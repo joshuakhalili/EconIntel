@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EconIntel — Global Intelligence</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+</head>
+<body class="theme-dark">
+
+  <!-- Full App Container -->
+  <div class="app-container">
+
+    <!-- ── Sidebar Navigation ── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-circle">🌐</div>
+        <div class="brand">
+          <h1>EconIntel</h1>
+          <span>Command Center</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-section">OVERVIEW</div>
+        <button class="nav-btn active" data-target="dashboard">
+          <span class="icon">📊</span> Dashboard
+        </button>
+        <button class="nav-btn" data-target="markets">
+          <span class="icon">📈</span> Live Markets
+        </button>
+
+        <div class="nav-section">INTELLIGENCE FEEDS</div>
+        <button class="nav-btn" data-target="finance">
+          <span class="icon">💹</span> Finance <span class="badge" id="badge-finance"></span>
+        </button>
+        <button class="nav-btn" data-target="government">
+          <span class="icon">🏛️</span> Gov & Banks <span class="badge" id="badge-government"></span>
+        </button>
+        <button class="nav-btn" data-target="trade">
+          <span class="icon">🚢</span> Trade <span class="badge" id="badge-trade"></span>
+        </button>
+        <button class="nav-btn" data-target="geopolitics">
+          <span class="icon">🌍</span> Geopolitics <span class="badge" id="badge-geopolitics"></span>
+        </button>
+        <button class="nav-btn" data-target="conflicts">
+          <span class="icon">⚔️</span> Conflicts <span class="badge" id="badge-conflicts"></span>
+        </button>
+        <button class="nav-btn" data-target="technology">
+          <span class="icon">💻</span> Technology <span class="badge" id="badge-technology"></span>
+        </button>
+        <button class="nav-btn" data-target="thinktanks">
+          <span class="icon">🧠</span> Think Tanks <span class="badge" id="badge-thinktanks"></span>
+        </button>
+
+        <div class="nav-section">STRATEGIC ANALYSIS</div>
+        <button class="nav-btn" data-target="regions">
+          <span class="icon">🗺️</span> Regional Risk
+        </button>
+        <button class="nav-btn" data-target="intel">
+          <span class="icon">📋</span> Daily Briefing
+        </button>
+      </nav>
+
+      <!-- Global Clocks -->
+      <div class="sidebar-footer">
+        <div class="nav-section">🔴 GLOBAL SYNC</div>
+        <div class="clock-container" id="world-clocks">
+          <!-- Clocks injected via JS -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main Content Area ── -->
+    <main class="main-content">
+      
+      <!-- Top Header Bar -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-toggle" id="mobile-toggle">☰</button>
+          <h2 class="page-title" id="page-title">Global Economics Command Center</h2>
+        </div>
+        
+        <!-- Live Ticker Strip inside header -->
+        <div class="ticker-wrapper">
+          <div class="ticker-track" id="ticker-track">
+            <!-- Ticker items injected via JS -->
+            <span class="ticker-loading">Establishing secure connection to market data...</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="global-search" placeholder="Search intel..." autocomplete="off">
+          </div>
+          <button class="btn-primary" id="btn-refresh">
+            <span class="icon">🔄</span> Sync
+          </button>
+        </div>
+      </header>
+
+      <!-- Connection Error Banner -->
+      <div class="banner banner-error" id="error-banner" style="display: none;">
+        <span class="icon">⚠️</span> <span id="error-msg">Connection lost. Retrying...</span>
+      </div>
+
+      <!-- Main Scrollable Area -->
+      <div class="content-scroll">
+        
+        <!-- ── VIEW: DASHBOARD ── -->
+        <section class="view-section active" id="view-dashboard">
+          
+          <!-- Key Metrics -->
+          <div class="metrics-grid" id="metrics-grid">
+            <!-- Populated via JS -->
+            <div class="metric-card skeleton"></div>
+            <div class="metric-card skeleton"></div>
+            <div class="metric-card skeleton"></div>
+            <div class="metric-card skeleton"></div>
+          </div>
+
+          <div class="dashboard-layout">
+            
+            <!-- Left Column: Critical Alerts & Top Stories -->
+            <div class="dash-primary">
+              <div class="section-header">
+                <h3>🚨 Critical Alerts</h3>
+              </div>
+              <div class="critical-alerts-stack" id="critical-alerts">
+                <div class="empty-state">No critical alerts detected.</div>
+              </div>
+
+              <div class="section-header mt-4">
+                <h3>🔥 Trending Intelligence</h3>
+                <select class="select-modern" id="sort-dashboard">
+                  <option value="impact">Highest Impact</option>
+                  <option value="newest">Latest Updates</option>
+                </select>
+              </div>
+              <div class="news-grid spotlight-grid" id="spotlight-grid">
+                <!-- Top stories per category -->
+              </div>
+            </div>
+
+            <!-- Right Column: Market Heatmaps & Regional Risk -->
+            <div class="dash-secondary">
+              
+              <div class="glass-panel">
+                <div class="panel-header">
+                  <h4>🗺️ Regional Risk Watch</h4>
+                </div>
+                <div class="risk-list" id="dashboard-risk-list">
+                  <!-- Regional risks -->
+                </div>
+              </div>
+
+              <div class="glass-panel mt-4">
+                <div class="panel-header">
+                  <h4>🏭 Sector Heatmap</h4>
+                </div>
+                <div class="mini-heatmap" id="dashboard-sector-heat">
+                  <!-- Heatmap cells -->
+                </div>
+              </div>
+
+              <div class="glass-panel mt-4">
+                <div class="panel-header">
+                  <h4>📦 Commodity Pulse</h4>
+                </div>
+                <div class="mini-heatmap" id="dashboard-commodity-heat">
+                  <!-- Heatmap cells -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- ── VIEW: MARKETS ── -->
+        <section class="view-section" id="view-markets">
+          <div class="markets-layout">
+            <!-- Indices -->
+            <div class="market-group">
+              <h3 class="group-title">🏦 Global Indices</h3>
+              <div class="treemap-container" id="heat-indices"></div>
+              <div class="market-cards" id="cards-indices"></div>
+            </div>
+            <!-- Sectors -->
+            <div class="market-group">
+              <h3 class="group-title">🏭 Sector Performance</h3>
+              <div class="treemap-container" id="heat-sectors"></div>
+              <div class="market-cards" id="cards-sectors"></div>
+            </div>
+            <!-- Commodities -->
+            <div class="market-group">
+              <h3 class="group-title">📦 Commodities</h3>
+              <div class="treemap-container" id="heat-commodities"></div>
+              <div class="market-cards" id="cards-commodities"></div>
+            </div>
+            <!-- Currencies -->
+            <div class="market-group">
+              <h3 class="group-title">💱 Fiat Currencies</h3>
+              <div class="treemap-container" id="heat-currencies"></div>
+              <div class="market-cards" id="cards-currencies"></div>
+            </div>
+            <!-- Crypto -->
+            <div class="market-group">
+              <h3 class="group-title">🪙 Cryptocurrencies</h3>
+              <div class="treemap-container" id="heat-crypto"></div>
+              <div class="market-cards" id="cards-crypto"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── VIEWS: CATEGORIES (Generated via JS) ── -->
+        <section class="view-section" id="view-finance"><div class="category-header"><h3>💹 Finance</h3><select class="select-modern sort-cat" data-cat="finance"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-finance"></div></section>
+        <section class="view-section" id="view-government"><div class="category-header"><h3>🏛️ Gov & Banks</h3><select class="select-modern sort-cat" data-cat="government"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-government"></div></section>
+        <section class="view-section" id="view-trade"><div class="category-header"><h3>🚢 Trade</h3><select class="select-modern sort-cat" data-cat="trade"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-trade"></div></section>
+        <section class="view-section" id="view-geopolitics"><div class="category-header"><h3>🌍 Geopolitics</h3><select class="select-modern sort-cat" data-cat="geopolitics"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-geopolitics"></div></section>
+        <section class="view-section" id="view-conflicts"><div class="category-header"><h3>⚔️ Conflicts</h3><select class="select-modern sort-cat" data-cat="conflicts"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-conflicts"></div></section>
+        <section class="view-section" id="view-technology"><div class="category-header"><h3>💻 Technology</h3><select class="select-modern sort-cat" data-cat="technology"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-technology"></div></section>
+        <section class="view-section" id="view-thinktanks"><div class="category-header"><h3>🧠 Think Tanks</h3><select class="select-modern sort-cat" data-cat="thinktanks"><option value="impact">Impact</option><option value="newest">Newest</option></select></div><div class="news-grid" id="grid-thinktanks"></div></section>
+
+        <!-- ── VIEW: REGIONAL RISK ── -->
+        <section class="view-section" id="view-regions">
+          <div class="regions-grid" id="grid-regions">
+            <div class="empty-state">Analyzing regional threat matrices...</div>
+          </div>
+        </section>
+
+        <!-- ── VIEW: INTEL BRIEFING ── -->
+        <section class="view-section" id="view-intel">
+          <div class="briefing-container" id="intel-briefing-doc">
+            <div class="empty-state">Compiling global intelligence briefing...</div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ── Article Modal Overlay ── -->
+  <div class="modal-backdrop" id="article-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="close-modal">✕</button>
+      <div class="modal-head">
+        <div class="tags">
+          <span class="tag cat-tag" id="mdl-cat"></span>
+          <span class="tag src-tag" id="mdl-src"></span>
+          <span class="tag date-tag" id="mdl-date"></span>
+        </div>
+        <div class="impact-shield" id="mdl-shield">
+          <span class="val" id="mdl-impact"></span>
+          <span class="lbl">IMPACT</span>
+        </div>
+      </div>
+      <h2 class="modal-title" id="mdl-title"></h2>
+      
+      <div class="modal-body">
+        <div class="ai-insight-box">
+          <h5>✨ AI Executive Summary</h5>
+          <div id="mdl-summary" class="summary-text"></div>
+        </div>
+        <div id="mdl-bullets" class="bullet-points"></div>
+      </div>
+      
+      <div class="modal-footer">
+        <a href="#" target="_blank" id="mdl-link" class="btn-external">Read Full Source Document ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
