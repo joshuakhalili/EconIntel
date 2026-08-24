@@ -51,6 +51,10 @@ export const config = Object.freeze({
    */
   keys: Object.freeze({
     fred: process.env.FRED_API_KEY ?? null,
+    census: process.env.CENSUS_API_KEY ?? null,
+    ember: process.env.EMBER_API_KEY ?? null,
+    eia: process.env.EIA_API_KEY ?? null,
+    bls: process.env.BLS_API_KEY ?? null,
     openai: process.env.OPENAI_API_KEY ?? null,
     anthropic: process.env.ANTHROPIC_API_KEY ?? null,
     copernicus: process.env.COPERNICUS_TOKEN ?? null,
@@ -79,11 +83,17 @@ export const config = Object.freeze({
  */
 export function describeIntegrations() {
   return [
-    { name: 'FRED',       ready: Boolean(config.keys.fred),   note: 'free key: fredaccount.stlouisfed.org/apikeys' },
-    { name: 'World Bank', ready: true,                        note: 'no key required' },
-    { name: 'DBnomics',   ready: true,                        note: 'no key required (aggregates FRED/OECD/IMF/BLS)' },
-    { name: 'SEC EDGAR',  ready: Boolean(config.secUserAgent),note: 'set SEC_USER_AGENT to "Name contact@email"' },
-    { name: 'Copernicus', ready: Boolean(config.keys.copernicus), note: 'satellite imagery, phase 3' },
-    { name: 'LLM',        ready: Boolean(config.keys.openai || config.keys.anthropic), note: 'narration layer' },
+    { name: 'FRED',        ready: Boolean(config.keys.fred),    note: 'free key: fredaccount.stlouisfed.org/apikeys' },
+    { name: 'World Bank',  ready: true,                         note: 'no key required' },
+    { name: 'DBnomics',    ready: true,                         note: 'no key required (mirrors FRED/OECD/IMF/BLS/Eurostat)' },
+    { name: 'SEC',         ready: Boolean(config.secUserAgent), note: 'no key; SEC_USER_AGENT="Name contact@email" is mandatory' },
+    { name: 'Epoch AI',    ready: true,                         note: 'no key; CC BY 4.0; fetched live, never cached to disk' },
+    { name: 'Fed Register',ready: true,                         note: 'no key required' },
+    { name: 'Census BTOS', ready: Boolean(config.keys.census),  note: 'free key: api.census.gov/data/key_signup.html — AI adoption rates' },
+    { name: 'Ember',       ready: Boolean(config.keys.ember),   note: 'free key: api.ember-energy.org — electricity, CC BY 4.0' },
+    { name: 'EIA',         ready: Boolean(config.keys.eia),     note: 'free key: eia.gov/opendata — US grid demand' },
+    { name: 'BLS',         ready: Boolean(config.keys.bls),     note: 'free key: data.bls.gov/registrationEngine — 500 req/day' },
+    { name: 'Copernicus',  ready: Boolean(config.keys.copernicus), note: 'satellite imagery, phase 3' },
+    { name: 'LLM',         ready: Boolean(config.keys.openai || config.keys.anthropic), note: 'narration layer' },
   ];
 }
