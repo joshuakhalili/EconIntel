@@ -24,12 +24,63 @@ import { config } from '../config.js';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../../../fixtures/http', import.meta.url));
 
+/**
+ * Query parameters that carry credentials. Their values are replaced before a
+ * URL is put in an error message, a log line or an audit record.
+ *
+ * This matters more than it looks: ingestion errors are written to
+ * `ingestion_runs.error_message` in the database and printed to stdout, both of
+ * which are routinely copied into bug reports and CI logs. A key that reaches
+ * either is a key that has to be rotated.
+ */
+const SECRET_PARAMS = new Set(['api_key', 'apikey', 'token', 'access_token', 'key']);
+
+/**
+ * Replace credential values with '[redacted]', preserving everything else so
+ * the URL stays diagnostically useful.
+ *
+ * Accepts either a bare URL or arbitrary text CONTAINING one. That distinction
+ * is the whole point: error messages embed URLs in prose ("Request to X failed:
+ * https://…?api_key=…"), and a redactor that only handled bare URLs would pass
+ * those straight through with the key intact — which is exactly the case that
+ * reaches logs.
+ *
+ * @param {string} text
+ */
+export function redactUrl(text) {
+  if (typeof text !== 'string' || text.length === 0) return text;
+
+  // Match http(s) URLs up to the first whitespace or quote. Deliberately
+  // permissive: over-matching costs a redacted character, under-matching
+  // leaks a credential.
+  return text.replace(/https?:\/\/[^\s"'<>)]+/g, (match) => {
+    try {
+      const parsed = new URL(match);
+      let changed = false;
+
+      for (const name of [...parsed.searchParams.keys()]) {
+        if (SECRET_PARAMS.has(name.toLowerCase())) {
+          parsed.searchParams.set(name, 'REDACTED');
+          changed = true;
+        }
+      }
+      if (!changed) return match;
+
+      // searchParams percent-encodes the brackets in '[redacted]', which makes
+      // the output harder to read. Use a plain token and restore it verbatim.
+      return parsed.toString().replace(/=REDACTED/g, '=[redacted]');
+    } catch {
+      return match;
+    }
+  });
+}
+
 /** Thrown for any non-recoverable HTTP failure. Carries context for the log. */
 export class HttpError extends Error {
   constructor(message, { url, status, body } = {}) {
-    super(message);
+    super(redactUrl(message));
     this.name = 'HttpError';
-    this.url = url;
+    this.url = url ? redactUrl(url) : url;
     this.status = status;
     this.body = body;
   }
@@ -221,7 +272,7 @@ async function readFixture(url) {
   } catch (error) {
     if (error.code === 'ENOENT') {
       throw new HttpError(
-        `No fixture recorded for ${url}\n` +
+        `No fixture recorded for ${redactUrl(url)}\n` +
           `  expected: ${file}\n` +
           `  Record it with USE_FIXTURES=false and record:true, ` +
           `or run with network access.`,

@@ -7,7 +7,13 @@
     "start": "node server.js",
     "dev": "node server.js",
     "db:migrate": "node src/server/db/migrate.js",
-    "db:status": "node src/server/db/migrate.js status"
+    "db:status": "node src/server/db/migrate.js status",
+    "db:seed": "node src/server/db/seed.js",
+    "db:reset": "node src/server/db/migrate.js && node src/server/db/seed.js",
+    "ingest": "node src/server/ingestion/runner.js",
+    "ingest:force": "node src/server/ingestion/runner.js --force",
+    "verify:sources": "node scripts/verify-sources.js",
+    "test": "node --test src/**/*.test.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
