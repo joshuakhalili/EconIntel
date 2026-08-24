@@ -5,12 +5,17 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "db:migrate": "node src/server/db/migrate.js",
+    "db:status": "node src/server/db/migrate.js status"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.21.0",
+    "pg": "^8.23.0",
     "rss-parser": "^3.13.0"
-  }
+  },
+  "type": "module"
 }
