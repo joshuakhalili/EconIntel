@@ -67,14 +67,17 @@ INSERT INTO indicators (
  'https://fred.stlouisfed.org/series/PAYEMS',
  TRUE, TRUE, FALSE, FALSE, INTERVAL '1 day'),
 
--- [UNVERIFIED] CES industry codes follow a structured pattern but the exact
--- digits for the information supersector need confirming.
-('fred.CES5000000001',
+-- VERIFIED 2026-08-24 against the live FRED API. The previous code
+-- CES5000000001 is a BLS series id; FRED does not expose it under that name and
+-- returned 400. FRED's seasonally-adjusted alias is USINFO, which matches the
+-- adjustment basis of PAYEMS above — mixing adjusted and unadjusted series in
+-- one chart produces a sawtooth that reads as signal.
+('fred.USINFO',
  'US Employment: Information Sector',
  'All employees in the information supersector — the industry most directly exposed to both AI supply and AI substitution.',
  'adoption', 'count', 'monthly', 'official',
- 'thousands_of_persons', NULL, 0, 'fred', 'CES5000000001',
- 'https://fred.stlouisfed.org/series/CES5000000001',
+ 'thousands_of_persons', NULL, 0, 'fred', 'USINFO',
+ 'https://fred.stlouisfed.org/series/USINFO',
  NULL, TRUE, TRUE, FALSE, INTERVAL '1 day'),
 
 ('fred.INDPRO',
