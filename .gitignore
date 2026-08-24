@@ -1,8 +1,17 @@
 node_modules/
-.env
-.env.local
 dist/
 build/
 *.log
 .DS_Store
 coverage/
+
+# Secrets. `.env.example` is the committed template and is re-included below;
+# every other .env variant is ignored by default so a new one (.env.production,
+# .env.staging) is safe the moment it is created rather than when remembered.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.json

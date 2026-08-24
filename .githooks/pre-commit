@@ -1,0 +1,71 @@
+#!/bin/sh
+# Block secrets before they leave this machine.
+#
+# GitHub's push protection is the last line of defence and only fires once the
+# commit already exists. This is the first line: it refuses the commit itself,
+# so the secret never enters history at all. That distinction matters — a key
+# that reaches a commit is compromised even if the commit is never pushed,
+# because rewriting history is far harder than not writing it.
+#
+# Enable with: git config core.hooksPath .githooks
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+fail=0
+
+# 1. Any .env variant other than the template must never be staged.
+for file in $staged; do
+  case "$file" in
+    .env.example) ;;
+    .env|.env.*)
+      echo "BLOCKED: $file is an environment file and must not be committed."
+      fail=1
+      ;;
+    *.pem|*.key|*.p12)
+      echo "BLOCKED: $file looks like a private key or certificate."
+      fail=1
+      ;;
+  esac
+done
+
+# 2. Scan staged content for key-shaped strings. Assignments only — a bare hex
+#    string is usually a git SHA or a checksum, so matching those would cry wolf
+#    constantly and train you to use --no-verify, which defeats the whole hook.
+patterns='(FRED|CENSUS|EMBER|EIA|BLS|OPENAI|ANTHROPIC|COPERNICUS)_API_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9_-]{16,}
+(api[_-]?key|secret|token|password)[\"'\'' ]*[:=][\"'\'' ]*[A-Za-z0-9_-]{20,}
+sk-[A-Za-z0-9]{20,}
+sk-ant-[A-Za-z0-9_-]{20,}
+ghp_[A-Za-z0-9]{36}
+AKIA[0-9A-Z]{16}'
+
+for file in $staged; do
+  [ -f "$file" ] || continue
+  case "$file" in .env.example|.githooks/*) continue ;; esac
+
+  echo "$patterns" | while IFS= read -r pattern; do
+    [ -z "$pattern" ] && continue
+    if git show ":$file" 2>/dev/null | grep -nEq "$pattern"; then
+      echo "BLOCKED: $file contains something shaped like a live credential:"
+      git show ":$file" 2>/dev/null | grep -nE "$pattern" | head -3 | sed 's/^/    /'
+      exit 1
+    fi
+  done || fail=1
+done
+
+if [ "$fail" -ne 0 ]; then
+  cat <<'MSG'
+
+Commit refused. Move the value into .env (which is gitignored) and read it
+through src/server/config.js instead of writing it inline.
+
+If this is a false positive, re-run with:  git commit --no-verify
+
+If a real key has ALREADY been pushed anywhere public, do not try to delete
+the commit — bots scrape new commits within seconds. Revoke and regenerate
+the key at the provider instead.
+MSG
+  exit 1
+fi
+
+exit 0
