@@ -120,14 +120,26 @@ export function toFrontierComputeObservations(rows, indicatorId = 'epoch.trainin
 
   dated.sort((a, b) => a.date.localeCompare(b.date));
 
-  const observations = [];
+  /**
+   * Keyed by date rather than appended, because two record-setting models can
+   * share a publication date. Both would clear the running maximum in turn and
+   * emit two rows on the same day — and since the observations grain is
+   * (indicator, date), Postgres rejects the whole batch with "ON CONFLICT DO
+   * UPDATE command cannot affect row a second time".
+   *
+   * Overwriting is correct rather than merely expedient: entries are sorted
+   * ascending and only records are emitted, so the last write for a given date
+   * is by construction the highest compute that day — which is what a frontier
+   * series means.
+   */
+  const byDate = new Map();
   let runningMax = 0;
 
   for (const entry of dated) {
     if (entry.compute <= runningMax) continue;   // not a new frontier
     runningMax = entry.compute;
 
-    observations.push({
+    byDate.set(entry.date, {
       indicatorId,
       periodStart: entry.date,
       periodEnd: entry.date,
@@ -136,7 +148,7 @@ export function toFrontierComputeObservations(rows, indicatorId = 'epoch.trainin
     });
   }
 
-  return observations;
+  return [...byDate.values()];
 }
 
 /**
@@ -152,7 +164,18 @@ export function toClusterCountObservations(rows, indicatorId = 'epoch.gpu_cluste
   const counts = new Map();
 
   for (const row of rows) {
-    const date = isoDate(row['First operational date'] ?? row.first_operational_date ?? row.date);
+    // 'First Operational Date' is the live column name. The previous spelling
+    // here differed only in capitalisation, so every lookup returned undefined,
+    // every row was skipped, and the job reported success having written
+    // nothing — a wrong key and an empty upstream are indistinguishable on a
+    // chart, which is why the variants are listed explicitly rather than
+    // assumed.
+    const date = isoDate(
+      row['First Operational Date'] ??
+        row['First operational date'] ??
+        row.first_operational_date ??
+        row.date
+    );
     const country = (row.Country ?? row.country ?? '').trim();
     if (!date || !country) continue;
 

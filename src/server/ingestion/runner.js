@@ -19,6 +19,8 @@ import { config } from '../config.js';
 import { upsertObservations, touchIndicator } from '../repositories/observations.js';
 import * as fred from './sources/fred.js';
 import * as worldbank from './sources/worldbank.js';
+import * as epoch from './sources/epoch.js';
+import * as federalRegister from './sources/federal-register.js';
 
 /**
  * Open a run record. Every job gets one whether it succeeds or fails — a run
@@ -126,10 +128,121 @@ async function ingestWorldBankIndicator(indicator) {
   }
 }
 
+/**
+ * Ingest one Epoch AI indicator.
+ *
+ * Dispatches on indicator id rather than source id because this one source
+ * backs two structurally different series — a running maximum over model
+ * training runs, and a count of known clusters per country per year. They share
+ * a provider and nothing else.
+ */
+async function ingestEpochIndicator(indicator) {
+  const runId = await startRun(`epoch:${indicator.id}`, 'epoch_ai');
+  try {
+    let observations;
+    switch (indicator.id) {
+      case 'epoch.training_compute_frontier':
+        observations = await epoch.ingestFrontierCompute();
+        break;
+      case 'epoch.gpu_cluster_count':
+        observations = await epoch.ingestGpuClusters();
+        break;
+      default:
+        throw new Error(`No Epoch job defined for indicator "${indicator.id}"`);
+    }
+
+    const { written, skipped } = await upsertObservations(observations);
+    await touchIndicator(indicator.id);
+    await finishRun(runId, {
+      status: 'succeeded',
+      written,
+      skipped,
+      details: { fetched: observations.length },
+    });
+    return { written, skipped, fetched: observations.length };
+  } catch (error) {
+    await finishRun(runId, { status: 'failed', error: error.message });
+    throw error;
+  }
+}
+
 const HANDLERS = {
   fred: ingestFredIndicator,
   worldbank: ingestWorldBankIndicator,
+  epoch_ai: ingestEpochIndicator,
 };
+
+/**
+ * DERIVED JOBS — the second kind of ingestion.
+ *
+ * `dueIndicators` requires `source_series_code IS NOT NULL`, because a fetch
+ * job needs something to fetch. Nine indicators in the catalogue are
+ * `derived.*`: they have no upstream code because they are COMPUTED rather than
+ * retrieved. You cannot ask an API for "AI regulation volume" — you fetch
+ * several hundred documents, deduplicate them and count them by month.
+ *
+ * Those indicators were therefore invisible to the runner entirely. They did
+ * not even appear as skips, because the WHERE clause excluded them before the
+ * loop saw them — the worst kind of gap, since nothing reports it.
+ *
+ * Keyed by indicator id rather than source id: a derived indicator's identity
+ * IS its computation, and two derived indicators from the same source are
+ * usually unrelated calculations.
+ *
+ * Each function returns ObservationInput[] and is responsible for its own
+ * fetching. Absent entries are reported as unimplemented rather than skipped
+ * silently, so an empty chart always has a stated reason.
+ */
+const DERIVED_JOBS = {
+  'derived.ai_regulation_volume': async () => {
+    // fetchAiDocuments returns { documents, truncated } — the wrapper exists so
+    // a capped result cannot be mistaken for a complete one.
+    const { documents, truncated } = await federalRegister.fetchAiDocuments();
+    if (truncated) {
+      console.warn(
+        '  note  federal register results were truncated by the per-term page cap; ' +
+          'regulatory volume is a lower bound for the affected months'
+      );
+    }
+    return federalRegister.toMonthlyCounts(documents);
+  },
+};
+
+/** Derived indicators that are due, i.e. the ones `dueIndicators` cannot see. */
+async function dueDerivedIndicators({ force = false } = {}) {
+  const { rows } = await query(
+    `SELECT id, source_id, cadence
+       FROM indicators
+      WHERE is_active
+        AND source_series_code IS NULL
+        AND ($1::boolean
+             OR last_ingested_at IS NULL
+             OR last_ingested_at + COALESCE(refresh_interval, INTERVAL '1 day') < now())
+      ORDER BY id`,
+    [force]
+  );
+  return rows;
+}
+
+/** Run one derived job inside the same audit wrapper as a fetch job. */
+async function runDerivedJob(indicator) {
+  const runId = await startRun(`derived:${indicator.id}`, indicator.source_id);
+  try {
+    const observations = await DERIVED_JOBS[indicator.id]();
+    const { written, skipped } = await upsertObservations(observations);
+    await touchIndicator(indicator.id);
+    await finishRun(runId, {
+      status: 'succeeded',
+      written,
+      skipped,
+      details: { computed: observations.length },
+    });
+    return { written, skipped, fetched: observations.length };
+  } catch (error) {
+    await finishRun(runId, { status: 'failed', error: error.message });
+    throw error;
+  }
+}
 
 /**
  * Run all due ingestion jobs.
@@ -173,7 +286,46 @@ export async function runIngestion({ sourceId = null, force = false } = {}) {
     }
   }
 
+  // ── Pass two: derived indicators ──────────────────────────────────────────
+  // Run after fetch jobs, not alongside them: a derived metric computed from
+  // observations must see this run's fresh data, not the previous run's.
+  const derived = await dueDerivedIndicators({ force });
+  const unimplemented = [];
+
+  if (derived.length > 0) {
+    console.log(`\nComputing ${derived.length} derived indicator(s)…\n`);
+
+    for (const indicator of derived) {
+      if (!DERIVED_JOBS[indicator.id]) {
+        unimplemented.push(indicator.id);
+        console.log(`  todo  ${indicator.id.padEnd(32)} (no computation defined yet)`);
+        continue;
+      }
+
+      try {
+        const { written, fetched } = await runDerivedJob(indicator);
+        totalWritten += written;
+        succeeded += 1;
+        console.log(`  ok    ${indicator.id.padEnd(32)} ${written} written / ${fetched} computed`);
+      } catch (error) {
+        failed += 1;
+        failures.push({ id: indicator.id, message: error.message.split('\n')[0] });
+        console.log(`  FAIL  ${indicator.id.padEnd(32)} ${error.message.split('\n')[0]}`);
+      }
+    }
+  }
+
   console.log(`\n${succeeded} succeeded · ${failed} failed · ${totalWritten} rows written`);
+
+  // Report these explicitly rather than leaving them to be discovered as blank
+  // panels. An indicator with no computation is a product decision outstanding,
+  // not a bug, but it must be visible either way.
+  if (unimplemented.length > 0) {
+    console.log(
+      `\n${unimplemented.length} derived indicator(s) have no computation defined:\n` +
+        unimplemented.map((id) => `  ${id}`).join('\n')
+    );
+  }
 
   if (failures.length > 0) {
     console.log('\nFailures:');
