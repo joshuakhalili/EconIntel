@@ -1,30 +1,29 @@
 /**
- * EconIntel dashboard.
+ * EconIntel — question-led dashboard.
  *
- * Plain modules and hand-built SVG — no framework, no chart library. The page
- * draws a handful of line charts over data the server has already shaped, and a
- * bundled charting library would be larger than everything here put together
- * while giving less control over the axis and hover behaviour.
+ * The organising idea: a page answers a question, and every chart on it exists
+ * to support that answer. Both the answer and the reason each chart is present
+ * are stored text, fetched from /api/questions — not written here, and not
+ * generated. The front end arranges evidence; it does not author claims.
  *
- * Charts follow the dataviz rules: fixed categorical order (never cycled), one
- * y-axis per chart, a legend whenever more than one series is drawn, tabular
- * figures, and a crosshair tooltip as standard rather than as an extra.
+ * Reader mode switches which register of that stored text is shown. The
+ * technical variant is not the plain one with jargon added; it answers a
+ * different question, usually how a thing was measured and where it misleads.
+ *
+ * Charts are hand-built SVG. A chart library would be larger than this whole
+ * file and would fight the two rules that matter here: one y-axis always, and
+ * a click on a point opens the news from that month.
  */
 
-const API = '';
-
-/**
- * The validated categorical order. Assigned by position and never cycled: a
- * ninth series would fold into "other" rather than reusing hue one, because a
- * repeated colour reads as a repeated entity.
- */
+/** Validated categorical order — see the note in style.css. Never reordered. */
 const SERIES_COLORS = ['--c1', '--c2', '--c3', '--c4', '--c5', '--c6'];
 
 const state = {
-  view: 'dashboard',
-  pillar: null,
+  view: 'question',
+  slug: 'adoption',
+  mode: 'plain',
+  questions: [],
   indicators: [],
-  pillars: [],
   status: null,
   cache: new Map(),
 };
@@ -38,17 +37,19 @@ const el = (tag, cls, text) => {
   if (text != null) n.textContent = text;
   return n;
 };
+const escapeHtml = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function api(path) {
   if (state.cache.has(path)) return state.cache.get(path);
-  const res = await fetch(API + path);
+  const res = await fetch(path);
   if (!res.ok) throw new Error(`${res.status} on ${path}`);
   const data = await res.json();
   state.cache.set(path, data);
   return data;
 }
 
-/** Locale-aware, and compact only above 10,000 so ordinary figures stay exact. */
 function fmt(value, decimals = 1) {
   if (value == null || !Number.isFinite(value)) return '—';
   const abs = Math.abs(value);
@@ -70,13 +71,12 @@ function fmtDate(iso, cadence) {
 }
 
 /**
- * Work out cadence from the observations themselves.
+ * Cadence from the observations, not from the indicator's own metadata.
  *
- * The declared cadence on an indicator is metadata, and metadata drifts: several
- * series here are annual in fact while declared quarterly or monthly, which put
- * "vs 2015 Q1" under a figure whose points are years apart. The source audit
- * found the same thing upstream — RBA series tagged daily that are quarterly —
- * so the dates are the only trustworthy statement of spacing.
+ * Several series are annual in fact while declared quarterly, which put
+ * "vs 2015 Q1" under points a year apart. The upstream audit found the same
+ * problem at source — RBA series tagged daily that are quarterly — so the
+ * dates are the only trustworthy statement of spacing.
  */
 function inferCadence(points) {
   const dates = points.filter((p) => p.value != null).map((p) => p.date);
@@ -86,57 +86,74 @@ function inferCadence(points) {
     gaps.push((new Date(dates[i]) - new Date(dates[i - 1])) / 86400000);
   }
   gaps.sort((a, b) => a - b);
-  const median = gaps[Math.floor(gaps.length / 2)];
-  if (median > 200) return 'annual';
-  if (median > 60) return 'quarterly';
-  if (median > 20) return 'monthly';
-  if (median > 4) return 'weekly';
-  return 'daily';
+  const m = gaps[Math.floor(gaps.length / 2)];
+  return m > 200 ? 'annual' : m > 60 ? 'quarterly' : m > 20 ? 'monthly' : m > 4 ? 'weekly' : 'daily';
 }
 
-const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+/**
+ * Change over a trailing window. A RATE is reported in percentage POINTS:
+ * a share moving 0.5% to 60.9% is +60.4 points, and "+11,831%" is
+ * arithmetically true, useless, and reads as a bug.
+ */
+function delta(points, isRate, cadence) {
+  const vals = points.filter((p) => p.value != null);
+  if (vals.length < 2) return null;
+  const window = cadence === 'annual' ? 3 : cadence === 'quarterly' ? 12 : 36;
+  const from = vals[Math.max(0, vals.length - 1 - window)];
+  const to = vals[vals.length - 1];
+  if (from === to) return null;
+  const since = fmtDate(from.date, cadence);
+  if (isRate) return { value: to.value - from.value, unit: 'pp', since };
+  if (!from.value) return null;
+  const ratio = to.value / from.value;
+  if (ratio >= 3) return { value: ratio, unit: '×', since, multiple: true };
+  return { value: ((to.value - from.value) / Math.abs(from.value)) * 100, unit: '%', since };
+}
+
+function deltaBadge(d) {
+  if (d == null || !Number.isFinite(d.value)) return '<span class="delta flat">—</span>';
+  // Flat only when genuinely nil. At a wider threshold a small FALL was classed
+  // flat and had its sign stripped, so a decline read as a rise.
+  const cls = d.value > 0.001 ? 'up' : d.value < -0.001 ? 'down' : 'flat';
+  const arrow = cls === 'up' ? '↑' : cls === 'down' ? '↓' : '→';
+  if (d.multiple) return `<span class="delta up">↑ ${d.value.toFixed(1)}×</span>`;
+  const mag = Math.abs(d.value);
+  return `<span class="delta ${cls}">${arrow} ${mag >= 1000 ? fmt(mag, 0) : mag.toFixed(1)}${d.unit}</span>`;
+}
+
+const isRateUnit = (unit) => /%|percent|share|rate|pp/i.test(unit ?? '');
 
 /* ── sparkline ─────────────────────────────────────────────────────────────*/
 
-/**
- * A sparkline carries shape only — no axes, no labels, no tooltip. It sits
- * beside a number that already states the value, so adding scales would repeat
- * what the tile says and crowd what the line is for.
- */
 function sparkline(points, colorVar = '--accent') {
   const W = 200, H = 30, PAD = 2;
   const values = points.map((p) => p.value).filter((v) => v != null);
   if (values.length < 2) return '';
-
   const min = Math.min(...values), max = Math.max(...values);
   const span = max - min || 1;
   const step = (W - PAD * 2) / (values.length - 1);
-
-  const d = values
-    .map((v, i) => `${i === 0 ? 'M' : 'L'}${(PAD + i * step).toFixed(1)},${(H - PAD - ((v - min) / span) * (H - PAD * 2)).toFixed(1)}`)
-    .join(' ');
-
+  const d = values.map((v, i) =>
+    `${i === 0 ? 'M' : 'L'}${(PAD + i * step).toFixed(1)},${(H - PAD - ((v - min) / span) * (H - PAD * 2)).toFixed(1)}`
+  ).join(' ');
   const last = values[values.length - 1];
-  const cx = PAD + (values.length - 1) * step;
-  const cy = H - PAD - ((last - min) / span) * (H - PAD * 2);
-
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-    <path d="${d}" fill="none" stroke="var(${colorVar})" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-    <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2" fill="var(${colorVar})"/>
+    <path d="${d}" fill="none" stroke="var(${colorVar})" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${(PAD + (values.length - 1) * step).toFixed(1)}" cy="${(H - PAD - ((last - min) / span) * (H - PAD * 2)).toFixed(1)}" r="2" fill="var(${colorVar})"/>
   </svg>`;
 }
 
 /* ── line chart ────────────────────────────────────────────────────────────*/
 
 /**
- * Multi-series line chart with a crosshair tooltip.
+ * Multi-series line chart with crosshair, tooltip and click-to-context.
  *
- * ONE y-axis, always. Series measured on different scales are indexed to a
- * common base before they arrive here — a second axis lets any two lines be
- * made to cross wherever the author wants, which is the most effective way to
- * imply a relationship that is not in the data.
+ * ONE y-axis, always. Series on different scales are indexed server-side to a
+ * common base before arriving; a second axis would let any two lines be made to
+ * cross wherever we chose.
+ *
+ * @param {Function} [onPick] called with an ISO date when a point is clicked
  */
-function lineChart(container, series, { cadence = 'monthly', unit = '', height = 260 } = {}) {
+function lineChart(container, series, { cadence = 'monthly', unit = '', height = 250, width = 760, onPick = null } = {}) {
   container.innerHTML = '';
   const live = series.filter((s) => s.points.some((p) => p.value != null));
   if (!live.length) {
@@ -144,8 +161,8 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
     return;
   }
 
-  const W = 760, H = height;
-  const M = { top: 14, right: 16, bottom: 26, left: 52 };
+  const W = width, H = height;
+  const M = { top: 14, right: 16, bottom: 26, left: 54 };
   const iw = W - M.left - M.right;
   const ih = H - M.top - M.bottom;
 
@@ -155,78 +172,124 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
 
   let lo = Math.min(...values), hi = Math.max(...values);
   if (lo === hi) { lo -= 1; hi += 1; }
-  // Pad the range so the extremes are not welded to the frame.
   const allNonNegative = values.every((v) => v >= 0);
   const pad = (hi - lo) * 0.08;
   lo -= pad; hi += pad;
-  // Include zero only when the data is already close to it. Forcing a zero
-  // baseline onto an index that lives near 120 flattens every real movement.
   if (lo > 0 && lo < (hi - lo) * 0.4) lo = 0;
-  // Never show a negative axis for a quantity that cannot be negative. Padding
-  // below zero on a percentage puts "-4.3%" on the scale, which is not a
-  // cosmetic flaw — it asserts that a negative share is a possible reading.
+  // A share cannot be negative; padding below zero would put "-4.3%" on the
+  // axis, which asserts that a negative share is a readable value.
   if (allNonNegative && lo < 0) lo = 0;
 
   const x = (iso) => (dates.indexOf(iso) / Math.max(dates.length - 1, 1)) * iw;
   const y = (v) => ih - ((v - lo) / (hi - lo)) * ih;
 
-  const svgns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgns, 'svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('class', 'chart');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label',
-    `Line chart, ${live.length} series, ${fmtDate(dates[0], cadence)} to ${fmtDate(dates[dates.length - 1], cadence)}.`);
+    `${live.length} series from ${fmtDate(dates[0], cadence)} to ${fmtDate(dates.at(-1), cadence)}.`);
+  if (onPick) svg.classList.add('clickable');
 
-  const g = document.createElementNS(svgns, 'g');
+  const g = document.createElementNS(NS, 'g');
   g.setAttribute('transform', `translate(${M.left},${M.top})`);
   svg.appendChild(g);
 
-  // Horizontal gridlines only. Vertical ones add ink without helping a reader
-  // who is comparing heights.
-  const TICKS = 5;
-  for (let i = 0; i <= TICKS; i += 1) {
-    const v = lo + ((hi - lo) * i) / TICKS;
+  /**
+   * Tick precision from the RANGE, not a fixed one decimal.
+   *
+   * Japan's job-openings ratio spans 1.18 to 1.36. At one decimal the six ticks
+   * printed 1.2, 1.2, 1.3, 1.3, 1.4 — three visibly duplicated labels on a
+   * chart whose whole story is the movement between them. Enough decimals are
+   * used to keep adjacent ticks distinct.
+   */
+  const tickStep = (hi - lo) / 5;
+  const tickDecimals = tickStep >= 10 ? 0 : tickStep >= 1 ? 1 : tickStep >= 0.1 ? 2 : 3;
+
+  for (let i = 0; i <= 5; i += 1) {
+    const v = lo + ((hi - lo) * i) / 5;
     const gy = y(v);
-    const line = document.createElementNS(svgns, 'line');
+    const line = document.createElementNS(NS, 'line');
     line.setAttribute('class', 'gridline');
     line.setAttribute('x1', 0); line.setAttribute('x2', iw);
     line.setAttribute('y1', gy); line.setAttribute('y2', gy);
     g.appendChild(line);
-
-    const label = document.createElementNS(svgns, 'text');
-    label.setAttribute('class', 'axis');
-    label.setAttribute('x', -8); label.setAttribute('y', gy + 3.5);
-    label.setAttribute('text-anchor', 'end');
-    label.textContent = fmt(v);
-    g.appendChild(label);
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('class', 'axis');
+    t.setAttribute('x', -8); t.setAttribute('y', gy + 3.5);
+    t.setAttribute('text-anchor', 'end');
+    t.textContent = Math.abs(v) >= 1e4
+      ? fmt(v)
+      : v.toLocaleString(undefined, { minimumFractionDigits: tickDecimals, maximumFractionDigits: tickDecimals });
+    g.appendChild(t);
   }
 
-  // Roughly six x labels, chosen by stride so they never collide.
-  const stride = Math.max(1, Math.ceil(dates.length / 6));
-  dates.forEach((iso, i) => {
-    if (i % stride !== 0 && i !== dates.length - 1) return;
-    const t = document.createElementNS(svgns, 'text');
+  /**
+   * Roughly six x labels, chosen by stride, with the last always shown.
+   *
+   * The guard matters: when the final index is not a multiple of the stride,
+   * the last label and the one before it can land within a few pixels and
+   * overprint — "2024 Q1" and "2025 Q3" rendered as "202Q025 Q3". Dropping the
+   * penultimate label when it is too close is better than dropping the last,
+   * which is the one a reader looks for first.
+   */
+  /**
+   * X labels: as many as actually fit, never overlapping.
+   *
+   * Two earlier attempts failed here. A fixed six labels collided once the
+   * supporting charts got a narrower viewBox — 390px of axis cannot hold six
+   * labels roughly 62px wide. A guard that only checked the final pair then
+   * missed collisions at the start.
+   *
+   * So: pick a target from the available width, then walk the candidates and
+   * keep one only if it clears the last kept label. The final label is always
+   * kept and wins any conflict, because it is the one a reader looks for first.
+   */
+  // 88 viewBox units. Measured against the longest labels this renders —
+  // "Sept 2007" and "2022 Q3" — with clearance, after 64 and 62 both left
+  // adjacent labels touching. Fewer, legible labels beat more, overlapping ones.
+  const LABEL_PX = 88;
+  const lastIndex = dates.length - 1;
+  const target = Math.max(2, Math.floor(iw / (LABEL_PX + 14)));
+  const stride = Math.max(1, Math.ceil(dates.length / target));
+
+  const candidates = [];
+  for (let i = 0; i <= lastIndex; i += stride) candidates.push(i);
+  if (candidates.at(-1) !== lastIndex) candidates.push(lastIndex);
+
+  const keep = [];
+  for (const i of candidates) {
+    if (i === lastIndex) {
+      // Drop whatever the last label would overprint, not the last label.
+      while (keep.length && Math.abs(x(dates[i]) - x(dates[keep.at(-1)])) < LABEL_PX) keep.pop();
+      keep.push(i);
+      break;
+    }
+    if (!keep.length || Math.abs(x(dates[i]) - x(dates[keep.at(-1)])) >= LABEL_PX) keep.push(i);
+  }
+
+  keep.forEach((i) => {
+    const iso = dates[i];
+    const t = document.createElementNS(NS, 'text');
     t.setAttribute('class', 'axis');
     t.setAttribute('x', x(iso)); t.setAttribute('y', ih + 17);
-    t.setAttribute('text-anchor', i === 0 ? 'start' : i === dates.length - 1 ? 'end' : 'middle');
+    t.setAttribute('text-anchor', i === 0 ? 'start' : i === lastIndex ? 'end' : 'middle');
     t.textContent = fmtDate(iso, cadence);
     g.appendChild(t);
   });
 
   live.forEach((s, i) => {
     const color = `var(${SERIES_COLORS[i % SERIES_COLORS.length]})`;
-    const pts = s.points.filter((p) => p.value != null);
-    // Break the path across gaps rather than bridging them: a straight line
-    // over missing months asserts data that was never collected.
-    let d = '';
-    let prevIndex = null;
-    for (const p of pts) {
+    let d = '', prev = null;
+    for (const p of s.points.filter((q) => q.value != null)) {
       const idx = dates.indexOf(p.date);
-      d += (prevIndex === null || idx !== prevIndex + 1 ? 'M' : 'L') + `${x(p.date).toFixed(1)},${y(p.value).toFixed(1)} `;
-      prevIndex = idx;
+      // Break the path across gaps. A straight segment over missing months
+      // asserts data that was never collected.
+      d += (prev === null || idx !== prev + 1 ? 'M' : 'L') + `${x(p.date).toFixed(1)},${y(p.value).toFixed(1)} `;
+      prev = idx;
     }
-    const path = document.createElementNS(svgns, 'path');
+    const path = document.createElementNS(NS, 'path');
     path.setAttribute('class', 'series-line');
     path.setAttribute('d', d.trim());
     path.setAttribute('stroke', color);
@@ -234,15 +297,14 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
     g.appendChild(path);
   });
 
-  // Hover layer
-  const crosshair = document.createElementNS(svgns, 'line');
+  const crosshair = document.createElementNS(NS, 'line');
   crosshair.setAttribute('class', 'crosshair');
   crosshair.setAttribute('y1', 0); crosshair.setAttribute('y2', ih);
   crosshair.style.opacity = '0';
   g.appendChild(crosshair);
 
   const dots = live.map(() => {
-    const c = document.createElementNS(svgns, 'circle');
+    const c = document.createElementNS(NS, 'circle');
     c.setAttribute('class', 'hover-dot');
     c.setAttribute('r', 4);
     c.style.opacity = '0';
@@ -256,40 +318,38 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
   wrap.appendChild(tip);
   container.appendChild(wrap);
 
-  svg.addEventListener('pointermove', (event) => {
+  const dateAt = (event) => {
     const box = svg.getBoundingClientRect();
     const px = ((event.clientX - box.left) / box.width) * W - M.left;
     const idx = Math.round((px / iw) * (dates.length - 1));
-    if (idx < 0 || idx >= dates.length) return;
-    const iso = dates[idx];
-    const cx = x(iso);
+    return idx >= 0 && idx < dates.length ? { iso: dates[idx], box } : null;
+  };
 
+  svg.addEventListener('pointermove', (event) => {
+    const hit = dateAt(event);
+    if (!hit) return;
+    const cx = x(hit.iso);
     crosshair.setAttribute('x1', cx); crosshair.setAttribute('x2', cx);
     crosshair.style.opacity = '1';
 
-    let html = `<div class="tooltip-date">${fmtDate(iso, cadence)}</div>`;
+    let html = `<div class="tooltip-date">${fmtDate(hit.iso, cadence)}</div>`;
     live.forEach((s, i) => {
-      const p = s.points.find((q) => q.date === iso && q.value != null);
+      const p = s.points.find((q) => q.date === hit.iso && q.value != null);
       if (p) {
-        dots[i].setAttribute('cx', cx);
-        dots[i].setAttribute('cy', y(p.value));
+        dots[i].setAttribute('cx', cx); dots[i].setAttribute('cy', y(p.value));
         dots[i].setAttribute('fill', `var(${SERIES_COLORS[i % SERIES_COLORS.length]})`);
         dots[i].style.opacity = '1';
         html += `<div class="tooltip-row">
           <span class="legend-swatch" style="background:var(${SERIES_COLORS[i % SERIES_COLORS.length]})"></span>
-          <span>${s.label}</span>
-          <span class="tooltip-val">${fmt(p.value)}${unit ? ' ' + unit : ''}</span>
-        </div>`;
-      } else {
-        dots[i].style.opacity = '0';
-      }
+          <span>${escapeHtml(s.label)}</span>
+          <span class="tooltip-val">${fmt(p.value)}${unit ? ' ' + escapeHtml(unit) : ''}</span></div>`;
+      } else dots[i].style.opacity = '0';
     });
+    if (onPick) html += '<div class="tooltip-hint">Click to see what happened</div>';
 
     tip.innerHTML = html;
     tip.classList.add('on');
-    const left = Math.min(Math.max((cx + M.left) / W * box.width - 64, 4), box.width - 150);
-    tip.style.left = `${left}px`;
-    tip.style.top = `8px`;
+    tip.style.left = `${Math.min(Math.max((cx + M.left) / W * hit.box.width - 70, 4), hit.box.width - 160)}px`;
   });
 
   svg.addEventListener('pointerleave', () => {
@@ -298,20 +358,27 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
     tip.classList.remove('on');
   });
 
-  // A legend appears whenever more than one series is drawn, so identity never
-  // rests on colour alone. A single series is named by the card title instead.
+  if (onPick) {
+    svg.addEventListener('click', (event) => {
+      const hit = dateAt(event);
+      if (hit) onPick(hit.iso, cadence);
+    });
+  }
+
+  // A legend whenever more than one series is drawn, so identity never rests on
+  // colour alone. One series is named by the card title instead.
   if (live.length > 1) {
     const legend = el('div', 'legend');
     live.forEach((s, i) => {
       const item = el('button', 'legend-item');
       item.type = 'button';
       item.setAttribute('aria-pressed', 'true');
-      item.innerHTML = `<span class="legend-swatch" style="background:var(${SERIES_COLORS[i % SERIES_COLORS.length]})"></span>${s.label}`;
+      item.innerHTML = `<span class="legend-swatch" style="background:var(${SERIES_COLORS[i % SERIES_COLORS.length]})"></span>${escapeHtml(s.label)}`;
       item.addEventListener('click', () => {
         const on = item.getAttribute('aria-pressed') === 'true';
         item.setAttribute('aria-pressed', String(!on));
-        const path = g.querySelector(`path[data-series="${i}"]`);
-        if (path) path.style.display = on ? 'none' : '';
+        const p = g.querySelector(`path[data-series="${i}"]`);
+        if (p) p.style.display = on ? 'none' : '';
       });
       legend.appendChild(item);
     });
@@ -319,299 +386,355 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
   }
 }
 
-/* ── data helpers ──────────────────────────────────────────────────────────*/
+/* ── data ──────────────────────────────────────────────────────────────────*/
 
-async function loadSeries(id, country) {
-  const q = country ? `?country=${encodeURIComponent(country)}` : '';
-  const data = await api(`/api/indicators/${encodeURIComponent(id)}/observations${q}`);
-  return {
-    meta: data.indicator,
-    points: data.observations.map((o) => ({ date: o.period_start, value: o.value })),
-  };
+async function loadSeries(ids, countries, { index = false } = {}) {
+  const qs = new URLSearchParams({ ids: ids.join(','), countries: countries.map((c) => c ?? '').join(',') });
+  if (index) qs.set('index', 'true');
+  return api(`/api/series?${qs}`);
 }
 
-/**
- * Change over a RECENT window, not since the beginning of the series.
- *
- * "Since Jan 1990" is not a fact a dashboard reader wants, and comparing a
- * present value against a tiny historical base produces numbers like "+67,232%"
- * that are arithmetically correct and read as a bug. Data-centre capacity really
- * did go from ~3 MW to ~1,946 MW; saying so as a percentage helps nobody.
- *
- * So the window is the last three years' worth of observations, sized by
- * cadence, falling back to the whole series when it is shorter than that.
- *
- * A RATE is reported in percentage POINTS. The share of filings mentioning AI
- * moving 17.6% to 60.9% is +43.3 points; calling it "+246%" invites the reader
- * to think three times as many filings exist, which is a different claim.
- *
- * @param {{date:string,value:number|null}[]} points
- * @param {boolean} isRate
- * @param {string} cadence
- */
-function delta(points, isRate, cadence = 'monthly') {
-  const vals = points.filter((p) => p.value != null);
-  if (vals.length < 2) return null;
+/* ── context drawer ────────────────────────────────────────────────────────*/
 
-  const window = cadence === 'annual' ? 3 : cadence === 'quarterly' ? 12 : 36;
-  const from = vals[Math.max(0, vals.length - 1 - window)];
-  const to = vals[vals.length - 1];
-  if (from === to) return null;
-
-  const since = fmtDate(from.date, cadence);
-  if (isRate) return { value: to.value - from.value, unit: 'pp', since };
-
-  if (!from.value) return null;
-  const ratio = to.value / from.value;
-  // Past a tripling, a multiple is easier to read than a percentage and does
-  // not run to five digits.
-  if (ratio >= 3) return { value: ratio, unit: '\u00d7', since, multiple: true };
-  return { value: ((to.value - from.value) / Math.abs(from.value)) * 100, unit: '%', since };
+/** Widen a clicked point into the period it represents. */
+function windowFor(iso, cadence) {
+  const d = new Date(iso + 'T00:00:00Z');
+  const end = new Date(d);
+  if (cadence === 'annual') end.setUTCFullYear(d.getUTCFullYear() + 1);
+  else if (cadence === 'quarterly') end.setUTCMonth(d.getUTCMonth() + 3);
+  else end.setUTCMonth(d.getUTCMonth() + 1);
+  end.setUTCDate(end.getUTCDate() - 1);
+  return { from: iso, to: end.toISOString().slice(0, 10) };
 }
 
-function deltaBadge(d) {
-  if (d == null || !Number.isFinite(d.value)) return '<span class="delta flat">—</span>';
+async function openContext(iso, cadence) {
+  const { from, to } = windowFor(iso, cadence);
+  const drawer = $('#drawer'), scrim = $('#scrim'), body = $('#drawer-body');
+
   /**
-   * The flat threshold is deliberately tiny.
+   * Title the window by its real dates, not by the period name.
    *
-   * At 0.5 a fall of 0.2 percentage points was classed "flat", drew a sideways
-   * arrow, and had its sign removed by Math.abs below — so a decline rendered
-   * as "→ 0.2pp" and read as a rise. On the information-sector employment tile
-   * that inverted the most interesting finding in the dataset.
-   *
-   * A change counts as flat only when it is genuinely nil. The arrow carries
-   * direction alongside the colour, since colour alone fails for a colour-blind
-   * reader and in print.
+   * A sparse series infers a wider cadence than its nominal one — the
+   * regulatory counts have monthly points with multi-month gaps, so they read
+   * as quarterly — and the window then runs three months from the clicked
+   * point. Labelling that "2026 Q2" while listing articles from late July is a
+   * small lie. Stating the range says exactly what was searched.
    */
-  const cls = d.value > 0.001 ? 'up' : d.value < -0.001 ? 'down' : 'flat';
-  const arrow = cls === 'up' ? '↑' : cls === 'down' ? '↓' : '→';
-  const mag = Math.abs(d.value);
-  if (d.multiple) return `<span class="delta up">\u2191 ${d.value.toFixed(1)}\u00d7</span>`;
-  const shown = mag >= 1000 ? fmt(mag, 0) : mag.toFixed(1);
-  return `<span class="delta ${cls}">${arrow} ${shown}${d.unit}</span>`;
+  const dateRange = (a, b) => {
+    const opts = { day: 'numeric', month: 'short' };
+    const start = new Date(a + 'T00:00:00Z').toLocaleDateString(undefined, { ...opts, timeZone: 'UTC' });
+    const end = new Date(b + 'T00:00:00Z').toLocaleDateString(undefined, { ...opts, year: 'numeric', timeZone: 'UTC' });
+    return `${start} – ${end}`;
+  };
+
+  $('#drawer-title').textContent = fmtDate(iso, cadence);
+  $('#drawer-sub').textContent = `Reported ${dateRange(from, to)}`;
+  body.innerHTML = '<div class="loading">Loading…</div>';
+  drawer.hidden = false; scrim.hidden = false;
+  requestAnimationFrame(() => drawer.classList.add('open'));
+  $('#drawer-close').focus();
+
+  try {
+    const data = await api(`/api/context?from=${from}&to=${to}&limit=25`);
+    body.innerHTML = '';
+
+    if (data.events.length) {
+      body.appendChild(el('div', 'drawer-section', 'Deals announced'));
+      data.events.forEach((e) => {
+        const row = el('div', 'ctx-item');
+        row.innerHTML = `<div class="ctx-title">${escapeHtml(e.headline)}</div>
+          <div class="ctx-meta">${escapeHtml(e.from_name)}${e.to_name ? ' → ' + escapeHtml(e.to_name) : ''}
+          ${e.amount_usd ? ' · $' + fmt(Number(e.amount_usd)) : ''}
+          <span class="score">${e.source_count} sources</span></div>`;
+        body.appendChild(row);
+      });
+    }
+
+    if (data.documents.length) {
+      body.appendChild(el('div', 'drawer-section', `Coverage (${data.documents.length})`));
+      data.documents.forEach((d) => {
+        const a = el('a', 'ctx-item');
+        a.href = d.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.innerHTML = `<div class="ctx-title">${escapeHtml(d.title)}</div>
+          <div class="ctx-meta"><span class="score ${d.ai_relevance >= 70 ? 'hi' : ''}">${d.ai_relevance}</span>
+          ${escapeHtml(d.source_name)} · ${new Date(d.published_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</div>`;
+        body.appendChild(a);
+      });
+    }
+
+    if (!data.events.length && !data.documents.length) {
+      body.appendChild(el('div', 'empty',
+        'Nothing recorded for this period. News collection began recently, so earlier periods are sparse.'));
+    }
+  } catch (e) {
+    body.innerHTML = '';
+    body.appendChild(el('div', 'err', e.message));
+  }
+}
+
+function closeContext() {
+  const drawer = $('#drawer');
+  drawer.classList.remove('open');
+  $('#scrim').hidden = true;
+  setTimeout(() => { drawer.hidden = true; }, 200);
 }
 
 /* ── views ─────────────────────────────────────────────────────────────────*/
 
-/** Headline tiles. Chosen because each is the clearest number in its pillar. */
-const HEADLINES = [
-  { id: 'derived.sec_ai_mention_rate', country: 'USA', label: 'US filings mentioning AI', unit: '%', note: 'share of 10-K filings' },
-  { id: 'derived.datacentre_capacity_mw', country: 'USA', label: 'US data-centre capacity', unit: 'MW', note: 'known clusters, lower bound' },
-  { id: 'dbn.OECD.DSD_ICT_B_DF_BUSINESSES.EU27.A.G14_B.PT_ENT._T.S_GE10', country: null, label: 'EU firms using AI', unit: '%', note: 'enterprises, 10+ staff' },
-  { id: 'derived.information_employment_share', country: 'USA', label: 'US information-sector jobs', unit: '%', note: 'share of all employment' },
-];
+const text = (row, field) =>
+  state.mode === 'expert' ? (row[`${field}_expert`] || row[`${field}_plain`]) : (row[`${field}_plain`] || row[`${field}_expert`]);
 
-async function viewDashboard(root) {
-  root.innerHTML = '';
-
-  const statRow = el('div', 'stat-row');
-  HEADLINES.forEach(() => {
-    const s = el('div', 'stat');
-    s.innerHTML = `<div class="skeleton" style="height:11px;width:60%"></div>
-      <div class="skeleton" style="height:23px;width:45%;margin-top:8px"></div>
-      <div class="skeleton" style="height:30px;margin-top:9px"></div>`;
-    statRow.appendChild(s);
-  });
-  root.appendChild(statRow);
-
-  const grid = el('div', 'grid two');
-  root.appendChild(grid);
-
-  // Charts
-  const adoptionCard = card('AI adoption is measurable now', 'Share of firms and filings referring to AI');
-  const infraCard = card('The physical build-out', 'Known data-centre capacity, cumulative megawatts');
-  grid.appendChild(adoptionCard.card);
-  grid.appendChild(infraCard.card);
-
-  const grid2 = el('div', 'grid two-one');
-  grid2.style.marginTop = '12px';
-  root.appendChild(grid2);
-
-  const effectsCard = card('Effects on work', 'Information-sector employment as a share of the whole economy');
-  const newsCard = card('Latest AI-economics news', 'Filtered for relevance, scored 0–100');
-  grid2.appendChild(effectsCard.card);
-  grid2.appendChild(newsCard.card);
-  newsCard.body.classList.add('flush');
-
-  // Fill tiles
-  const tiles = await Promise.all(HEADLINES.map(async (h) => {
-    try {
-      const s = await loadSeries(h.id, h.country);
-      return { h, s };
-    } catch { return { h, s: null }; }
-  }));
-
-  statRow.innerHTML = '';
-  tiles.forEach(({ h, s }, i) => {
-    const tile = el('div', 'stat');
-    if (!s || !s.points.length) {
-      tile.innerHTML = `<div class="stat-label">${h.label}</div>
-        <div class="stat-value">—</div><div class="stat-note">no data yet</div>`;
-    } else {
-      const vals = s.points.filter((p) => p.value != null);
-      const last = vals[vals.length - 1];
-      tile.innerHTML = `<div class="stat-label">${h.label}</div>
-        <div class="stat-value">${fmt(last.value)}<small>${h.unit}</small></div>
-        <div class="stat-foot">${(() => { const cad = inferCadence(s.points); const dd = delta(s.points, h.unit === '%', cad); return deltaBadge(dd) + (dd ? `<span class="stat-note">vs ${dd.since}</span>` : ''); })()}</div>
-        ${sparkline(s.points, SERIES_COLORS[i % SERIES_COLORS.length])}
-        <div class="stat-note" style="margin-top:5px">${h.note}</div>`;
-    }
-    statRow.appendChild(tile);
-  });
-
-  // Adoption chart — two comparable percentage series, so they share one axis.
-  try {
-    const [sec, eu] = await Promise.all([
-      loadSeries('derived.sec_ai_mention_rate', 'USA'),
-      loadSeries('dbn.OECD.DSD_ICT_B_DF_BUSINESSES.EU27.A.G14_B.PT_ENT._T.S_GE10', null),
-    ]);
-    lineChart(adoptionCard.body, [
-      { label: 'US 10-K filings mentioning AI', points: sec.points },
-      { label: 'EU enterprises using AI', points: eu.points },
-    ], { cadence: inferCadence(sec.points), unit: '%' });
-  } catch (e) { adoptionCard.body.appendChild(el('div', 'err', 'Could not load: ' + e.message)); }
-
-  try {
-    const cap = await loadSeries('derived.datacentre_capacity_mw', 'USA');
-    lineChart(infraCard.body, [{ label: 'US known capacity', points: cap.points }],
-      { cadence: inferCadence(cap.points), unit: 'MW' });
-  } catch (e) { infraCard.body.appendChild(el('div', 'err', 'Could not load: ' + e.message)); }
-
-  try {
-    const share = await loadSeries('derived.information_employment_share', 'USA');
-    lineChart(effectsCard.body, [{ label: 'Information sector share', points: share.points }],
-      { cadence: inferCadence(share.points), unit: '%' });
-  } catch (e) { effectsCard.body.appendChild(el('div', 'err', 'Could not load: ' + e.message)); }
-
-  try {
-    const { documents } = await api('/api/documents?limit=9');
-    if (!documents.length) newsCard.body.appendChild(el('div', 'empty', 'No articles yet.'));
-    documents.forEach((d) => {
-      const a = el('a', 'news-item');
-      a.href = d.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      a.innerHTML = `<div class="news-meta">
-          <span class="score ${d.ai_relevance >= 70 ? 'hi' : ''}">${d.ai_relevance}</span>
-          <span class="news-src">${d.source_name}</span>
-        </div><div class="news-title">${escapeHtml(d.title)}</div>`;
-      newsCard.body.appendChild(a);
-    });
-  } catch (e) { newsCard.body.appendChild(el('div', 'err', e.message)); }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-function card(title, sub) {
-  const c = el('div', 'card');
+function chartCard(title, caption, { tall = false } = {}) {
+  const c = el('article', `card${tall ? ' card-hero' : ''}`);
   const head = el('div', 'card-head');
   const wrap = el('div');
-  wrap.appendChild(el('h2', 'card-title', title));
-  if (sub) wrap.appendChild(el('p', 'card-sub', sub));
+  wrap.appendChild(el('h3', 'card-title', title));
   head.appendChild(wrap);
+  c.appendChild(head);
   const body = el('div', 'card-body');
-  c.appendChild(head); c.appendChild(body);
-  return { card: c, head, body };
+  c.appendChild(body);
+  if (caption) {
+    const cap = el('p', 'card-caption');
+    cap.textContent = caption;
+    c.appendChild(cap);
+  }
+  return { card: c, body };
 }
 
-async function viewPillar(root, pillar) {
-  root.innerHTML = '';
-  const list = state.indicators.filter((i) => i.pillar === pillar && i.observation_count > 0);
-  if (!list.length) {
-    root.appendChild(el('div', 'empty', 'No populated indicators in this pillar yet.'));
-    return;
-  }
-
-  const c = card(`${pillar[0].toUpperCase()}${pillar.slice(1)} indicators`, `${list.length} with data`);
-  c.body.classList.add('flush');
-  root.appendChild(c.card);
-
-  const scroll = el('div', 'table-scroll');
-  const table = el('table', 'table');
-  table.innerHTML = `<thead><tr>
-      <th scope="col">Indicator</th><th scope="col">Country</th>
-      <th scope="col">Unit</th><th scope="col" class="num">Points</th>
-      <th scope="col">Latest</th><th scope="col">Trend</th>
-    </tr></thead>`;
-  const tbody = el('tbody');
-  table.appendChild(tbody);
-  scroll.appendChild(table);
-  c.body.appendChild(scroll);
-
+/** Group indicators that share a chart_group onto one chart. */
+function groupIndicators(list) {
+  const out = [];
+  const groups = new Map();
   for (const ind of list) {
-    const tr = el('tr');
-    tr.innerHTML = `<td>${escapeHtml(ind.name)}</td>
-      <td><span class="pill">${ind.default_country_iso3 || (ind.has_country_dim ? 'multi' : '—')}</span></td>
-      <td style="color:var(--ink-3);font-size:12px">${escapeHtml(ind.unit || '')}</td>
-      <td class="num">${ind.observation_count.toLocaleString()}</td>
-      <td style="font-size:12px;color:var(--ink-3)">${ind.latest_period || '—'}</td>
-      <td style="width:130px"></td>`;
-    tbody.appendChild(tr);
-
-    // Sparklines load lazily per row so a 40-row pillar does not fire 40
-    // requests before anything renders.
-    loadSeries(ind.id, ind.default_country_iso3 || undefined)
-      .then((s) => { tr.lastElementChild.innerHTML = sparkline(s.points, '--c1'); })
-      .catch(() => { tr.lastElementChild.textContent = '—'; });
+    if (!ind.chart_group) { out.push({ members: [ind] }); continue; }
+    if (!groups.has(ind.chart_group)) {
+      const entry = { members: [], group: ind.chart_group };
+      groups.set(ind.chart_group, entry);
+      out.push(entry);
+    }
+    groups.get(ind.chart_group).members.push(ind);
   }
+  return out;
+}
+
+async function drawGroup(container, members, { tall = false } = {}) {
+  const lead = members[0];
+  const title = members.length > 1 && lead.chart_group
+    ? members.map((m) => m.name.replace(/^(US|UK|EU27?|China|Japan|Australia)\s+/i, '')).slice(0, 2).join(' vs ')
+    : lead.name;
+
+  const { card, body } = chartCard(title, text(lead, 'caption'), { tall });
+  container.appendChild(card);
+
+  try {
+    const data = await loadSeries(
+      members.map((m) => m.indicator_id),
+      members.map((m) => m.country_iso3 || m.default_country_iso3 || null)
+    );
+    const series = data.series.map((s, i) => ({
+      label: members[i].name,
+      points: s.points,
+    }));
+    const cadence = inferCadence(series[0].points);
+    lineChart(body, series, {
+      cadence,
+      unit: lead.unit_symbol || '',
+      height: tall ? 300 : 250,
+      // A narrower viewBox for the two-up charts. The SVG is scaled to fit its
+      // column, so a box wider than the column shrinks the type with it.
+      width: tall ? 760 : 460,
+      onPick: openContext,
+    });
+
+    // Source line. Researchers asked for provenance; generalists ignore it.
+    const meta = el('div', 'card-meta');
+    const conf = lead.confidence_tier;
+    meta.innerHTML = `<span class="pill tier-${conf}">${conf}</span>
+      <span>${escapeHtml(lead.source_name || lead.source_id)}</span>
+      ${lead.source_url ? `<a href="${escapeHtml(lead.source_url)}" target="_blank" rel="noopener noreferrer">source</a>` : ''}
+      <span class="card-meta-right">${lead.observation_count.toLocaleString()} points · ${lead.first_period?.slice(0, 4)}–${lead.last_period?.slice(0, 4)}</span>`;
+    card.appendChild(meta);
+  } catch (e) {
+    body.appendChild(el('div', 'err', 'Could not load: ' + e.message));
+  }
+}
+
+async function viewQuestion(root, slug) {
+  root.innerHTML = '<div class="loading">Loading…</div>';
+  const q = await api(`/api/questions/${slug}`);
+  root.innerHTML = '';
+
+  // The answer. This is the sentence the old dashboard was missing.
+  const answer = el('section', 'answer');
+  answer.innerHTML = `<p class="answer-text">${escapeHtml(text(q, 'answer'))}</p>`;
+  root.appendChild(answer);
+
+  const heroes = q.indicators.filter((i) => i.role === 'hero');
+  const supporting = q.indicators.filter((i) => i.role === 'supporting');
+  const context = q.indicators.filter((i) => i.role === 'context');
+
+  // Cards are appended in order first, then filled concurrently. Awaiting each
+  // chart in turn meant an eighteen-chart page fetched eighteen series one at a
+  // time, and the reader watched them appear over several seconds.
+  const pending = heroes.map((h) => drawGroup(root, [h], { tall: true }));
+
+  let supportingGrid = null;
+  if (supporting.length) {
+    root.appendChild(el('h2', 'section-title', 'The evidence'));
+    supportingGrid = el('div', 'grid two');
+    root.appendChild(supportingGrid);
+    for (const g of groupIndicators(supporting)) pending.push(drawGroup(supportingGrid, g.members));
+  }
+
+  // The caveat is given its own block, not a footnote. The limits of this data
+  // are large, and stating them is what separates this from a sales pitch.
+  if (q.caveat) {
+    const caveat = el('section', 'caveat');
+    caveat.innerHTML = `<h2 class="caveat-title">What this doesn't tell you</h2>
+      <p>${escapeHtml(q.caveat)}</p>`;
+    root.appendChild(caveat);
+  }
+
+  if (context.length) {
+    root.appendChild(el('h2', 'section-title', 'Background'));
+    const grid = el('div', 'grid two');
+    root.appendChild(grid);
+    for (const g of groupIndicators(context)) pending.push(drawGroup(grid, g.members));
+  }
+
+  await Promise.all(pending);
+}
+
+async function viewExplore(root) {
+  root.innerHTML = '';
+  const intro = el('section', 'answer');
+  intro.innerHTML = `<p class="answer-text">Put any indicators on one chart. Where they are measured
+    on different scales they are indexed to 100 at the first period they share, so you compare
+    shape rather than size — this dashboard never draws a second y-axis, because two scales let
+    any pair of lines be made to cross wherever the author likes.</p>`;
+  root.appendChild(intro);
+
+  const { card, body } = chartCard('Your chart', null, { tall: true });
+  const picker = el('div', 'picker');
+  const search = el('input', 'input picker-search');
+  search.type = 'search';
+  search.placeholder = `Search ${state.indicators.length} indicators…`;
+  search.setAttribute('aria-label', 'Search indicators');
+
+  const list = el('div', 'picker-list');
+  const chosen = [];
+  const chips = el('div', 'chips');
+
+  const redraw = async () => {
+    chips.innerHTML = '';
+    chosen.forEach((ind, i) => {
+      const chip = el('span', 'chip');
+      chip.innerHTML = `<span class="legend-swatch" style="background:var(${SERIES_COLORS[i % SERIES_COLORS.length]})"></span>${escapeHtml(ind.name)}`;
+      const x = el('button', 'chip-x', '×');
+      x.setAttribute('aria-label', `Remove ${ind.name}`);
+      x.addEventListener('click', () => { chosen.splice(i, 1); redraw(); });
+      chip.appendChild(x);
+      chips.appendChild(chip);
+    });
+
+    if (!chosen.length) {
+      body.innerHTML = '';
+      body.appendChild(el('div', 'empty', 'Choose an indicator to begin.'));
+      return;
+    }
+
+    body.innerHTML = '<div class="loading">Loading…</div>';
+    // Index whenever the chosen series do not all share a unit.
+    const units = new Set(chosen.map((c) => c.unit));
+    const needIndex = units.size > 1;
+    const data = await loadSeries(
+      chosen.map((c) => c.id),
+      chosen.map((c) => c.default_country_iso3 || null),
+      { index: needIndex }
+    );
+    lineChart(body, data.series.map((s, i) => ({ label: chosen[i].name, points: s.points })), {
+      cadence: inferCadence(data.series[0].points),
+      unit: needIndex ? '' : (chosen[0].unit_symbol || ''),
+      height: 320,
+      onPick: openContext,
+    });
+    const note = el('div', 'card-meta');
+    note.innerHTML = data.indexed
+      ? `<span class="pill warn">indexed</span><span>Different units — all series set to 100 at ${data.indexBase}, so this compares shape, not level.</span>`
+      : `<span class="pill ok">same unit</span><span>All series share a unit, so values are shown as published.</span>`;
+    body.appendChild(note);
+  };
+
+  const renderList = (q = '') => {
+    const term = q.toLowerCase();
+    const matches = state.indicators
+      .filter((i) => i.observation_count > 0)
+      .filter((i) => !term || i.name.toLowerCase().includes(term) || i.id.toLowerCase().includes(term))
+      .slice(0, 60);
+    list.innerHTML = '';
+    if (!matches.length) { list.appendChild(el('div', 'empty', 'Nothing matches.')); return; }
+    matches.forEach((ind) => {
+      const b = el('button', 'picker-item');
+      b.innerHTML = `<span>${escapeHtml(ind.name)}</span>
+        <span class="picker-meta">${escapeHtml(ind.unit || '')} · ${ind.observation_count.toLocaleString()}</span>`;
+      b.addEventListener('click', () => {
+        if (chosen.length >= 6) return;
+        if (!chosen.some((c) => c.id === ind.id)) { chosen.push(ind); redraw(); }
+      });
+      list.appendChild(b);
+    });
+  };
+
+  search.addEventListener('input', () => renderList(search.value));
+  picker.appendChild(search);
+  picker.appendChild(chips);
+  picker.appendChild(list);
+
+  const layout = el('div', 'grid explore');
+  layout.appendChild(card);
+  layout.appendChild(picker);
+  root.appendChild(layout);
+
+  renderList();
+  redraw();
 }
 
 async function viewNews(root) {
   root.innerHTML = '';
-  const c = card('AI-economics news', 'Scored by keyword relevance at ingestion — no model involved');
-  c.body.classList.add('flush');
-  root.appendChild(c.card);
+  const intro = el('section', 'answer');
+  intro.innerHTML = `<p class="answer-text">Coverage scored for relevance to AI economics at
+    ingestion, by keyword matching — no model is involved, so the score is the same every time.
+    Sport, crime and celebrity are excluded outright rather than scored down.</p>`;
+  root.appendChild(intro);
+
+  const { card, body } = chartCard('Recent coverage', null);
+  body.classList.add('flush');
+  root.appendChild(card);
   try {
     const { documents } = await api('/api/documents?limit=100');
-    if (!documents.length) { c.body.appendChild(el('div', 'empty', 'No articles.')); return; }
+    if (!documents.length) { body.appendChild(el('div', 'empty', 'No articles yet.')); return; }
     documents.forEach((d) => {
       const a = el('a', 'news-item');
       a.href = d.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      const when = new Date(d.published_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
       a.innerHTML = `<div class="news-meta">
           <span class="score ${d.ai_relevance >= 70 ? 'hi' : ''}">${d.ai_relevance}</span>
           <span class="news-src">${escapeHtml(d.source_name)}</span>
-          <span class="news-src">· ${when}</span>
+          <span class="news-src">· ${new Date(d.published_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
         </div><div class="news-title">${escapeHtml(d.title)}</div>`;
-      c.body.appendChild(a);
+      body.appendChild(a);
     });
-  } catch (e) { c.body.appendChild(el('div', 'err', e.message)); }
+  } catch (e) { body.appendChild(el('div', 'err', e.message)); }
 }
 
-async function viewIndicators(root) {
-  root.innerHTML = '';
-  const c = card('All indicators', `${state.indicators.length} defined`);
-  c.body.classList.add('flush');
-  root.appendChild(c.card);
-
-  const scroll = el('div', 'table-scroll');
-  const table = el('table', 'table');
-  table.innerHTML = `<thead><tr>
-    <th scope="col">Indicator</th><th scope="col">Pillar</th>
-    <th scope="col">Source</th><th scope="col" class="num">Points</th>
-    <th scope="col">Range</th></tr></thead>`;
-  const tbody = el('tbody');
-  state.indicators.forEach((i) => {
-    const tr = el('tr');
-    const range = i.observation_count
-      ? `${(i.earliest_period || '').slice(0, 4)}–${(i.latest_period || '').slice(0, 4)}`
-      : '—';
-    tr.innerHTML = `<td>${escapeHtml(i.name)}</td>
-      <td><span class="pill">${i.pillar}</span></td>
-      <td style="font-size:12px;color:var(--ink-3)">${escapeHtml(i.source_id)}</td>
-      <td class="num">${i.observation_count ? i.observation_count.toLocaleString() : '<span style="color:var(--ink-3)">0</span>'}</td>
-      <td style="font-size:12px;color:var(--ink-3)">${range}</td>`;
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  scroll.appendChild(table);
-  c.body.appendChild(scroll);
-}
-
-async function viewStatus(root) {
+async function viewPipeline(root) {
   root.innerHTML = '';
   const s = state.status;
+
+  const intro = el('section', 'answer');
+  intro.innerHTML = `<p class="answer-text">Every figure here comes from a named statistical agency
+    and is refetched on a schedule. This page shows what ran, what failed and what is going stale —
+    published rather than hidden, because silent staleness is how a dashboard like this rots.</p>`;
+  root.appendChild(intro);
 
   const row = el('div', 'stat-row');
   [['Observations', s.counts.observations], ['News articles', s.counts.documents],
@@ -626,7 +749,7 @@ async function viewStatus(root) {
   const grid = el('div', 'grid two');
   root.appendChild(grid);
 
-  const intg = card('Data sources', 'What is configured and what is not');
+  const intg = chartCard('Data sources', null);
   intg.body.classList.add('flush');
   const it = el('table', 'table');
   it.innerHTML = '<thead><tr><th scope="col">Source</th><th scope="col">State</th><th scope="col">Note</th></tr></thead>';
@@ -635,14 +758,15 @@ async function viewStatus(root) {
     const tr = el('tr');
     tr.innerHTML = `<td>${escapeHtml(i.name)}</td>
       <td><span class="pill ${i.ready ? 'ok' : 'warn'}">${i.ready ? 'ready' : 'not configured'}</span></td>
-      <td style="font-size:11.5px;color:var(--ink-3)">${escapeHtml(i.note)}</td>`;
+      <td class="muted-cell">${escapeHtml(i.note)}</td>`;
     ib.appendChild(tr);
   });
   it.appendChild(ib);
-  intg.body.appendChild(el('div', 'table-scroll')).appendChild(it);
+  const iscroll = el('div', 'table-scroll'); iscroll.appendChild(it);
+  intg.body.appendChild(iscroll);
   grid.appendChild(intg.card);
 
-  const runs = card('Recent ingestion runs', 'Failures are shown, not hidden');
+  const runs = chartCard('Recent ingestion runs', null);
   runs.body.classList.add('flush');
   const rt = el('table', 'table');
   rt.innerHTML = '<thead><tr><th scope="col">Job</th><th scope="col">Result</th><th scope="col" class="num">Rows</th></tr></thead>';
@@ -650,75 +774,115 @@ async function viewStatus(root) {
   s.recentRuns.forEach((r) => {
     const tr = el('tr');
     const cls = r.status === 'succeeded' ? 'ok' : r.status === 'failed' ? 'off' : 'warn';
-    tr.innerHTML = `<td style="font-size:12px">${escapeHtml(r.job_name)}</td>
+    tr.innerHTML = `<td class="muted-cell">${escapeHtml(r.job_name)}</td>
       <td><span class="pill ${cls}">${r.status}</span></td>
       <td class="num">${r.rows_written ?? 0}</td>`;
     rb.appendChild(tr);
   });
   rt.appendChild(rb);
-  runs.body.appendChild(el('div', 'table-scroll')).appendChild(rt);
+  const rscroll = el('div', 'table-scroll'); rscroll.appendChild(rt);
+  runs.body.appendChild(rscroll);
   grid.appendChild(runs.card);
 }
 
-/* ── routing & boot ────────────────────────────────────────────────────────*/
-
-const TITLES = {
-  dashboard: ['Dashboard', 'AI’s measurable effect on the world economy'],
-  news: ['News', 'Relevance-filtered AI economics coverage'],
-  indicators: ['All indicators', 'Every series defined, populated or not'],
-  status: ['Pipeline status', 'What ran, what failed, what is stale'],
-};
+/* ── routing ───────────────────────────────────────────────────────────────*/
 
 async function render() {
   const root = $('#view');
   root.innerHTML = '<div class="loading">Loading…</div>';
 
-  const [title, sub] = state.view === 'pillar'
-    ? [`${state.pillar[0].toUpperCase()}${state.pillar.slice(1)}`,
-       state.pillars.find((p) => p.pillar === state.pillar)
-         ? `${state.pillars.find((p) => p.pillar === state.pillar).observation_count.toLocaleString()} observations`
-         : '']
-    : TITLES[state.view];
-
-  $('#page-title').textContent = title;
-  $('#page-sub').textContent = sub;
+  document.querySelectorAll('.nav-item').forEach((b) => b.removeAttribute('aria-current'));
+  const active = state.view === 'question'
+    ? document.querySelector(`.nav-item[data-slug="${state.slug}"]`)
+    : document.querySelector(`.nav-item[data-view="${state.view}"]`);
+  if (active) active.setAttribute('aria-current', 'page');
 
   try {
-    if (state.view === 'dashboard') await viewDashboard(root);
-    else if (state.view === 'pillar') await viewPillar(root, state.pillar);
-    else if (state.view === 'news') await viewNews(root);
-    else if (state.view === 'indicators') await viewIndicators(root);
-    else if (state.view === 'status') await viewStatus(root);
+    if (state.view === 'question') {
+      const q = state.questions.find((x) => x.slug === state.slug);
+      $('#page-title').textContent = q ? q.question : 'EconIntel';
+      $('#page-sub').textContent = q ? q.subtitle : '';
+      await viewQuestion(root, state.slug);
+    } else if (state.view === 'explore') {
+      $('#page-title').textContent = 'Build a chart';
+      $('#page-sub').textContent = `Compare any of ${state.indicators.length} indicators`;
+      await viewExplore(root);
+    } else if (state.view === 'news') {
+      $('#page-title').textContent = 'News';
+      $('#page-sub').textContent = 'Relevance-filtered AI economics coverage';
+      await viewNews(root);
+    } else if (state.view === 'pipeline') {
+      $('#page-title').textContent = 'Where this comes from';
+      $('#page-sub').textContent = 'Sources, freshness and failures';
+      await viewPipeline(root);
+    }
   } catch (e) {
     root.innerHTML = '';
     root.appendChild(el('div', 'err', 'Failed to render: ' + e.message));
   }
 }
 
-function wireNav() {
-  document.querySelectorAll('.nav-item[data-view]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach((b) => b.removeAttribute('aria-current'));
-      btn.setAttribute('aria-current', 'page');
-      state.view = btn.dataset.view;
-      state.pillar = btn.dataset.pillar ?? null;
-      render();
-    });
+/** Hash routing, so a page can be linked to and the back button works. */
+function applyHash() {
+  const hash = location.hash.replace(/^#\/?/, '');
+  if (!hash) { state.view = 'question'; state.slug = state.questions[0]?.slug ?? 'adoption'; return; }
+  if (['explore', 'news', 'pipeline'].includes(hash)) { state.view = hash; return; }
+  state.view = 'question';
+  state.slug = hash;
+}
+
+function go(view, slug) {
+  location.hash = view === 'question' ? `#/${slug}` : `#/${view}`;
+}
+
+function buildNav() {
+  const box = $('#nav-questions');
+  box.innerHTML = '';
+  state.questions.forEach((q) => {
+    const b = el('button', 'nav-item');
+    b.dataset.view = 'question';
+    b.dataset.slug = q.slug;
+    b.innerHTML = `<span class="nav-dot" aria-hidden="true"></span>
+      <span class="nav-text">${escapeHtml(q.question)}</span>
+      <span class="nav-count">${q.indicator_count}</span>`;
+    b.addEventListener('click', () => go('question', q.slug));
+    box.appendChild(b);
   });
+  document.querySelectorAll('.nav-item[data-view]:not([data-slug])').forEach((btn) => {
+    btn.addEventListener('click', () => go(btn.dataset.view));
+  });
+}
 
+function wireChrome() {
   $('#refresh-btn').addEventListener('click', () => { state.cache.clear(); boot(); });
+  $('#drawer-close').addEventListener('click', closeContext);
+  $('#scrim').addEventListener('click', closeContext);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') closeContext(); });
+  addEventListener('hashchange', () => { applyHash(); render(); });
 
-  const toggle = $('#theme-toggle');
-  const apply = (mode) => {
+  const applyMode = (mode) => {
+    state.mode = mode;
+    document.documentElement.setAttribute('data-mode', mode);
+    document.querySelectorAll('.mode-btn').forEach((b) =>
+      b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    try { localStorage.setItem('econintel-mode', mode); } catch { /* private mode */ }
+  };
+  document.querySelectorAll('.mode-btn').forEach((b) =>
+    b.addEventListener('click', () => { applyMode(b.dataset.mode); render(); }));
+  let storedMode = null;
+  try { storedMode = localStorage.getItem('econintel-mode'); } catch { /* ignore */ }
+  applyMode(storedMode === 'expert' ? 'expert' : 'plain');
+
+  const applyTheme = (mode) => {
     document.documentElement.setAttribute('data-theme', mode);
     $('#theme-label').textContent = mode === 'dark' ? 'Light mode' : 'Dark mode';
-    try { localStorage.setItem('econintel-theme', mode); } catch { /* private mode */ }
+    try { localStorage.setItem('econintel-theme', mode); } catch { /* ignore */ }
   };
-  let stored = null;
-  try { stored = localStorage.getItem('econintel-theme'); } catch { /* ignore */ }
-  apply(stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-  toggle.addEventListener('click', () =>
-    apply(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+  let storedTheme = null;
+  try { storedTheme = localStorage.getItem('econintel-theme'); } catch { /* ignore */ }
+  applyTheme(storedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('#theme-toggle').addEventListener('click', () =>
+    applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 
   const bar = $('#topbar');
   addEventListener('scroll', () => bar.classList.toggle('stuck', scrollY > 4), { passive: true });
@@ -726,22 +890,18 @@ function wireNav() {
 
 async function boot() {
   try {
-    const [inds, pills, status] = await Promise.all([
-      api('/api/indicators'), api('/api/pillars'), api('/api/status'),
+    const [questions, indicators, status] = await Promise.all([
+      api('/api/questions'), api('/api/indicators?hasData=true'), api('/api/status'),
     ]);
-    state.indicators = inds.indicators;
-    state.pillars = pills.pillars;
+    state.questions = questions.questions;
+    state.indicators = indicators.indicators;
     state.status = status;
 
-    pills.pillars.forEach((p) => {
-      const n = document.querySelector(`[data-count="${p.pillar}"]`);
-      if (n) n.textContent = p.populated_count;
-    });
-    const all = document.querySelector('[data-count="all"]');
-    if (all) all.textContent = inds.indicators.length;
+    buildNav();
     const news = document.querySelector('[data-count="news"]');
     if (news) news.textContent = status.counts.documents;
 
+    applyHash();
     await render();
   } catch (e) {
     $('#view').innerHTML = '';
@@ -750,5 +910,5 @@ async function boot() {
   }
 }
 
-wireNav();
+wireChrome();
 boot();
