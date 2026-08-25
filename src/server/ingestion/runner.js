@@ -22,6 +22,7 @@ import * as worldbank from './sources/worldbank.js';
 import * as epoch from './sources/epoch.js';
 import * as federalRegister from './sources/federal-register.js';
 import * as dbnomics from './sources/dbnomics.js';
+import * as gdelt from './sources/gdelt.js';
 
 /**
  * Open a run record. Every job gets one whether it succeeds or fails — a run
@@ -244,6 +245,25 @@ const DERIVED_JOBS = {
     }
     return federalRegister.toMonthlyCounts(documents);
   },
+
+  /**
+   * Installed data-centre power capacity, from Epoch's cluster register.
+   *
+   * This indicator was previously recorded as having no free source anywhere.
+   * That was wrong: the same CSV backing gpu_cluster_count carries a
+   * 'Power Capacity (MW)' column, populated for 418 of 482 clusters. Nobody
+   * had read past the columns already in use.
+   */
+  'derived.datacentre_capacity_mw': async () => epoch.ingestDatacentreCapacity(),
+
+  /**
+   * AI-economics news as a share of all global news coverage, monthly to 2017.
+   *
+   * A share rather than a count: GDELT's crawler has grown over the period, so
+   * raw matches would rise even if the world's attention had not moved. The
+   * denominator is what makes the series about AI rather than about GDELT.
+   */
+  'derived.ai_news_volume': async () => gdelt.ingestNewsVolume(),
 };
 
 /** Derived indicators that are due, i.e. the ones `dueIndicators` cannot see. */
@@ -292,12 +312,18 @@ async function runDerivedJob(indicator) {
 export async function runIngestion({ sourceId = null, force = false } = {}) {
   const indicators = await dueIndicators({ sourceId, force });
 
-  if (indicators.length === 0) {
-    console.log('Nothing due. Use --force to ingest regardless of refresh interval.');
-    return { succeeded: 0, failed: 0, written: 0 };
+  /**
+   * No early return when the fetch list is empty.
+   *
+   * This used to return here, which made the derived pass below reachable only
+   * when at least one FETCH job happened to be due. Derived indicators refresh
+   * on their own schedule and frequently have none — so a newly added
+   * computation would print "Nothing due", never run, and leave an empty chart
+   * with nothing in the audit log to explain it.
+   */
+  if (indicators.length > 0) {
+    console.log(`Ingesting ${indicators.length} indicator(s)…\n`);
   }
-
-  console.log(`Ingesting ${indicators.length} indicator(s)…\n`);
 
   let succeeded = 0;
   let failed = 0;

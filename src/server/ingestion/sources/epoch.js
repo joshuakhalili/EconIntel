@@ -235,6 +235,32 @@ const COUNTRY_NAME_TO_ISO3 = Object.freeze({
   Italy: 'ITA',
   Poland: 'POL',
   Brazil: 'BRA',
+
+  /**
+   * ISO 3166 official long forms, which is what Epoch actually publishes.
+   * Auditing the live CSV showed 'Korea (Republic of)' and 'United Kingdom of
+   * Great Britain and Northern Ireland' arriving instead of the short names
+   * above — 18 clusters were being dropped without a word, the same silent
+   * class of failure as the column-case bug in this file's history.
+   *
+   * Only countries present in the `countries` table are mapped. An ISO3 we do
+   * not hold would violate the foreign key and abort the entire batch, so an
+   * unmapped name skipping one row is strictly safer than a mapping we cannot
+   * insert. Thailand, Iceland, Hong Kong, Luxembourg, Slovenia and the
+   * Philippines appear in the data but are not seeded, so they stay unmapped
+   * deliberately rather than by oversight.
+   */
+  'Korea (Republic of)': 'KOR',
+  'United Kingdom of Great Britain and Northern Ireland': 'GBR',
+  'Russian Federation': 'RUS',
+  Russia: 'RUS',
+  Denmark: 'DNK',
+  Czechia: 'CZE',
+  'Czech Republic': 'CZE',
+  'Viet Nam': 'VNM',
+  Vietnam: 'VNM',
+  Mexico: 'MEX',
+  Malaysia: 'MYS',
 });
 
 /** Convenience: fetch and shape frontier compute in one call. */
@@ -247,4 +273,88 @@ export async function ingestFrontierCompute() {
 export async function ingestGpuClusters() {
   const rows = await fetchCsv(DATASETS.gpuClusters);
   return toClusterCountObservations(rows);
+}
+
+/**
+ * Installed data-centre power capacity, cumulative, by country and year.
+ *
+ * CUMULATIVE rather than annual additions, because capacity is a stock: a
+ * cluster that came online in 2024 is still drawing power in 2026. Charting
+ * additions would show a decline in any year that merely built less than the
+ * one before, which is not what "capacity" means.
+ *
+ * MEGAWATTS rather than a count of clusters, because clusters differ by two
+ * orders of magnitude — xAI's Memphis phase 3 is 352 MW against sites under
+ * 1 MW. Counting them treats those as equal, which is why the existing
+ * gpu_cluster_count series answers a different question than this one.
+ *
+ * THIS IS A LOWER BOUND, AND THE DASHBOARD MUST SAY SO. Epoch documents
+ * publicly-known clusters; many are undisclosed, and the 482 rows carry 2,604
+ * MW between them, which is certainly less than what exists. A lower bound
+ * presented as a total is a wrong number wearing a confident face.
+ */
+export function toCapacityObservations(rows, indicatorId = 'derived.datacentre_capacity_mw') {
+  /** @type {Array<{year: number, iso3: string, mw: number}>} */
+  const entries = [];
+
+  for (const row of rows) {
+    const date = isoDate(
+      row['First Operational Date'] ??
+        row['First operational date'] ??
+        row.first_operational_date
+    );
+    const country = (row.Country ?? row.country ?? '').trim();
+    const mw = num(row['Power Capacity (MW)'] ?? row.power_capacity_mw);
+
+    if (!date || !country || mw === null || mw <= 0) continue;
+
+    const iso3 = COUNTRY_NAME_TO_ISO3[country];
+    if (!iso3) continue;   // never guess a country onto a map
+
+    entries.push({ year: Number(date.slice(0, 4)), iso3, mw });
+  }
+
+  if (entries.length === 0) return [];
+
+  // Build the running total per country across the full span, emitting a point
+  // for every year from a country's first cluster to the present. Without the
+  // fill, a country with clusters in 2022 and 2025 would render as a line that
+  // leaps across an apparently empty 2023-24, when in fact its capacity simply
+  // did not change.
+  const byCountry = new Map();
+  for (const e of entries) {
+    if (!byCountry.has(e.iso3)) byCountry.set(e.iso3, new Map());
+    const years = byCountry.get(e.iso3);
+    years.set(e.year, (years.get(e.year) ?? 0) + e.mw);
+  }
+
+  const finalYear = Math.max(...entries.map((e) => e.year));
+  const observations = [];
+
+  for (const [iso3, years] of byCountry) {
+    const firstYear = Math.min(...years.keys());
+    let cumulative = 0;
+
+    for (let year = firstYear; year <= finalYear; year += 1) {
+      cumulative += years.get(year) ?? 0;
+      observations.push({
+        indicatorId,
+        countryIso3: iso3,
+        periodStart: `${year}-01-01`,
+        periodEnd: `${year}-12-31`,
+        // Two decimals: the source quotes fractional megawatts, but the
+        // undercount dwarfs any rounding, so more precision would be theatre.
+        value: Math.round(cumulative * 100) / 100,
+        sourceRef: 'https://epoch.ai/data/gpu-clusters',
+      });
+    }
+  }
+
+  return observations;
+}
+
+/** Convenience: fetch and shape installed capacity in one call. */
+export async function ingestDatacentreCapacity() {
+  const rows = await fetchCsv(DATASETS.gpuClusters);
+  return toCapacityObservations(rows);
 }
