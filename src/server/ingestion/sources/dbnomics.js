@@ -97,7 +97,17 @@ export async function fetchSeries(seriesPath, options = {}) {
   const { indicatorId = `dbnomics.${seriesPath}`, countryIso3 = null } = options;
 
   const url = `${BASE}/series/${seriesPath}?observations=1`;
-  const data = await fetchJson(url);
+
+  /**
+   * 90 seconds, against a 20-second default.
+   *
+   * Response size is not the problem — EIA/ELEC/PRICE.US-IND.M is 13 KB with
+   * 303 observations and still takes ~56 seconds. DBnomics assembles some
+   * providers' series on demand, and how long that takes has nothing to do with
+   * how much data comes back. Timing out here produced a failed job for a series
+   * that works perfectly well given the time to answer.
+   */
+  const data = await fetchJson(url, { timeoutMs: 90_000 });
 
   const series = data?.series?.docs?.[0];
   if (!series) {

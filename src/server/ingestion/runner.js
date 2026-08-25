@@ -21,6 +21,7 @@ import * as fred from './sources/fred.js';
 import * as worldbank from './sources/worldbank.js';
 import * as epoch from './sources/epoch.js';
 import * as federalRegister from './sources/federal-register.js';
+import * as dbnomics from './sources/dbnomics.js';
 
 /**
  * Open a run record. Every job gets one whether it succeeds or fails — a run
@@ -54,7 +55,7 @@ async function finishRun(runId, { status, written = 0, skipped = 0, error = null
  */
 async function dueIndicators({ sourceId = null, force = false } = {}) {
   const { rows } = await query(
-    `SELECT id, source_id, source_series_code, cadence
+    `SELECT id, source_id, source_series_code, cadence, default_country_iso3
        FROM indicators
       WHERE is_active
         AND source_series_code IS NOT NULL
@@ -166,10 +167,47 @@ async function ingestEpochIndicator(indicator) {
   }
 }
 
+/**
+ * Ingest one DBnomics-backed indicator.
+ *
+ * DBnomics mirrors 93 statistical agencies behind one API, which is what makes
+ * genuinely global coverage a configuration problem rather than 93 adapters.
+ * One series here can come from ONS, Eurostat, China's NBS or the Bank of
+ * Japan; the provider is the first segment of the series path.
+ *
+ * The country is carried on the indicator rather than parsed out of the series
+ * code. Provider code layouts differ wildly and share no convention, so
+ * inferring geography from the string would be guesswork — and a series
+ * attributed to the wrong country is worse on a map than one that is absent.
+ */
+async function ingestDbnomicsIndicator(indicator) {
+  const runId = await startRun(`dbnomics:${indicator.id}`, 'dbnomics');
+  try {
+    const observations = await dbnomics.fetchSeries(indicator.source_series_code, {
+      indicatorId: indicator.id,
+      countryIso3: indicator.default_country_iso3 ?? null,
+    });
+
+    const { written, skipped } = await upsertObservations(observations);
+    await touchIndicator(indicator.id);
+    await finishRun(runId, {
+      status: 'succeeded',
+      written,
+      skipped,
+      details: { fetched: observations.length },
+    });
+    return { written, skipped, fetched: observations.length };
+  } catch (error) {
+    await finishRun(runId, { status: 'failed', error: error.message });
+    throw error;
+  }
+}
+
 const HANDLERS = {
   fred: ingestFredIndicator,
   worldbank: ingestWorldBankIndicator,
   epoch_ai: ingestEpochIndicator,
+  dbnomics: ingestDbnomicsIndicator,
 };
 
 /**
