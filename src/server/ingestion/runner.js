@@ -24,6 +24,7 @@ import * as federalRegister from './sources/federal-register.js';
 import * as dbnomics from './sources/dbnomics.js';
 import * as gdelt from './sources/gdelt.js';
 import * as sec from './sources/sec.js';
+import * as lbma from './sources/lbma.js';
 
 /**
  * Open a run record. Every job gets one whether it succeeds or fails — a run
@@ -57,7 +58,7 @@ async function finishRun(runId, { status, written = 0, skipped = 0, error = null
  */
 async function dueIndicators({ sourceId = null, force = false } = {}) {
   const { rows } = await query(
-    `SELECT id, source_id, source_series_code, cadence, default_country_iso3
+    `SELECT id, source_id, source_series_code, cadence, default_country_iso3, has_country_dim
        FROM indicators
       WHERE is_active
         AND source_series_code IS NOT NULL
@@ -75,8 +76,19 @@ async function dueIndicators({ sourceId = null, force = false } = {}) {
 async function ingestFredIndicator(indicator) {
   const runId = await startRun(`fred:${indicator.id}`, 'fred');
   try {
+    /**
+     * The FRED adapter defaults every series to USA, on the reasonable
+     * assumption that FRED is a US source. That is wrong for the global
+     * commodity prices it also carries: copper and aluminium are world prices,
+     * not American ones, and the grain trigger correctly rejected them for
+     * declaring a country the indicator does not have.
+     *
+     * So the country comes from the indicator: its own default where it has a
+     * country dimension, and explicitly nothing where it does not.
+     */
     const observations = await fred.fetchSeries(indicator.source_series_code, {
       indicatorId: indicator.id,
+      countryIso3: indicator.has_country_dim ? (indicator.default_country_iso3 ?? 'USA') : null,
     });
     const { written, skipped } = await upsertObservations(observations);
     await touchIndicator(indicator.id);
@@ -205,8 +217,27 @@ async function ingestDbnomicsIndicator(indicator) {
   }
 }
 
+/**
+ * LBMA precious metals. Dispatches on indicator id: one source, two metals,
+ * each its own endpoint.
+ */
+async function ingestLbmaIndicator(indicator) {
+  const runId = await startRun(`lbma:${indicator.id}`, 'lbma');
+  try {
+    const observations = await lbma.fetchMetal(indicator.source_series_code, indicator.id);
+    const { written, skipped } = await upsertObservations(observations);
+    await touchIndicator(indicator.id);
+    await finishRun(runId, { status: 'succeeded', written, skipped, details: { fetched: observations.length } });
+    return { written, skipped, fetched: observations.length };
+  } catch (error) {
+    await finishRun(runId, { status: 'failed', error: error.message });
+    throw error;
+  }
+}
+
 const HANDLERS = {
   fred: ingestFredIndicator,
+  lbma: ingestLbmaIndicator,
   worldbank: ingestWorldBankIndicator,
   epoch_ai: ingestEpochIndicator,
   dbnomics: ingestDbnomicsIndicator,
