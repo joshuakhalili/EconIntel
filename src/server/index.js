@@ -18,7 +18,8 @@ import path from 'node:path';
 
 import { config, describeIntegrations } from './config.js';
 import { query, closePool, pool } from './db/pool.js';
-import { recentDocuments } from './repositories/documents.js';
+import { recentDocuments, documentsInWindow } from './repositories/documents.js';
+import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '../../public');
@@ -60,23 +61,58 @@ app.get('/healthz', route(async (_req, res) => {
 // Catalogue
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Every active indicator, with how much data it actually holds. */
-app.get('/api/indicators', route(async (_req, res) => {
+/**
+ * Every active indicator, with how much data it actually holds.
+ *
+ * `default_country_iso3` is selected here and was not before. The client reads
+ * it to decide which country to request for a multi-country series; without it
+ * the value was always undefined, every country cell rendered wrong, and
+ * single-country sparklines were fetched unfiltered — drawing fifty countries
+ * interleaved as one line, which looks like a noisy series rather than a bug.
+ *
+ * `quantity_kind` and `index_base_period` are included because they decide
+ * chart form and whether two series may share an axis. Both existed in the
+ * schema and neither reached the client.
+ */
+app.get('/api/indicators', route(async (req, res) => {
+  const { q = null, pillar = null } = req.query;
+  const hasData = req.query.hasData === 'true';
+
   const { rows } = await query(
     `SELECT i.id, i.name, i.description, i.pillar, i.unit, i.unit_symbol,
-            i.decimals, i.cadence, i.confidence_tier, i.source_id, i.source_url,
-            i.higher_is_better, i.has_country_dim, i.has_industry_dim,
-            i.last_ingested_at,
+            i.decimals, i.cadence, i.quantity_kind, i.confidence_tier,
+            i.source_id, i.source_url, i.higher_is_better,
+            i.has_country_dim, i.has_industry_dim, i.default_country_iso3,
+            i.index_base_period::text, i.last_ingested_at,
             count(o.*)::int              AS observation_count,
             max(o.period_start)::text    AS latest_period,
             min(o.period_start)::text    AS earliest_period
        FROM indicators i
        LEFT JOIN observations o ON o.indicator_id = i.id
       WHERE i.is_active
+        AND ($1::text IS NULL OR i.pillar = $1::pillar)
+        AND ($2::text IS NULL OR i.name ILIKE '%' || $2 || '%'
+                              OR i.id   ILIKE '%' || $2 || '%')
       GROUP BY i.id
-      ORDER BY i.pillar, count(o.*) DESC, i.id`
+     HAVING (NOT $3::boolean OR count(o.*) > 0)
+      ORDER BY i.pillar, count(o.*) DESC, i.id`,
+    [pillar, q, hasData]
   );
   res.json({ indicators: rows });
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Questions — the editorial layer
+// ─────────────────────────────────────────────────────────────────────────────
+
+app.get('/api/questions', route(async (_req, res) => {
+  res.json({ questions: await listQuestions() });
+}));
+
+app.get('/api/questions/:slug', route(async (req, res) => {
+  const question = await getQuestion(req.params.slug);
+  if (!question) return res.status(404).json({ error: `No question "${req.params.slug}"` });
+  res.json(question);
 }));
 
 /**
@@ -140,6 +176,133 @@ app.get('/api/indicators/:id/observations', route(async (req, res) => {
   );
 
   res.json({ indicator: meta[0], observations: rows });
+}));
+
+/**
+ * Several series in one request, optionally rebased to a common index.
+ *
+ * A question page draws up to eighteen charts; fetching each series separately
+ * meant a request per chart. More importantly, this is where REBASING lives.
+ *
+ * The project bans dual-axis charts — a second y-scale lets any two lines be
+ * made to cross wherever the author chooses, which is the most effective way to
+ * imply a relationship that is not in the data. So series measured on different
+ * scales are indexed to 100 at their first shared period instead, which
+ * compares SHAPE honestly and states in the axis label that it is doing so.
+ *
+ * Rebasing happens here rather than in the browser so that every consumer —
+ * page, explorer, future export — indexes identically.
+ *
+ * Query: ?ids=a,b,c&countries=USA,,GBR&index=true
+ * `countries` is positional and may contain blanks, so a mixed request of
+ * country-specific and global series stays aligned with `ids`.
+ */
+app.get('/api/series', route(async (req, res) => {
+  const ids = String(req.query.ids ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (ids.length === 0) return res.status(400).json({ error: 'ids required' });
+  // Cap the fan-out: a request for 200 series is a mistake or an attack, and
+  // either way it should fail clearly rather than exhaust the pool.
+  if (ids.length > 12) return res.status(400).json({ error: 'at most 12 series per request' });
+
+  const countries = String(req.query.countries ?? '').split(',').map((s) => s.trim());
+  const rebase = req.query.index === 'true';
+
+  const series = await Promise.all(ids.map(async (id, i) => {
+    const country = countries[i] || null;
+
+    const { rows: meta } = await query(
+      `SELECT id, name, unit, unit_symbol, decimals, cadence, quantity_kind,
+              source_url, confidence_tier, default_country_iso3
+         FROM indicators WHERE id = $1 AND is_active`,
+      [id]
+    );
+    if (meta.length === 0) return { id, error: 'not found', points: [] };
+
+    const { rows } = await query(
+      `SELECT period_start::text AS date, value
+         FROM observations
+        WHERE indicator_id = $1
+          AND ($2::char(3) IS NULL OR country_iso3 = $2)
+        ORDER BY period_start`,
+      [id, country ?? meta[0].default_country_iso3 ?? null]
+    );
+
+    return { id, meta: meta[0], country, points: rows };
+  }));
+
+  if (!rebase) return res.json({ series, indexed: false });
+
+  /**
+   * Index every series to 100 at the first period they ALL cover.
+   *
+   * Using each series' own first observation instead would silently compare
+   * different starting points and make whichever series began earliest look
+   * like the strongest performer.
+   */
+  const dateSets = series
+    .filter((s) => s.points.some((p) => p.value != null))
+    .map((s) => new Set(s.points.filter((p) => p.value != null).map((p) => p.date)));
+
+  const shared = dateSets.length
+    ? [...dateSets[0]].filter((d) => dateSets.every((set) => set.has(d))).sort()
+    : [];
+
+  // No overlap means indexing would be arbitrary. Say so rather than picking a
+  // base that makes the comparison meaningless without admitting it.
+  if (shared.length === 0) {
+    return res.json({ series, indexed: false, indexNote: 'no shared period — series shown unindexed' });
+  }
+
+  const base = shared[0];
+  const indexedSeries = series.map((s) => {
+    const anchor = s.points.find((p) => p.date === base && p.value != null);
+    if (!anchor || anchor.value === 0) return { ...s, indexed: false };
+    return {
+      ...s,
+      indexed: true,
+      points: s.points.map((p) => ({
+        date: p.date,
+        value: p.value == null ? null : (p.value / anchor.value) * 100,
+      })),
+    };
+  });
+
+  res.json({ series: indexedSeries, indexed: true, indexBase: base });
+}));
+
+/**
+ * What was happening around a given period.
+ *
+ * The layer that turns a line into an explanation: click a point, see the news
+ * and regulation from that month. Reads `documents` (165 rows, indexed on
+ * published_at) and `events` (currently empty, awaiting extraction) so the
+ * shape is right before the data arrives.
+ */
+app.get('/api/context', route(async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  const limit = Math.min(Number(req.query.limit) || 20, 100);
+  const minRelevance = Number(req.query.minRelevance ?? 40);
+
+  const [documents, events] = await Promise.all([
+    documentsInWindow({ from, to, limit, minRelevance }),
+    query(
+      `SELECT e.id, e.kind, e.status, e.headline, e.amount_usd, e.capacity_mw,
+              e.announced_date::text, e.location_iso3,
+              f.name AS from_name, t.name AS to_name,
+              (SELECT count(*)::int FROM event_sources es WHERE es.event_id = e.id) AS source_count
+         FROM events e
+         JOIN entities f ON f.id = e.from_entity_id
+         LEFT JOIN entities t ON t.id = e.to_entity_id
+        WHERE e.announced_date BETWEEN $1::date AND $2::date
+          AND e.status <> 'cancelled'
+        ORDER BY e.amount_usd DESC NULLS LAST, e.announced_date DESC
+        LIMIT $3`,
+      [from, to, limit]
+    ).then((r) => r.rows),
+  ]);
+
+  res.json({ from, to, documents, events });
 }));
 
 /** Which countries an indicator actually holds data for — populates dropdowns. */

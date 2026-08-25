@@ -169,6 +169,34 @@ export async function recentDocuments({ limit = 50, minRelevance = 40, kind = nu
 }
 
 /**
+ * Documents published within a date window.
+ *
+ * Backs the click-a-chart-point context panel. Ordered by relevance first and
+ * recency second: the reader wants the most significant thing that happened
+ * that month, not merely the last thing.
+ *
+ * A sibling of `recentDocuments` rather than another parameter on it, because
+ * the two use different indexes — that one rides `documents_relevance_idx`, this
+ * one `documents_published_idx`.
+ */
+export async function documentsInWindow({ from, to, limit = 20, minRelevance = 40, kind = null } = {}) {
+  const { rows } = await query(
+    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, d.url, d.title,
+            d.summary, d.published_at, d.ai_relevance
+       FROM documents d
+       JOIN sources s ON s.id = d.source_id
+      WHERE d.published_at >= $1::date
+        AND d.published_at <  ($2::date + INTERVAL '1 day')
+        AND d.ai_relevance >= $3
+        AND ($5::document_kind IS NULL OR d.kind = $5)
+      ORDER BY d.ai_relevance DESC, d.published_at DESC
+      LIMIT $4`,
+    [from, to, minRelevance, limit, kind]
+  );
+  return rows;
+}
+
+/**
  * Monthly counts of relevant documents — the raw material for
  * `derived.ai_news_volume`.
  *
