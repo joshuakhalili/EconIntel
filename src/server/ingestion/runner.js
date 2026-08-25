@@ -23,6 +23,7 @@ import * as epoch from './sources/epoch.js';
 import * as federalRegister from './sources/federal-register.js';
 import * as dbnomics from './sources/dbnomics.js';
 import * as gdelt from './sources/gdelt.js';
+import * as sec from './sources/sec.js';
 
 /**
  * Open a run record. Every job gets one whether it succeeds or fails — a run
@@ -264,6 +265,98 @@ const DERIVED_JOBS = {
    * denominator is what makes the series about AI rather than about GDELT.
    */
   'derived.ai_news_volume': async () => gdelt.ingestNewsVolume(),
+
+  /**
+   * Share of US annual reports mentioning AI.
+   *
+   * A 10-K is a legal filing: overstating AI involvement in one carries
+   * liability that a press release does not, so this measures corporate
+   * commitment under a far higher standard of truth than any survey.
+   */
+  'derived.sec_ai_mention_rate': async () => sec.computeAiMentionRate(),
+
+  /**
+   * Federal Register counts split by document type.
+   *
+   * All three share one fetch of several hundred documents, so they are cheap
+   * to compute together, but they answer different questions: a Rule is law, a
+   * Proposed Rule is an intention, an executive order is a gesture that can be
+   * undone by the next administration.
+   */
+  'derived.ai_binding_rules': async () => {
+    const { documents } = await federalRegister.fetchAiDocuments();
+    return federalRegister.toMonthlyCountsByType(documents, 'Rule', 'derived.ai_binding_rules');
+  },
+
+  'derived.ai_proposed_rules': async () => {
+    const { documents } = await federalRegister.fetchAiDocuments();
+    return federalRegister.toMonthlyCountsByType(documents, 'Proposed Rule', 'derived.ai_proposed_rules');
+  },
+
+  'derived.ai_presidential_documents': async () => {
+    const { documents } = await federalRegister.fetchAiDocuments();
+    return federalRegister.toMonthlyCountsByType(documents, 'Presidential Document', 'derived.ai_presidential_documents');
+  },
+
+  /**
+   * Ratios computed in SQL from observations already held.
+   *
+   * Done in SQL rather than JavaScript because the join on period is exactly
+   * what a database is for, and because the definition of the ratio then lives
+   * in one place instead of being re-derived by whatever reads it.
+   */
+  'derived.information_employment_share': async () => {
+    const { rows } = await query(
+      `SELECT info.period_start::text AS period_start,
+              info.period_end::text   AS period_end,
+              (info.value / total.value) * 100 AS value
+         FROM observations info
+         JOIN observations total
+           ON total.indicator_id = 'fred.PAYEMS'
+          AND total.period_start = info.period_start
+        WHERE info.indicator_id = 'fred.USINFO'
+          AND info.value IS NOT NULL
+          AND total.value IS NOT NULL
+          AND total.value > 0
+        ORDER BY info.period_start`
+    );
+    return rows.map((r) => ({
+      indicatorId: 'derived.information_employment_share',
+      countryIso3: 'USA',
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      value: Number(r.value),
+      sourceRef: 'computed: fred.USINFO / fred.PAYEMS',
+    }));
+  },
+
+  'derived.productivity_gap_mfg_vs_total': async () => {
+    const { rows } = await query(
+      `WITH paired AS (
+         SELECT m.period_start, m.period_end, m.value AS mfg, t.value AS total
+           FROM observations m
+           JOIN observations t
+             ON t.indicator_id = 'fred.OPHNFB'
+            AND t.period_start = m.period_start
+          WHERE m.indicator_id = 'fred.OPHMFG'
+            AND m.value IS NOT NULL AND t.value IS NOT NULL AND t.value > 0
+       ),
+       base AS (SELECT (mfg / total) AS r FROM paired ORDER BY period_start LIMIT 1)
+       SELECT p.period_start::text AS period_start,
+              p.period_end::text   AS period_end,
+              ((p.mfg / p.total) / b.r) * 100 AS value
+         FROM paired p CROSS JOIN base b
+        ORDER BY p.period_start`
+    );
+    return rows.map((r) => ({
+      indicatorId: 'derived.productivity_gap_mfg_vs_total',
+      countryIso3: 'USA',
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      value: Number(r.value),
+      sourceRef: 'computed: fred.OPHMFG / fred.OPHNFB, indexed to first shared period',
+    }));
+  },
 };
 
 /** Derived indicators that are due, i.e. the ones `dueIndicators` cannot see. */

@@ -36,11 +36,21 @@ const BASE = 'https://api.gdeltproject.org/api/v2/doc/doc';
  * `sourcelang:eng` because the relevance vocabulary is English. Dropping it
  * would inflate counts with articles the filter cannot actually assess.
  */
+/**
+ * GDELT rejects queries beyond roughly 250 characters with
+ * "Your query was too short or too long" — and returns that as plain text with
+ * HTTP 200, like every other refusal it issues. An earlier, more exhaustive
+ * version of this query ran to ~280 characters and failed for that reason
+ * rather than for anything to do with the terms in it.
+ *
+ * Kept under 160 characters. The dropped terms ("machine learning", "workforce",
+ * "capex") were mostly redundant: articles using them almost always also use
+ * one of the terms retained, so the loss in recall is small and the query
+ * actually runs.
+ */
 export const AI_ECONOMY_QUERY =
-  '("artificial intelligence" OR "generative AI" OR "machine learning" OR ' +
-  '"large language model" OR ChatGPT OR OpenAI OR Anthropic OR "AI model") ' +
-  '(jobs OR layoffs OR productivity OR workforce OR economy OR economic OR ' +
-  'hiring OR automation OR wages OR investment OR capex) sourcelang:eng';
+  '("artificial intelligence" OR "generative AI" OR ChatGPT OR OpenAI) ' +
+  '(jobs OR layoffs OR productivity OR economy OR hiring OR wages) sourcelang:eng';
 
 /**
  * GDELT publishes 1 request / 5 seconds. Observed behaviour is stickier than

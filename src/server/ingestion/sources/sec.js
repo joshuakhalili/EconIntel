@@ -205,6 +205,110 @@ export async function searchFilingMentions(query, options = {}) {
  * Needed because everything else in this module is keyed on CIK, while humans
  * and every other data source think in tickers.
  */
+/**
+ * How many filings of a given form type EDGAR received in a year.
+ *
+ * Read from the quarterly full-index files rather than from full-text search,
+ * because FTS caps its reported total at 10,000. Querying a ubiquitous word
+ * returns exactly 10000 for every year — a number that looks like a count, is
+ * actually a ceiling, and would silently produce a wrong denominator that no
+ * one would question because the resulting rate looks reasonable.
+ *
+ * The index files are the authoritative record: one line per filing, no cap.
+ *
+ * @param {number} year
+ * @param {string} [form]
+ * @returns {Promise<number>}
+ */
+export async function fetchFilingCount(year, form = '10-K') {
+  let total = 0;
+
+  for (const quarter of ['QTR1', 'QTR2', 'QTR3', 'QTR4']) {
+    const url = `https://www.sec.gov/Archives/edgar/full-index/${year}/${quarter}/form.idx`;
+
+    let text;
+    try {
+      const response = await fetch(url, {
+        headers: secHeaders(),
+        signal: AbortSignal.timeout(60_000),
+      });
+      // A quarter that has not happened yet returns 404. That is expected for
+      // the current year and must not fail the whole calculation.
+      if (response.status === 404) continue;
+      if (!response.ok) {
+        throw new HttpError(`SEC index returned HTTP ${response.status}`, {
+          url,
+          status: response.status,
+        });
+      }
+      text = await response.text();
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(`SEC index fetch failed: ${error.message}`, { url });
+    }
+
+    // form.idx is fixed-width with the form type first. Match the whole token,
+    // or '10-K' would also count '10-K/A' amendments and '10-KSB'.
+    for (const line of text.split('\n')) {
+      const first = line.trimEnd().split(/\s{2,}/)[0]?.trim();
+      if (first === form) total += 1;
+    }
+  }
+
+  return total;
+}
+
+/**
+ * Share of annual reports that mention AI, per year.
+ *
+ * WHY THIS IS A GOOD INDICATOR: a 10-K is a legal document. Overstating AI
+ * involvement in one carries liability that a press release does not, so this
+ * measures corporate commitment under a materially higher standard of truth
+ * than any survey or announcement count.
+ *
+ * The denominator matters as much as the numerator. Total 10-K filings barely
+ * moved between 2019 and 2024 (6,923 to 6,878), so the rise from 6.4% to 35.4%
+ * is a real change in what companies are saying, not an artefact of more
+ * companies filing.
+ *
+ * @param {object} [options]
+ * @param {number} [options.startYear=2015]
+ * @param {number} [options.endYear]
+ * @returns {Promise<Array<object>>}
+ */
+export async function computeAiMentionRate({
+  startYear = 2015,
+  endYear = new Date().getUTCFullYear(),
+  indicatorId = 'derived.sec_ai_mention_rate',
+} = {}) {
+  const observations = [];
+
+  for (let year = startYear; year <= endYear; year += 1) {
+    const total = await fetchFilingCount(year, '10-K');
+    // Skip rather than divide by zero. The current year has few filings until
+    // the spring, and a rate computed from a handful of them is noise wearing
+    // the same units as signal.
+    if (total < 100) continue;
+
+    const { totalMentions } = await searchFilingMentions('"artificial intelligence"', {
+      forms: ['10-K'],
+      startDate: `${year}-01-01`,
+      endDate: `${year}-12-31`,
+    });
+
+    observations.push({
+      indicatorId,
+      countryIso3: 'USA',
+      periodStart: `${year}-01-01`,
+      periodEnd: `${year}-12-31`,
+      value: Math.round((totalMentions / total) * 10_000) / 100,
+      sourceRef: 'https://efts.sec.gov/LATEST/search-index',
+    });
+  }
+
+  return observations;
+}
+
 export async function fetchTickerToCikMap() {
   const url = 'https://www.sec.gov/files/company_tickers.json';
   const data = await fetchJson(url, { headers: secHeaders() });

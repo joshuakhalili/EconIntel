@@ -174,6 +174,29 @@ export async function fetchAiDocuments(options = {}) {
  * @param {Array<{publishedAt: string}>} documents
  * @param {string} [indicatorId]
  */
+/**
+ * Monthly counts restricted to one Federal Register document type.
+ *
+ * The distinction is the point, and lumping them together loses it. A "Rule" is
+ * binding law already in force. A "Proposed Rule" is a intention with a comment
+ * period, typically 12-24 months ahead of becoming a Rule, if it ever does. A
+ * "Presidential Document" is an executive order — fast, unilateral, and often
+ * reversed by the next administration.
+ *
+ * A single "regulatory activity" line treats an executive order, a draft, and
+ * enforceable law as the same event. Split, proposals become a leading
+ * indicator of rules, and the gap between the two lines measures how much
+ * announced intent is actually converting into obligation.
+ *
+ * @param {Array<{publishedAt: string, documentType: string|null}>} documents
+ * @param {string} type  'Rule' | 'Proposed Rule' | 'Notice' | 'Presidential Document'
+ * @param {string} indicatorId
+ */
+export function toMonthlyCountsByType(documents, type, indicatorId) {
+  const matching = documents.filter((doc) => doc.documentType === type);
+  return toMonthlyCounts(matching, indicatorId);
+}
+
 export function toMonthlyCounts(documents, indicatorId = 'derived.ai_regulation_volume') {
   /** @type {Map<string, number>} */
   const counts = new Map();
