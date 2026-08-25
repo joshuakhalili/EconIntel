@@ -20,6 +20,7 @@ import { config, describeIntegrations } from './config.js';
 import { query, closePool, pool } from './db/pool.js';
 import { recentDocuments, documentsInWindow } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
+import { listLenses, getLens, getLensTickers } from './repositories/lenses.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '../../public');
@@ -104,6 +105,27 @@ app.get('/api/indicators', route(async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Questions — the editorial layer
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── Lenses: the top level of navigation ──────────────────────────────────────
+
+app.get('/api/lenses', route(async (_req, res) => {
+  res.json({ lenses: await listLenses() });
+}));
+
+app.get('/api/lenses/:slug', route(async (req, res) => {
+  const lens = await getLens(req.params.slug);
+  if (!lens) return res.status(404).json({ error: `No lens "${req.params.slug}"` });
+  res.json(lens);
+}));
+
+/**
+ * The ticker strip. Two observations per indicator, not the whole series —
+ * a strip needs a value and a direction, and fetching decades of history for
+ * seven tickers would cost more than the rest of the page.
+ */
+app.get('/api/lenses/:slug/tickers', route(async (req, res) => {
+  res.json({ tickers: await getLensTickers(req.params.slug) });
+}));
 
 app.get('/api/questions', route(async (_req, res) => {
   res.json({ questions: await listQuestions() });

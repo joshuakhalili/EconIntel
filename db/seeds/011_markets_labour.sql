@@ -174,8 +174,16 @@ INSERT INTO indicators (
  'thousands of persons', NULL, 0, 'fred', 'LNU02032207',
  'https://fred.stlouisfed.org/series/LNU02032207', NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA')
 
+-- has_country_dim MUST be in this list. It was omitted, so a later correction
+-- to the VALUES above had no effect on re-seed: the column kept its original
+-- value while default_country_iso3 changed, leaving indicators that claimed a
+-- country their observations did not carry. An ON CONFLICT list is a silent
+-- filter on which edits actually apply.
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name, description = EXCLUDED.description,
   unit = EXCLUDED.unit, source_series_code = EXCLUDED.source_series_code,
-  source_url = EXCLUDED.source_url, default_country_iso3 = EXCLUDED.default_country_iso3,
+  source_url = EXCLUDED.source_url,
+  default_country_iso3 = EXCLUDED.default_country_iso3,
+  has_country_dim = EXCLUDED.has_country_dim,
+  quantity_kind = EXCLUDED.quantity_kind, cadence = EXCLUDED.cadence,
   is_active = TRUE, updated_at = now();
