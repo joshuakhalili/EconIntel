@@ -32,12 +32,25 @@ done
 # 2. Scan staged content for key-shaped strings. Assignments only — a bare hex
 #    string is usually a git SHA or a checksum, so matching those would cry wolf
 #    constantly and train you to use --no-verify, which defeats the whole hook.
-patterns='(FRED|CENSUS|EMBER|EIA|BLS|OPENAI|ANTHROPIC|COPERNICUS)_API_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9_-]{16,}
-(api[_-]?key|secret|token|password)[\"'\'' ]*[:=][\"'\'' ]*[A-Za-z0-9_-]{20,}
+#
+#    The first rule is written by SHAPE — anything named *KEY, *TOKEN, *SECRET,
+#    *PASSWORD assigned a long literal — rather than by listing providers. The
+#    provider list this replaced had already gone stale twice: it named
+#    COPERNICUS_API_KEY when the real variable is COPERNICUS_TOKEN, and it knew
+#    nothing about Cloudflare, so a live Workers AI token passed straight
+#    through it. A list of remembered names protects only against the keys you
+#    remembered, which is backwards for a safety net.
+#
+#    Matching is case-insensitive. The old rule spelled the generic words in
+#    lowercase, so every SCREAMING_CASE variable — which is to say every line
+#    in a real .env file — was invisible to it.
+patterns='[A-Za-z0-9_]*(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_-]{16,}
 sk-[A-Za-z0-9]{20,}
 sk-ant-[A-Za-z0-9_-]{20,}
 ghp_[A-Za-z0-9]{36}
-AKIA[0-9A-Z]{16}'
+AKIA[0-9A-Z]{16}
+cfut_[A-Za-z0-9]{20,}
+postgres(ql)?://[^:/]+:[^@]{8,}@[A-Za-z0-9-]+\.'
 
 for file in $staged; do
   [ -f "$file" ] || continue
@@ -45,9 +58,9 @@ for file in $staged; do
 
   echo "$patterns" | while IFS= read -r pattern; do
     [ -z "$pattern" ] && continue
-    if git show ":$file" 2>/dev/null | grep -nEq "$pattern"; then
+    if git show ":$file" 2>/dev/null | grep -niEq "$pattern"; then
       echo "BLOCKED: $file contains something shaped like a live credential:"
-      git show ":$file" 2>/dev/null | grep -nE "$pattern" | head -3 | sed 's/^/    /'
+      git show ":$file" 2>/dev/null | grep -niE "$pattern" | head -3 | sed 's/^/    /'
       exit 1
     fi
   done || fail=1

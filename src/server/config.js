@@ -13,10 +13,13 @@ import 'dotenv/config';
 function required(name, fallback) {
   const value = process.env[name] ?? fallback;
   if (value === undefined || value === '') {
-    throw new Error(
-      `Missing required environment variable ${name}. ` +
-        `Copy .env.example to .env and fill it in.`
-    );
+    // The remedy differs by environment and the wrong one wastes real time:
+    // there is no .env file on a hosted service to copy anything into.
+    const remedy =
+      (process.env.NODE_ENV ?? 'development') === 'production'
+        ? `Set it in the service's environment settings (Render: Dashboard → the service → Environment).`
+        : `Copy .env.example to .env and fill it in.`;
+    throw new Error(`Missing required environment variable ${name}. ${remedy}`);
   }
   return value;
 }
@@ -32,13 +35,32 @@ function numeric(name, fallback) {
   return parsed;
 }
 
+const env = process.env.NODE_ENV ?? 'development';
+
+/**
+ * The database URL falls back to a local development instance, but ONLY
+ * outside production.
+ *
+ * This used to fall back unconditionally, which is the worst possible
+ * behaviour on a hosted service: forget to set DATABASE_URL on Render and the
+ * process starts cleanly, reports itself healthy, and then fails every single
+ * request against a localhost database that does not exist. A config error
+ * should look like a config error at startup, not like a database outage an
+ * hour later.
+ *
+ * The credentials below are the documented local dev pair from the README.
+ * They are deliberately the only secret-shaped string in the repository, and
+ * they unlock nothing that is not already on your own machine.
+ */
+const LOCAL_DEV_DATABASE = 'postgres://econintel:econintel_dev@localhost:5432/econintel';
+
 export const config = Object.freeze({
-  env: process.env.NODE_ENV ?? 'development',
+  env,
   port: numeric('PORT', 3000),
 
   databaseUrl: required(
     'DATABASE_URL',
-    'postgres://econintel:econintel_dev@localhost:5432/econintel'
+    env === 'production' ? undefined : LOCAL_DEV_DATABASE
   ),
   dbPoolMax: numeric('DB_POOL_MAX', 10),
   slowQueryMs: numeric('SLOW_QUERY_MS', 500),
@@ -57,7 +79,22 @@ export const config = Object.freeze({
     bls: process.env.BLS_API_KEY ?? null,
     openai: process.env.OPENAI_API_KEY ?? null,
     anthropic: process.env.ANTHROPIC_API_KEY ?? null,
+    cloudflare: process.env.CLOUDFLARE_API_TOKEN ?? null,
     copernicus: process.env.COPERNICUS_TOKEN ?? null,
+  }),
+
+  /**
+   * Cloudflare Workers AI — the LLM this project actually runs on.
+   *
+   * Chosen over OpenAI and Anthropic for one reason: the free tier is 10,000
+   * neurons a day with no card on file, which is enough for the extraction
+   * work (findings from papers, events from filings) to fill in steadily.
+   * The account id is not a secret — it appears in every dashboard URL — but
+   * it lives here rather than in `keys` so nothing treats it as one.
+   */
+  cloudflare: Object.freeze({
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? null,
+    model: process.env.CLOUDFLARE_AI_MODEL ?? '@cf/meta/llama-3.1-8b-instruct',
   }),
 
   /**
@@ -94,6 +131,8 @@ export function describeIntegrations() {
     { name: 'EIA',         ready: Boolean(config.keys.eia),     note: 'free key: eia.gov/opendata — US grid demand' },
     { name: 'BLS',         ready: Boolean(config.keys.bls),     note: 'free key: data.bls.gov/registrationEngine — 500 req/day' },
     { name: 'Copernicus',  ready: Boolean(config.keys.copernicus), note: 'satellite imagery, phase 3' },
-    { name: 'LLM',         ready: Boolean(config.keys.openai || config.keys.anthropic), note: 'narration layer' },
+    { name: 'Workers AI',  ready: Boolean(config.keys.cloudflare && config.cloudflare.accountId),
+                                                                 note: `free: 10k neurons/day, no card — ${config.cloudflare.model}` },
+    { name: 'LLM (paid)',  ready: Boolean(config.keys.openai || config.keys.anthropic), note: 'optional fallback; not required' },
   ];
 }
