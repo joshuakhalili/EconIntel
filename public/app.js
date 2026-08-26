@@ -167,7 +167,7 @@ function sparkline(points, colorVar = '--accent') {
  *
  * @param {Function} [onPick] called with an ISO date when a point is clicked
  */
-function lineChart(container, series, { cadence = 'monthly', unit = '', height = 250, width = 760, onPick = null } = {}) {
+function lineChart(container, series, { cadence = 'monthly', unit = '', height = 250, width = null, onPick = null } = {}) {
   container.innerHTML = '';
   const live = series.filter((s) => s.points.some((p) => p.value != null));
   if (!live.length) {
@@ -175,7 +175,26 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
     return;
   }
 
-  const W = width, H = height;
+  /**
+   * The viewBox matches the container, so one SVG unit is one CSS pixel.
+   *
+   * This was the single worst thing on a phone. A fixed 760-unit viewBox drawn
+   * into a 317px column scales everything by 0.42, so 14px axis labels reached
+   * the reader at 5.9px — measured at 8.8px even on a 947px-wide desktop
+   * window for the two-up charts. Scaling an SVG to fit scales its TEXT, which
+   * is the one thing that must not scale.
+   *
+   * A caller may still force a width; nothing does, and it exists only for
+   * rendering to a fixed size off-screen.
+   */
+  // clientWidth INCLUDES padding, so using it straight made the viewBox 30px
+  // wider than the box the SVG is actually painted into — still scaling the
+  // text down, just less. The content box is what the SVG gets.
+  const cs = getComputedStyle(container);
+  const avail = container.clientWidth
+    - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const W = width ?? Math.max(280, Math.round(avail) || 640);
+  const H = height;
   const M = { top: 14, right: 16, bottom: 26, left: 54 };
   const iw = W - M.left - M.right;
   const ih = H - M.top - M.bottom;
@@ -339,7 +358,7 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
     return idx >= 0 && idx < dates.length ? { iso: dates[idx], box } : null;
   };
 
-  svg.addEventListener('pointermove', (event) => {
+  const showAt = (event) => {
     const hit = dateAt(event);
     if (!hit) return;
     const cx = x(hit.iso);
@@ -364,16 +383,54 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
     tip.innerHTML = html;
     tip.classList.add('on');
     tip.style.left = `${Math.min(Math.max((cx + M.left) / W * hit.box.width - 70, 4), hit.box.width - 160)}px`;
-  });
+    return hit.iso;
+  };
 
-  svg.addEventListener('pointerleave', () => {
+  const clear = () => {
     crosshair.style.opacity = '0';
     dots.forEach((d) => { d.style.opacity = '0'; });
     tip.classList.remove('on');
+  };
+
+  /**
+   * Mouse and touch are different interactions, not one interaction on two
+   * devices.
+   *
+   * With a mouse, hovering inspects and clicking commits. A finger cannot
+   * hover: the first touch IS the click, so a single tap would open the drawer
+   * before the reader has seen what they hit. Worse, listening only for
+   * pointermove meant a touch scrub scrolled the page — the chart never saw
+   * the gesture at all.
+   *
+   * So on touch: the first tap places the crosshair and shows the values, and
+   * a second tap at the same point opens the context drawer. `touch-action:
+   * pan-y` in the stylesheet is what lets a horizontal drag scrub while a
+   * vertical drag still scrolls the page.
+   */
+  let touchArmed = null;
+
+  svg.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'touch' && event.buttons === 0) return;
+    showAt(event);
+  });
+
+  svg.addEventListener('pointerdown', (event) => {
+    if (event.pointerType !== 'touch') return;
+    const iso = showAt(event);
+    if (onPick && iso && touchArmed === iso) { onPick(iso, cadence); touchArmed = null; }
+    else touchArmed = iso;
+  });
+
+  svg.addEventListener('pointerleave', (event) => {
+    if (event.pointerType === 'touch') return;   // a finger "leaves" on lift
+    clear();
   });
 
   if (onPick) {
     svg.addEventListener('click', (event) => {
+      // Touch is handled by pointerdown above; a synthesised click would fire
+      // onPick on the first tap and defeat the two-step.
+      if (event.pointerType === 'touch') return;
       const hit = dateAt(event);
       if (hit) onPick(hit.iso, cadence);
     });
@@ -397,6 +454,32 @@ function lineChart(container, series, { cadence = 'monthly', unit = '', height =
       legend.appendChild(item);
     });
     container.appendChild(legend);
+  }
+
+  /**
+   * Redraw when the column changes width.
+   *
+   * Necessary because the viewBox is now the container's width: without this,
+   * rotating a phone or crossing a breakpoint leaves a chart drawn for the old
+   * width and scaled to the new one — reintroducing exactly the shrunken text
+   * this was meant to fix.
+   *
+   * The 24px threshold stops a redraw loop. Sub-pixel reflow fires the observer
+   * constantly, and redrawing on every notification would be an endless cycle
+   * of draw → observe → draw.
+   */
+  if (width == null && typeof ResizeObserver !== 'undefined') {
+    container._chartObserver?.disconnect();
+    const drawnAt = W;
+    const ro = new ResizeObserver(() => {
+      const now = container.clientWidth
+        - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      if (Math.abs(now - drawnAt) < 24) return;
+      ro.disconnect();
+      lineChart(container, series, { cadence, unit, height, width, onPick });
+    });
+    ro.observe(container);
+    container._chartObserver = ro;
   }
 }
 
@@ -554,9 +637,9 @@ async function drawGroup(container, members, { tall = false } = {}) {
       cadence,
       unit: lead.unit_symbol || '',
       height: tall ? 300 : 250,
-      // A narrower viewBox for the two-up charts. The SVG is scaled to fit its
-      // column, so a box wider than the column shrinks the type with it.
-      width: tall ? 760 : 460,
+      // Width comes from the container now. Hand-picking a viewBox per slot was
+      // an approximation of the column width that was wrong at every window
+      // size except the one it was tuned at.
       onPick: openContext,
     });
 
@@ -603,12 +686,33 @@ function tickerDelta(t) {
  * Past the threshold the change is REPLACED by the date rather than annotated
  * with it. A stale percentage with a caveat beside it is still a percentage the
  * eye reads first; a date is not mistakable for a recent move.
+ *
+ * The threshold scales with how often the series publishes, because a fixed
+ * one is wrong at both ends. At a flat 120 days every ANNUAL series was
+ * flagged: an EU survey released each January is eight months old by August
+ * and entirely healthy. Flagging it says "broken" about the normal state of
+ * affairs, and a warning that fires on everything stops being read.
+ *
+ * The publication interval is taken from the gap between the last two
+ * observations, which is data already on hand — no cadence column needed, and
+ * it reflects what the series ACTUALLY does rather than what it claims.
  */
-const STALE_DAYS = 120;
+const STALE_FLOOR_DAYS = 120;
 
 function tickerAgeDays(t) {
   if (!t.latest_period) return null;
   return Math.floor((Date.now() - new Date(t.latest_period + 'T00:00:00Z')) / 86400000);
+}
+
+function tickerIsStale(t) {
+  const age = tickerAgeDays(t);
+  if (age == null) return false;
+  const gap = t.previous_period
+    ? (new Date(t.latest_period) - new Date(t.previous_period)) / 86400000
+    : 0;
+  // Two missed releases plus two months of slack. Daily and monthly series
+  // fall back to the floor; quarterly gets ~8 months, annual ~2 years.
+  return age > Math.max(STALE_FLOOR_DAYS, gap * 2 + 60);
 }
 
 /** Month and year — enough to see the staleness, short enough for a strip. */
@@ -658,7 +762,7 @@ function tickerStrip(container, tickers) {
 
   const showDetail = (t) => {
     const age = tickerAgeDays(t);
-    const stale = age != null && age > STALE_DAYS;
+    const stale = tickerIsStale(t);
     const d = tickerDelta(t);
     const asOf = t.latest_period
       ? new Date(t.latest_period + 'T00:00:00Z')
@@ -686,8 +790,7 @@ function tickerStrip(container, tickers) {
     const track = el('div', 'ticker-track');
     if (isClone) track.setAttribute('aria-hidden', 'true');
     live.forEach((t) => {
-      const age = tickerAgeDays(t);
-      const stale = age != null && age > STALE_DAYS;
+      const stale = tickerIsStale(t);
       const d = tickerDelta(t);
       const btn = el('button', `ticker-item${stale ? ' is-stale' : ''}`);
       btn.type = 'button';
@@ -1170,6 +1273,52 @@ function wireChrome() {
 
   const bar = $('#topbar');
   addEventListener('scroll', () => bar.classList.toggle('stuck', scrollY > 4), { passive: true });
+
+  wireSheet();
+}
+
+/**
+ * The small-screen overflow sheet.
+ *
+ * Five lenses fill a bottom tab bar exactly; the three tools, the reader-mode
+ * switch and the theme toggle do not fit beside them. Rather than duplicating
+ * that markup for mobile, the existing elements are MOVED between the rail and
+ * the sheet as the breakpoint crosses. Cloning would put `#theme-toggle` in the
+ * document twice — invalid, and `$('#theme-toggle')` would then wire only the
+ * first copy, so the visible one on a phone would do nothing.
+ */
+function wireSheet() {
+  const sheet = $('#sheet'), body = $('#sheet-body'), btn = $('#more-btn');
+  const scrim = $('#scrim');
+  const small = matchMedia('(max-width: 700px)');
+  // Remember where each element started so it can be put back in order.
+  const movable = [...document.querySelectorAll('[data-secondary]')];
+  const home = movable.map((n) => n.parentElement);
+
+  const close = () => {
+    sheet.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    if ($('#drawer').hidden) scrim.hidden = true;
+    setTimeout(() => { sheet.hidden = true; }, 200);
+  };
+  const open = () => {
+    sheet.hidden = false; scrim.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => sheet.classList.add('open'));
+  };
+
+  const place = () => {
+    if (small.matches) movable.forEach((n) => body.appendChild(n));
+    else { movable.forEach((n, i) => home[i].appendChild(n)); close(); }
+  };
+  place();
+  small.addEventListener('change', place);
+
+  btn.addEventListener('click', () => (sheet.classList.contains('open') ? close() : open()));
+  scrim.addEventListener('click', close);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  // Choosing anything inside the sheet has done its job — get out of the way.
+  body.addEventListener('click', (e) => { if (e.target.closest('.nav-item, .mode-btn')) close(); });
 }
 
 async function boot() {

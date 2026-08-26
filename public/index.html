@@ -5,8 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EconIntel — Is AI changing the economy?</title>
 <meta name="description" content="Tracking artificial intelligence's measurable effect on the world economy, from official statistics.">
+<!-- Fonts before the stylesheet, and as <link> rather than a CSS @import.
+     An @import inside style.css cannot start downloading until style.css has
+     itself arrived and been parsed, so the two requests run one after the
+     other in front of first paint instead of together. preconnect opens the
+     connection to the font host during that gap. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
+
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231F7A4D'/><path d='M8 21l5-6 4 3 6-8' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<!-- iOS ignores SVG favicons entirely; without a PNG, "Add to Home Screen"
+     produces a blank grey tile. -->
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/manifest.json">
+<!-- Colours the browser chrome around the page on Android and in standalone
+     mode, so the app does not sit in a white band on a dark phone. -->
+<meta name="theme-color" content="#F4F3EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131312" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
 
@@ -32,7 +51,7 @@
       </div>
     </div>
 
-    <div class="nav-group">
+    <div class="nav-group" data-secondary>
       <div class="nav-label">Tools</div>
       <button class="nav-item" data-view="explore">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 17l6-6 4 4 8-9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="11" r="1.6"/></svg>
@@ -48,7 +67,7 @@
       </button>
     </div>
 
-    <div class="rail-foot">
+    <div class="rail-foot" data-secondary>
       <!-- Reader mode. The same finding has to reach a generalist and a
            researcher; this switches which register of the stored text is
            shown, not which application is running. -->
@@ -70,6 +89,11 @@
         <p class="page-sub" id="page-sub">Loading…</p>
       </div>
       <div class="topbar-actions">
+        <!-- Opens the sheet holding whatever does not fit the bottom tab bar.
+             Small screens only; hidden by CSS above 700px. -->
+        <button class="btn btn-icon" id="more-btn" aria-expanded="false" aria-controls="sheet" aria-label="More">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
+        </button>
         <button class="btn" id="refresh-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Refresh
@@ -97,6 +121,14 @@
     </div>
     <div class="drawer-body" id="drawer-body"></div>
   </aside>
+  <!-- Overflow sheet. On small screens the Tools group and the reader-mode /
+       theme controls are MOVED here rather than copied, so their existing
+       listeners keep working and no id appears twice. -->
+  <aside class="sheet" id="sheet" aria-label="More" hidden>
+    <div class="sheet-grab" aria-hidden="true"></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </aside>
+
   <div class="scrim" id="scrim" hidden></div>
 </div>
 

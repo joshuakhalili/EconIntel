@@ -25,6 +25,8 @@ import * as dbnomics from './sources/dbnomics.js';
 import * as gdelt from './sources/gdelt.js';
 import * as sec from './sources/sec.js';
 import * as lbma from './sources/lbma.js';
+import * as rss from './sources/rss.js';
+import { insertDocuments } from '../repositories/documents.js';
 
 /**
  * Open a run record. Every job gets one whether it succeeds or fails — a run
@@ -427,6 +429,43 @@ async function runDerivedJob(indicator) {
 }
 
 /**
+ * Document jobs — news and filings, as opposed to numbers.
+ *
+ * These were missing from the runner entirely. `dueIndicators` selects rows
+ * from `indicators`, and a news feed is not an indicator: it produces
+ * DOCUMENTS. So `npm run ingest -- rss` matched no indicator, printed nothing,
+ * exited 0, and the feeds had in fact never been fetched on a schedule at all
+ * — the articles in the database came from a one-off call. The corpus sat
+ * frozen while the runner reported success every time.
+ *
+ * That is the same silent-failure shape as the empty chart that reads as "no
+ * data" rather than "broken", and it is why this is keyed by name and reported
+ * explicitly below.
+ */
+const DOCUMENT_JOBS = {
+  async rss() {
+    const documents = await rss.fetchAllFeeds();
+    const { written, duplicates, skipped } = await insertDocuments(documents);
+    // Duplicates are the normal case, not an error: a feed re-serves the same
+    // items on every poll and the URL unique constraint absorbs them.
+    return { written, fetched: documents.length, skipped: skipped + duplicates };
+  },
+};
+
+/** Run one document job inside the same audit wrapper as everything else. */
+async function runDocumentJob(name) {
+  const runId = await startRun(`documents:${name}`, name);
+  try {
+    const { written, fetched, skipped } = await DOCUMENT_JOBS[name]();
+    await finishRun(runId, { status: 'succeeded', written, skipped, details: { fetched } });
+    return { written, fetched, skipped };
+  } catch (error) {
+    await finishRun(runId, { status: 'failed', error: error.message });
+    throw error;
+  }
+}
+
+/**
  * Run all due ingestion jobs.
  *
  * One failing indicator must not abort the rest: sources fail independently,
@@ -474,7 +513,38 @@ export async function runIngestion({ sourceId = null, force = false } = {}) {
     }
   }
 
-  // ── Pass two: derived indicators ──────────────────────────────────────────
+  // ── Pass two: documents ───────────────────────────────────────────────────
+  // Before the derived pass, because `derived.ai_news_volume` is computed FROM
+  // the documents table and would otherwise measure the previous run's corpus.
+  const docJobs = sourceId
+    ? (DOCUMENT_JOBS[sourceId] ? [sourceId] : [])
+    : Object.keys(DOCUMENT_JOBS);
+
+  // Naming a job that does not exist must be loud. Silently running nothing is
+  // exactly how this pipeline went unnoticed for as long as it did.
+  if (sourceId && docJobs.length === 0 && indicators.length === 0) {
+    console.log(
+      `Nothing matched "${sourceId}". Known document jobs: ${Object.keys(DOCUMENT_JOBS).join(', ')}.`
+    );
+  }
+
+  if (docJobs.length > 0) {
+    console.log(`\nFetching ${docJobs.length} document source(s)…\n`);
+    for (const name of docJobs) {
+      try {
+        const { written, fetched, skipped } = await runDocumentJob(name);
+        totalWritten += written;
+        succeeded += 1;
+        console.log(`  ok    ${name.padEnd(32)} ${written} new / ${fetched} fetched / ${skipped} already held`);
+      } catch (error) {
+        failed += 1;
+        failures.push({ id: name, message: error.message.split('\n')[0] });
+        console.log(`  FAIL  ${name.padEnd(32)} ${error.message.split('\n')[0]}`);
+      }
+    }
+  }
+
+  // ── Pass three: derived indicators ────────────────────────────────────────
   // Run after fetch jobs, not alongside them: a derived metric computed from
   // observations must see this run's fresh data, not the previous run's.
   const derived = await dueDerivedIndicators({ force });
