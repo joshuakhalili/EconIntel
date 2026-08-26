@@ -31,17 +31,32 @@
    NOT a taste decision, and not Tailwind utilities — these are read at runtime
    by the chart components, which map series index to colour in this order.
 
-   The order was checked with the dataviz validator in both light and dark:
-   lightness band, chroma floor, colour-vision separation, normal-vision floor,
-   and contrast against the card surface. The hue ORDER is fixed and must not be
-   reordered or cycled — putting green and orange adjacent drops protanopia
-   separation to dE 5.9, below the floor, at which point the two series are
-   indistinguishable for a reader with that condition.
+   The order was checked with the dataviz validator: lightness band, chroma
+   floor, colour-vision separation, normal-vision floor, and contrast against
+   the card surface. The hue ORDER is fixed and must not be reordered or
+   cycled — putting green and orange adjacent drops protanopia separation to
+   dE 5.9, below the floor, at which point the two series are indistinguishable
+   for a reader with that condition.
 
-   The hues are identical in dark mode. They were validated to pass on both
-   surfaces; lightening them for dark actually FAILED the band and CVD checks.
+   Re-validated against BoardUI's surfaces on adopting its theme (2026-08-26).
 
-   RE-VALIDATE THESE against BoardUI's card surface before shipping charts.
+   LIGHT, card #ffffff — all five checks pass unchanged.
+     worst adjacent CVD  c6<->c5  dE 10.8 deutan
+     worst normal-vision c2<->c1  dE 22.4
+
+   DARK, card #262626 — needed its own steps. BoardUI's dark card is LIGHTER
+   than the surface these hues were originally validated against, which dropped
+   green, blue and purple under the 3:1 contrast floor (2.85, 2.67, 2.66). Only
+   those three are lifted; orange, cyan and pink already passed and are left
+   identical to light, because every hue moved is separation spent. A uniform
+   lift of all six was tried first and FAILED — four hues left the lightness
+   band and CVD separation fell to dE 6.5.
+     worst adjacent CVD  c6<->c5  dE 10.8 deutan
+     worst normal-vision c5<->c4  dE 20.3
+     contrast            all six >= 3:1
+
+   Re-run before changing any of this:
+     node scripts/validate_palette.js "<hex,...>" --mode dark --surface "#262626"
    -------------------------------------------------------------------------- */
 :root {
   --c1: #1F7A4D;
@@ -57,6 +72,10 @@
    on a .dark class — using one convention for both avoids two competing
    switches that can disagree. */
 .dark {
+  --c1: #2E9160;
+  --c2: #4680E0;
+  --c4: #9061F0;
+
   --color-pos: #35A46B;
   --color-pos-soft: #16301F;
   --color-neg: #E0736A;
