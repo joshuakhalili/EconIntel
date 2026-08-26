@@ -1,10 +1,23 @@
 /**
- * EconIntel — question-led dashboard.
+ * EconIntel — lens-led dashboard.
  *
- * The organising idea: a page answers a question, and every chart on it exists
- * to support that answer. Both the answer and the reason each chart is present
- * are stored text, fetched from /api/questions — not written here, and not
- * generated. The front end arranges evidence; it does not author claims.
+ * Three levels, and the order is the argument:
+ *
+ *   LENS      a way of looking at this — money, work, build-out, government
+ *     ├─ TICKERS    the prices that lens depends on, each stating why it is here
+ *     ├─ QUESTIONS  the claims, each with charts underneath
+ *     └─ NEWS       what was reported that bears on it
+ *
+ * Every chart on a question page exists to support that question's answer. Both
+ * the answer and the reason each chart is present are stored text, fetched from
+ * the API — not written here, and not generated. The front end arranges
+ * evidence; it does not author claims.
+ *
+ * The tickers are the reason for the lens layer. Prices in a "Finance" tab are
+ * decoration: a copper price on its own answers nothing. The same price beside
+ * data-centre construction spending, carrying a sentence about why it is there,
+ * is evidence. So a ticker is a PLACEMENT, and its rationale belongs to the
+ * placement rather than to the series.
  *
  * Reader mode switches which register of that stored text is shown. The
  * technical variant is not the plain one with jargon added; it answers a
@@ -19,9 +32,10 @@
 const SERIES_COLORS = ['--c1', '--c2', '--c3', '--c4', '--c5', '--c6'];
 
 const state = {
-  view: 'question',
+  view: 'lens',
   slug: 'adoption',
   mode: 'plain',
+  lenses: [],
   questions: [],
   indicators: [],
   status: null,
@@ -559,10 +573,255 @@ async function drawGroup(container, members, { tall = false } = {}) {
   }
 }
 
+/* ── ticker strip ──────────────────────────────────────────────────────────*/
+
+/**
+ * Change between the last two observations of a ticker.
+ *
+ * Separate from `delta()`, which reports a trailing multi-year window because
+ * that is what a chart tile needs. A ticker is asking a different question —
+ * what did this do most recently — so it compares the two points it was given.
+ * Rates still move in percentage POINTS, for the same reason as everywhere
+ * else: an unemployment rate going 7.3 to 7.4 rose by 0.1 points, not 1.4%.
+ */
+function tickerDelta(t) {
+  if (t.latest_value == null || t.previous_value == null) return null;
+  const diff = t.latest_value - t.previous_value;
+  if (isRateUnit(t.unit)) return { value: diff, unit: 'pp' };
+  if (!t.previous_value) return null;
+  return { value: (diff / Math.abs(t.previous_value)) * 100, unit: '%' };
+}
+
+/**
+ * How out of date a ticker is, in days.
+ *
+ * A strip puts a daily gold price beside a monthly IMF commodity index, and
+ * the IMF mirror for lithium, cobalt and uranium stops dead at June 2025. Shown
+ * identically, "Lithium ↓6.3%" sits next to "Gold ↑1.8%" and reads as two
+ * things that happened this week. One of them happened fourteen months ago.
+ *
+ * Past the threshold the change is REPLACED by the date rather than annotated
+ * with it. A stale percentage with a caveat beside it is still a percentage the
+ * eye reads first; a date is not mistakable for a recent move.
+ */
+const STALE_DAYS = 120;
+
+function tickerAgeDays(t) {
+  if (!t.latest_period) return null;
+  return Math.floor((Date.now() - new Date(t.latest_period + 'T00:00:00Z')) / 86400000);
+}
+
+/** Month and year — enough to see the staleness, short enough for a strip. */
+function shortPeriod(iso) {
+  return new Date(iso + 'T00:00:00Z')
+    .toLocaleDateString(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * A value with its unit symbol on the correct side.
+ *
+ * Currency symbols lead, everything else trails. `unit_symbol` is one column
+ * holding both kinds, so appending it unconditionally printed "77.1k $".
+ */
+function withUnit(value, symbol, decimals) {
+  const n = fmt(value, decimals ?? 1);
+  if (!symbol) return n;
+  return /^[$€£¥]$/.test(symbol) ? `${symbol}${n}` : `${n} ${symbol}`;
+}
+
+/**
+ * The strip.
+ *
+ * It scrolls, because a stale row of numbers reads as an image rather than a
+ * feed. Three constraints on that, none optional:
+ *
+ *   - `prefers-reduced-motion` stops it dead. Motion the reader cannot stop is
+ *     an accessibility failure, and this one is decorative by definition.
+ *   - It pauses on hover AND on focus-within, or a keyboard user tabbing into a
+ *     moving target can never land on one.
+ *   - Every ticker is a real button. The `why` is the point of the whole strip,
+ *     and a title attribute would hide it from touch and from screen readers —
+ *     which is to say from most readers.
+ *
+ * The track is duplicated so the loop has no visible seam; the copy is
+ * aria-hidden and untabbable, otherwise every ticker is announced twice.
+ */
+function tickerStrip(container, tickers) {
+  const live = tickers.filter((t) => t.latest_value != null);
+  if (!live.length) return;
+
+  const strip = el('div', 'ticker');
+  strip.setAttribute('aria-label', 'Prices this lens depends on');
+
+  const detail = el('div', 'ticker-detail');
+  detail.hidden = true;
+
+  const showDetail = (t) => {
+    const age = tickerAgeDays(t);
+    const stale = age != null && age > STALE_DAYS;
+    const d = tickerDelta(t);
+    const asOf = t.latest_period
+      ? new Date(t.latest_period + 'T00:00:00Z')
+          .toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+      : null;
+    detail.hidden = false;
+    detail.innerHTML = `
+      <div class="ticker-detail-head">
+        <span class="ticker-detail-name">${escapeHtml(t.name)}</span>
+        <span class="ticker-detail-val">${escapeHtml(withUnit(t.latest_value, t.unit_symbol, t.decimals))}</span>
+        ${stale ? '' : (d ? deltaBadge(d) : '')}
+      </div>
+      <p class="ticker-why">${escapeHtml(t.why)}</p>
+      ${stale ? `<p class="ticker-stale-note"><strong>Not current.</strong> The last figure available
+         free is from ${escapeHtml(shortPeriod(t.latest_period))}, ${Math.floor(age / 30)} months ago.
+         The change since is unknown here, so no change is shown.</p>` : ''}
+      <div class="ticker-detail-meta">
+        ${asOf ? `<span>As at ${asOf}</span>` : ''}
+        ${t.source_url ? `<a href="${escapeHtml(t.source_url)}" target="_blank" rel="noopener noreferrer">source</a>` : ''}
+      </div>`;
+    detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+
+  const buildTrack = (isClone) => {
+    const track = el('div', 'ticker-track');
+    if (isClone) track.setAttribute('aria-hidden', 'true');
+    live.forEach((t) => {
+      const age = tickerAgeDays(t);
+      const stale = age != null && age > STALE_DAYS;
+      const d = tickerDelta(t);
+      const btn = el('button', `ticker-item${stale ? ' is-stale' : ''}`);
+      btn.type = 'button';
+      if (isClone) btn.tabIndex = -1;
+      const trailing = stale
+        ? `<span class="ticker-asof">${escapeHtml(shortPeriod(t.latest_period))}</span>`
+        : (d ? deltaBadge(d) : '<span class="delta flat">—</span>');
+      btn.innerHTML = `<span class="ticker-label">${escapeHtml(t.label)}</span>
+        <span class="ticker-value">${fmt(t.latest_value, t.decimals ?? 1)}</span>
+        ${trailing}`;
+      btn.addEventListener('click', () => showDetail(t));
+      track.appendChild(btn);
+    });
+    return track;
+  };
+
+  strip.appendChild(buildTrack(false));
+  strip.appendChild(buildTrack(true));
+
+  /**
+   * A real pause control, not only the hover rule.
+   *
+   * WCAG 2.2.2 asks for a mechanism to stop any motion that starts by itself
+   * and runs past five seconds. Hover pausing is not that mechanism: it does
+   * not exist on a touch screen, and it un-pauses the moment the reader moves
+   * away to read anything else on the page.
+   */
+  const row = el('div', 'ticker-foot');
+  const pause = el('button', 'ticker-pause');
+  pause.type = 'button';
+  const setPaused = (on) => {
+    strip.classList.toggle('paused', on);
+    pause.setAttribute('aria-pressed', String(on));
+    pause.textContent = on ? 'Resume' : 'Pause';
+    pause.setAttribute('aria-label', on ? 'Resume the ticker' : 'Pause the ticker');
+  };
+  pause.addEventListener('click', () => setPaused(!strip.classList.contains('paused')));
+  setPaused(false);
+
+  row.appendChild(el('p', 'ticker-hint', 'Pick any of these to see why it is on this page.'));
+  row.appendChild(pause);
+
+  container.appendChild(strip);
+  container.appendChild(row);
+  container.appendChild(detail);
+}
+
+/* ── news items, shared by the lens page and the news page ─────────────────*/
+
+function newsItem(d) {
+  const a = el('a', 'news-item');
+  a.href = d.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.innerHTML = `<div class="news-meta">
+      <span class="score ${d.ai_relevance >= 70 ? 'hi' : ''}">${d.ai_relevance}</span>
+      <span class="news-src">${escapeHtml(d.source_name)}</span>
+      <span class="news-src">· ${new Date(d.published_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+    </div><div class="news-title">${escapeHtml(d.title)}</div>`;
+  return a;
+}
+
+/* ── lens page ─────────────────────────────────────────────────────────────*/
+
+async function viewLens(root, slug) {
+  root.innerHTML = '<div class="loading">Loading…</div>';
+  const lens = await api(`/api/lenses/${slug}`);
+  root.innerHTML = '';
+
+  // The thesis. A reader who reads nothing else should still leave with the
+  // point of this lens.
+  const thesis = el('section', 'answer');
+  thesis.innerHTML = `<p class="answer-text">${escapeHtml(text(lens, 'thesis'))}</p>`;
+  root.appendChild(thesis);
+
+  const stripHost = el('section', 'ticker-host');
+  root.appendChild(stripHost);
+
+  if (lens.questions.length) {
+    root.appendChild(el('h2', 'section-title', lens.questions.length === 1 ? 'The question' : 'The questions'));
+    const list = el('div', 'q-list');
+    lens.questions.forEach((q) => {
+      const b = el('button', 'q-card');
+      b.type = 'button';
+      b.innerHTML = `<span class="q-card-q">${escapeHtml(q.question)}</span>
+        <span class="q-card-a">${escapeHtml(text(q, 'answer') || q.subtitle || '')}</span>
+        <span class="q-card-foot"><span class="q-card-count">${q.indicator_count} charts</span>
+        <span class="q-card-go" aria-hidden="true">→</span></span>`;
+      b.addEventListener('click', () => go('question', q.slug));
+      list.appendChild(b);
+    });
+    root.appendChild(list);
+  }
+
+  const newsHost = el('section');
+  root.appendChild(newsHost);
+
+  // Tickers and news are fetched after the page has structure, so the thesis
+  // and questions are readable immediately rather than after the slowest
+  // request. Neither failing should blank the page.
+  const [tickers] = await Promise.allSettled([
+    api(`/api/lenses/${slug}/tickers`).then((r) => tickerStrip(stripHost, r.tickers)),
+    lens.has_news
+      ? api(`/api/lenses/${slug}/news?limit=12`).then(({ documents }) => {
+          if (!documents.length) return;
+          newsHost.appendChild(el('h2', 'section-title', 'Reported recently'));
+          const { card, body } = chartCard('Coverage matching this lens', null);
+          body.classList.add('flush');
+          documents.forEach((d) => body.appendChild(newsItem(d)));
+          newsHost.appendChild(card);
+        })
+      : Promise.resolve(),
+  ]);
+  if (tickers.status === 'rejected') {
+    stripHost.appendChild(el('div', 'err', 'Ticker data unavailable: ' + tickers.reason.message));
+  }
+}
+
 async function viewQuestion(root, slug) {
   root.innerHTML = '<div class="loading">Loading…</div>';
   const q = await api(`/api/questions/${slug}`);
   root.innerHTML = '';
+
+  // A way back up. Without it a question page is a dead end reachable only by
+  // the browser's back button, and the lens it belongs to is invisible from
+  // inside it.
+  if (q.lens_slug) {
+    const crumb = el('nav', 'crumb');
+    crumb.setAttribute('aria-label', 'Breadcrumb');
+    const up = el('button', 'crumb-link');
+    up.type = 'button';
+    up.innerHTML = `<span aria-hidden="true">←</span> ${escapeHtml(q.lens_name)}`;
+    up.addEventListener('click', () => go('lens', q.lens_slug));
+    crumb.appendChild(up);
+    root.appendChild(crumb);
+  }
 
   // The answer. This is the sentence the old dashboard was missing.
   const answer = el('section', 'answer');
@@ -713,16 +972,7 @@ async function viewNews(root) {
   try {
     const { documents } = await api('/api/documents?limit=100');
     if (!documents.length) { body.appendChild(el('div', 'empty', 'No articles yet.')); return; }
-    documents.forEach((d) => {
-      const a = el('a', 'news-item');
-      a.href = d.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      a.innerHTML = `<div class="news-meta">
-          <span class="score ${d.ai_relevance >= 70 ? 'hi' : ''}">${d.ai_relevance}</span>
-          <span class="news-src">${escapeHtml(d.source_name)}</span>
-          <span class="news-src">· ${new Date(d.published_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-        </div><div class="news-title">${escapeHtml(d.title)}</div>`;
-      body.appendChild(a);
-    });
+    documents.forEach((d) => body.appendChild(newsItem(d)));
   } catch (e) { body.appendChild(el('div', 'err', e.message)); }
 }
 
@@ -792,13 +1042,24 @@ async function render() {
   root.innerHTML = '<div class="loading">Loading…</div>';
 
   document.querySelectorAll('.nav-item').forEach((b) => b.removeAttribute('aria-current'));
-  const active = state.view === 'question'
-    ? document.querySelector(`.nav-item[data-slug="${state.slug}"]`)
+  // A question page highlights its parent lens in the nav — the reader is
+  // still inside that lens, and nothing else in the rail represents where
+  // they are.
+  const navSlug = state.view === 'question'
+    ? state.questions.find((x) => x.slug === state.slug)?.lens_id
+    : state.slug;
+  const active = ['lens', 'question'].includes(state.view)
+    ? document.querySelector(`.nav-item[data-slug="${navSlug}"]`)
     : document.querySelector(`.nav-item[data-view="${state.view}"]`);
   if (active) active.setAttribute('aria-current', 'page');
 
   try {
-    if (state.view === 'question') {
+    if (state.view === 'lens') {
+      const l = state.lenses.find((x) => x.slug === state.slug);
+      $('#page-title').textContent = l ? l.name : 'EconIntel';
+      $('#page-sub').textContent = l ? l.subtitle : '';
+      await viewLens(root, state.slug);
+    } else if (state.view === 'question') {
       const q = state.questions.find((x) => x.slug === state.slug);
       $('#page-title').textContent = q ? q.question : 'EconIntel';
       $('#page-sub').textContent = q ? q.subtitle : '';
@@ -822,30 +1083,53 @@ async function render() {
   }
 }
 
-/** Hash routing, so a page can be linked to and the back button works. */
+/**
+ * Hash routing, so a page can be linked to and the back button works.
+ *
+ * Lens and question slugs are namespaced (`#/lens/money`, `#/q/markets`)
+ * because they share a namespace in the database and several deliberately
+ * share a name — the Adoption lens contains the Adoption question. A bare
+ * `#/adoption` cannot say which was meant.
+ */
+const TOOL_VIEWS = ['explore', 'news', 'pipeline'];
+
 function applyHash() {
   const hash = location.hash.replace(/^#\/?/, '');
-  if (!hash) { state.view = 'question'; state.slug = state.questions[0]?.slug ?? 'adoption'; return; }
-  if (['explore', 'news', 'pipeline'].includes(hash)) { state.view = hash; return; }
+  if (!hash) { state.view = 'lens'; state.slug = state.lenses[0]?.slug ?? 'adoption'; return; }
+  if (TOOL_VIEWS.includes(hash)) { state.view = hash; return; }
+
+  const [kind, ...rest] = hash.split('/');
+  const slug = rest.join('/');
+  if (kind === 'lens' && slug) { state.view = 'lens'; state.slug = slug; return; }
+  if (kind === 'q' && slug) { state.view = 'question'; state.slug = slug; return; }
+
+  // An un-namespaced slug is a link written before the lens layer existed.
+  // Resolve it rather than 404ing: a lens wins, since that is the page a
+  // reader arriving at "adoption" most likely wants.
+  if (state.lenses.some((l) => l.slug === hash)) { state.view = 'lens'; state.slug = hash; return; }
   state.view = 'question';
   state.slug = hash;
 }
 
 function go(view, slug) {
-  location.hash = view === 'question' ? `#/${slug}` : `#/${view}`;
+  if (view === 'lens') location.hash = `#/lens/${slug}`;
+  else if (view === 'question') location.hash = `#/q/${slug}`;
+  else location.hash = `#/${view}`;
 }
 
 function buildNav() {
-  const box = $('#nav-questions');
+  const box = $('#nav-lenses');
   box.innerHTML = '';
-  state.questions.forEach((q) => {
+  state.lenses.forEach((l) => {
     const b = el('button', 'nav-item');
-    b.dataset.view = 'question';
-    b.dataset.slug = q.slug;
+    b.dataset.view = 'lens';
+    b.dataset.slug = l.slug;
+    // The counts say what is actually on the page before the reader commits to
+    // loading it, and make an empty lens obvious rather than a surprise.
     b.innerHTML = `<span class="nav-dot" aria-hidden="true"></span>
-      <span class="nav-text">${escapeHtml(q.question)}</span>
-      <span class="nav-count">${q.indicator_count}</span>`;
-    b.addEventListener('click', () => go('question', q.slug));
+      <span class="nav-text">${escapeHtml(l.name)}</span>
+      <span class="nav-count" title="${l.question_count} questions, ${l.ticker_count} tickers">${l.question_count}·${l.ticker_count}</span>`;
+    b.addEventListener('click', () => go('lens', l.slug));
     box.appendChild(b);
   });
   document.querySelectorAll('.nav-item[data-view]:not([data-slug])').forEach((btn) => {
@@ -890,9 +1174,11 @@ function wireChrome() {
 
 async function boot() {
   try {
-    const [questions, indicators, status] = await Promise.all([
-      api('/api/questions'), api('/api/indicators?hasData=true'), api('/api/status'),
+    const [lenses, questions, indicators, status] = await Promise.all([
+      api('/api/lenses'), api('/api/questions'),
+      api('/api/indicators?hasData=true'), api('/api/status'),
     ]);
+    state.lenses = lenses.lenses;
     state.questions = questions.questions;
     state.indicators = indicators.indicators;
     state.status = status;

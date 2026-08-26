@@ -8,42 +8,55 @@
 -- physical build-out. Hence a `why` per placement, not per series.
 -- ============================================================================
 
-INSERT INTO lenses (id, slug, name, subtitle, thesis_plain, thesis_expert, sort_order, icon) VALUES
+-- `news_query` is websearch syntax, run against documents.search_tsv. Written
+-- in the vocabulary REPORTERS use, not the vocabulary the statistics use: no
+-- headline says "gross fixed capital formation", it says "invests $10bn".
+INSERT INTO lenses (id, slug, name, subtitle, thesis_plain, thesis_expert, sort_order, icon, news_query) VALUES
 
 ('adoption', 'adoption', 'Adoption',
  'Who is actually using it',
  'AI has spread faster than almost any technology before it, but very unevenly. Three in five US public companies now mention it in their annual report; among European firms, one in five uses it — two thirds of software companies, one in six factories.',
  'Adoption is measured three independent ways: self-reported enterprise use (Eurostat/OECD ICT surveys, 10+ employee firms), disclosure incidence in SEC 10-K filings, and cloud uptake as an infrastructure precondition. Survey and disclosure measures agree on direction and disagree on level, which is expected — one asks firms what they do, the other observes what they tell a regulator under liability. Sectoral dispersion exceeds cross-country dispersion.',
- 1, 'trending-up'),
+ 1, 'trending-up',
+ 'adoption OR adopting OR deploying OR deployment OR rollout OR "generative AI" OR copilot OR chatbot OR "AI tools" OR uptake'),
 
 ('money', 'money', 'Money',
  'Investment, capital and what it costs',
  'Enormous sums are going into computers, software and the buildings that hold them — over $1.6 trillion a year in the US alone. The prices of the metals and energy that make it possible are the floor underneath all of it, which is why they sit on this page rather than in a markets section.',
  'Capital formation at three levels: BEA NIPA fixed investment in information-processing equipment and software, the data-centre structures line from table 5.4.5, and business R&D in programming and IT services from OECD ANBERD. Commodity prices are placed here as input costs, not as market colour. Note the deflator problem: nominal series understate real capital deepening where quality-adjusted prices fall as fast as they do in semiconductors.',
- 2, 'banknote'),
+ 2, 'banknote',
+ 'investment OR investing OR funding OR capex OR valuation OR IPO OR "venture capital" OR acquisition OR acquires OR "capital spending" OR fundraising'),
 
 ('work', 'work', 'Work',
  'Jobs, pay and who gets hired',
  'The early signs are small but real. The share of US jobs in the information sector has been falling since 2023 after a decade of rising. UK tech vacancies are below their 2001 level. Young people are the place to watch: if AI takes the bottom rung of a career ladder, it shows there first.',
  'Identification is by comparison, not level: an AI-exposed group against a control sharing its macro shocks. Information-sector employment as a share of total non-farm payrolls cancels the cycle affecting both. Vacancy series lead employment because hiring intent adjusts before headcount. The youth panel is OECD-harmonised across ten countries. Principal confound: the information sector was consolidating post-2022 for reasons unrelated to AI, chiefly interest rates.',
- 3, 'users'),
+ 3, 'users',
+ 'jobs OR hiring OR layoffs OR redundancies OR employment OR unemployment OR graduates OR wages OR salaries OR recruitment OR "job cuts" OR workforce'),
 
 ('infrastructure', 'infrastructure', 'Infrastructure',
  'The physical machine underneath',
  'Software needs concrete, copper and electricity. Publicly known US data-centre capacity went from under 400 megawatts in 2023 to nearly 2,000 in 2025. Unlike survey data this is hard to exaggerate — the transformers either exist or they do not.',
  'Physical build-out via Epoch AI''s cluster register (cumulative MW, a documented lower bound), semiconductor and computer manufacturing output, new orders, manufacturing construction, and electricity generation and industrial sales. Chinese integrated-circuit output is the supply-side counterpart. Capacity figures cover disclosed clusters only and systematically understate the total.',
- 4, 'server'),
+ 4, 'server',
+ '"data centre" OR "data center" OR semiconductor OR semiconductors OR GPU OR GPUs OR foundry OR wafer OR electricity OR "power grid" OR megawatt OR nuclear OR TSMC OR ASML'),
 
 ('policy', 'policy', 'Policy',
  'What governments are actually doing',
  'Mostly proposing rather than enacting. US agencies have published roughly a hundred months of AI rules that are genuinely in force, and a similar number of proposals that may never become law. Executive orders move in days and can be undone just as fast.',
  'Federal Register documents matched on six AI search terms, deduplicated on document_number, split by type. The distinction is load-bearing: a Rule is enforceable, a Proposed Rule carries a comment period and leads a Rule by 12-24 months where it converts, and a Presidential Document is unilateral and reversible. United States only — no comparable machine-readable register exists free for the EU, UK or China.',
- 5, 'landmark')
+ 5, 'landmark',
+ 'regulation OR regulator OR law OR legislation OR government OR ministers OR antitrust OR lawsuit OR court OR ban OR investigation OR copyright')
 
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name, subtitle = EXCLUDED.subtitle,
   thesis_plain = EXCLUDED.thesis_plain, thesis_expert = EXCLUDED.thesis_expert,
   sort_order = EXCLUDED.sort_order, icon = EXCLUDED.icon,
+  -- news_query MUST be listed here. An earlier seed corrected a value in the
+  -- VALUES block, re-ran clean, and changed nothing, because the column was
+  -- missing from this list. An ON CONFLICT list is a silent filter on which
+  -- of your edits actually apply.
+  news_query = EXCLUDED.news_query,
   is_active = TRUE, updated_at = now();
 
 

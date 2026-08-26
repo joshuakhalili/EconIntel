@@ -28,7 +28,12 @@ export async function listLenses() {
 /** One lens with its questions. Charts are fetched per question, not here. */
 export async function getLens(slug) {
   const { rows: lenses } = await query(
-    `SELECT id, slug, name, subtitle, thesis_plain, thesis_expert, icon
+    // The query itself is not exposed — it is an editorial control, and
+    // publishing it invites gaming the search. Whether one exists is exposed,
+    // because the client needs it to decide between rendering a news section
+    // and rendering nothing at all.
+    `SELECT id, slug, name, subtitle, thesis_plain, thesis_expert, icon,
+            (news_query IS NOT NULL) AS has_news
        FROM lenses WHERE slug = $1 AND is_active`,
     [slug]
   );

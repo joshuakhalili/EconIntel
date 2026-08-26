@@ -18,7 +18,7 @@ import path from 'node:path';
 
 import { config, describeIntegrations } from './config.js';
 import { query, closePool, pool } from './db/pool.js';
-import { recentDocuments, documentsInWindow } from './repositories/documents.js';
+import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 import { listLenses, getLens, getLensTickers } from './repositories/lenses.js';
 
@@ -125,6 +125,15 @@ app.get('/api/lenses/:slug', route(async (req, res) => {
  */
 app.get('/api/lenses/:slug/tickers', route(async (req, res) => {
   res.json({ tickers: await getLensTickers(req.params.slug) });
+}));
+
+/**
+ * Coverage for a lens, matched by the lens's own stored search rather than by
+ * classifying each article. See `lenses.news_query` for why.
+ */
+app.get('/api/lenses/:slug/news', route(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 24, 100);
+  res.json({ documents: await documentsForLens(req.params.slug, { limit }) });
 }));
 
 app.get('/api/questions', route(async (_req, res) => {

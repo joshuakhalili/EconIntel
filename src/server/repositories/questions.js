@@ -15,7 +15,7 @@ import { query } from '../db/pool.js';
 /** All active questions, for navigation. */
 export async function listQuestions() {
   const { rows } = await query(
-    `SELECT q.id, q.slug, q.question, q.subtitle, q.icon, q.sort_order,
+    `SELECT q.id, q.slug, q.question, q.subtitle, q.icon, q.sort_order, q.lens_id,
             count(qi.*)::int                                     AS indicator_count,
             count(*) FILTER (WHERE qi.role = 'hero')::int         AS hero_count
        FROM questions q
@@ -38,9 +38,11 @@ export async function listQuestions() {
  */
 export async function getQuestion(slug) {
   const { rows: questions } = await query(
-    `SELECT id, slug, question, subtitle, answer_plain, answer_expert, caveat, icon
-       FROM questions
-      WHERE slug = $1 AND is_active`,
+    `SELECT q.id, q.slug, q.question, q.subtitle, q.answer_plain, q.answer_expert,
+            q.caveat, q.icon, q.lens_id, l.name AS lens_name, l.slug AS lens_slug
+       FROM questions q
+       LEFT JOIN lenses l ON l.id = q.lens_id AND l.is_active
+      WHERE q.slug = $1 AND q.is_active`,
     [slug]
   );
   if (questions.length === 0) return null;

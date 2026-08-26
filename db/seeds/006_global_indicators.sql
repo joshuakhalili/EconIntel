@@ -383,7 +383,7 @@ INSERT INTO indicators (
  'PPI by Industry: Data Processing, Hosting and Related Services',
  'The direct price of renting compute — this is the closest thing the US statistical system has to an ''AI cloud price index'', so it shows whether the AI buildout is deflating or inflating the cost of the compute layer everything else runs on.',
  'infrastructure', 'index', 'monthly', 'official',
- 'Index Dec 2000=100 (latest 124.178)', NULL, 2, 'fred', 'PCU518210518210',
+ 'Index Dec 2000=100', NULL, 2, 'fred', 'PCU518210518210',
  'https://fred.stlouisfed.org/series/PCU518210518210',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -391,7 +391,7 @@ INSERT INTO indicators (
  'Private Fixed Investment in Information Processing Equipment and Software',
  'The single best national-accounts measure of the AI capex boom: servers, GPUs and software bought by US business, running $1.61tn annualised in 2026Q2 against $1.47tn three quarters earlier.',
  'infrastructure', 'currency', 'quarterly', 'official',
- 'Billions of Dollars (latest 1612.853)', NULL, 2, 'fred', 'A679RC1Q027SBEA',
+ 'Billions of Dollars', NULL, 2, 'fred', 'A679RC1Q027SBEA',
  'https://fred.stlouisfed.org/series/A679RC1Q027SBEA',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -399,7 +399,7 @@ INSERT INTO indicators (
  'Electricity Net Generation, All Sectors, United States',
  'AI''s physical constraint is power; total US net generation is the supply side of the data-centre energy story and the denominator for every ''what share does AI consume'' claim.',
  'infrastructure', 'magnitude', 'monthly', 'official',
- 'Thousand megawatthours (latest 348,756.33)', NULL, 2, 'dbnomics', 'EIA/ELEC/GEN.ALL-US-99.M',
+ 'Thousand megawatthours', NULL, 2, 'dbnomics', 'EIA/ELEC/GEN.ALL-US-99.M',
  'https://db.nomics.world/EIA/ELEC/GEN.ALL-US-99.M',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -407,7 +407,7 @@ INSERT INTO indicators (
  'Retail Sales of Electricity, Commercial Sector, United States',
  'Data centres are classified commercial, not industrial, in EIA''s accounts — so this series is where the AI load actually shows up, and it has risen 32% since 2001 while industrial sales were flat.',
  'infrastructure', 'currency', 'monthly', 'official',
- 'Million kilowatthours (latest 119,621.53)', NULL, 2, 'dbnomics', 'EIA/ELEC/SALES.US-COM.M',
+ 'Million kilowatthours', NULL, 2, 'dbnomics', 'EIA/ELEC/SALES.US-COM.M',
  'https://db.nomics.world/EIA/ELEC/SALES.US-COM.M',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -415,7 +415,7 @@ INSERT INTO indicators (
  'Average Retail Price of Electricity, Industrial Sector, United States',
  'Industrial electricity prices are the input cost that decides where AI compute gets built; the series has gone 4.73 to 8.58 cents/kWh since 2001, most of it recent.',
  'infrastructure', 'magnitude', 'monthly', 'official',
- 'Cents per kilowatthour (latest 8.58)', NULL, 2, 'dbnomics', 'EIA/ELEC/PRICE.US-IND.M',
+ 'Cents per kilowatthour', NULL, 2, 'dbnomics', 'EIA/ELEC/PRICE.US-IND.M',
  'https://db.nomics.world/EIA/ELEC/PRICE.US-IND.M',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -423,7 +423,7 @@ INSERT INTO indicators (
  'PPI by Industry: Semiconductor and Related Device Manufacturing',
  'Semiconductor prices are the cost floor under all AI compute; the index has fallen from 100 (Dec 1998) to 28.99, quantifying nearly three decades of quality-adjusted chip deflation.',
  'infrastructure', 'index', 'monthly', 'official',
- 'Index Dec 1998=100 (latest 28.987)', NULL, 2, 'fred', 'PCU334413334413',
+ 'Index Dec 1998=100', NULL, 2, 'fred', 'PCU334413334413',
  'https://fred.stlouisfed.org/series/PCU334413334413',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -431,7 +431,7 @@ INSERT INTO indicators (
  'Real Value Added by Industry: Information',
  'Sector-level output for the tech industries themselves — the ''tech'' half of a tech vs non-tech comparison, and the cleanest test of whether AI is showing up as measured output rather than just investment.',
  'effects', 'currency', 'quarterly', 'official',
- 'Billions of Chained 2017 Dollars (latest 1962.5)', NULL, 2, 'fred', 'RVAI',
+ 'Billions of Chained 2017 Dollars', NULL, 2, 'fred', 'RVAI',
  'https://fred.stlouisfed.org/series/RVAI',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -439,7 +439,7 @@ INSERT INTO indicators (
  'Real Value Added by Industry: Private Services-Producing Industries',
  'The non-tech comparator that makes RVAI interpretable: Information grew 3.1% in 2026Q1 against 0.2% for private services as a whole, which is the AI-concentration story in two numbers.',
  'effects', 'currency', 'quarterly', 'official',
- 'Billions of Chained 2017 Dollars (latest 17664.6)', NULL, 2, 'fred', 'RVASPI',
+ 'Billions of Chained 2017 Dollars', NULL, 2, 'fred', 'RVASPI',
  'https://fred.stlouisfed.org/series/RVASPI',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -447,7 +447,7 @@ INSERT INTO indicators (
  'PPI by Industry: Semiconductor Machinery Manufacturing',
  'The cost of the lithography and fab tooling that has to be bought before any AI chip exists — an upstream leading indicator of semiconductor capacity expansion.',
  'infrastructure', 'index', 'monthly', 'official',
- 'Index Dec 2003=100 (latest 108.223)', NULL, 2, 'fred', 'PCU333242333242',
+ 'Index Dec 2003=100', NULL, 2, 'fred', 'PCU333242333242',
  'https://fred.stlouisfed.org/series/PCU333242333242',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -455,7 +455,7 @@ INSERT INTO indicators (
  'Electricity Prices for Non-Household Consumers, Band IG (150,000 MWh and over), EU27, Excluding Taxes',
  'The very-large-consumer band is the data-centre tariff band; EU prices have gone 0.0381 to 0.1022 EUR/kWh since 2007, which is the European counterweight to the US industrial price series and explains siting decisions.',
  'infrastructure', 'currency', 'annual', 'official',
- 'EUR per kilowatt-hour, excluding taxes and levies (latest 0.', NULL, 2, 'dbnomics', 'Eurostat/nrg_pc_205/S.6000.MWH_GE150000.KWH.X_TAX.EUR.EU27_2020',
+ 'EUR per kilowatt-hour, excluding taxes and levies', NULL, 2, 'dbnomics', 'Eurostat/nrg_pc_205/S.6000.MWH_GE150000.KWH.X_TAX.EUR.EU27_2020',
  'https://db.nomics.world/Eurostat/nrg_pc_205/S.6000.MWH_GE150000.KWH.X_TAX.EUR.EU27_2020',
  NULL, FALSE, FALSE, FALSE, INTERVAL '1 day', NULL),
 
@@ -463,7 +463,7 @@ INSERT INTO indicators (
  'Industrial Production: Computer and Electronic Product Manufacturing',
  'Physical output volume for the whole computer-and-electronics sector, the broader companion to the semiconductor-only IPG3344S already held, and up 140.6 vs a 2017 base.',
  'infrastructure', 'index', 'monthly', 'official',
- 'Index 2017=100 (latest 140.5529)', NULL, 2, 'fred', 'IPG334S',
+ 'Index 2017=100', NULL, 2, 'fred', 'IPG334S',
  'https://fred.stlouisfed.org/series/IPG334S',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -471,7 +471,7 @@ INSERT INTO indicators (
  'Export Price Index (End Use): Nonmonetary Gold',
  'This is the working answer to the gold question: FRED''s LBMA gold price series were withdrawn, and this BLS index is the only gold price series still live on FRED, tracking gold up 54.8% since Dec 2024 as a macro-uncertainty gauge alongside the AI capex cycle.',
  'infrastructure', 'index', 'monthly', 'official',
- 'Index Dec 2024=100 (latest 154.8)', NULL, 2, 'fred', 'IQ12260',
+ 'Index Dec 2024=100', NULL, 2, 'fred', 'IQ12260',
  'https://fred.stlouisfed.org/series/IQ12260',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -479,7 +479,7 @@ INSERT INTO indicators (
  'Primary Commodity Prices: Gold, US Dollars',
  'Gold in actual dollars per troy ounce rather than index form ($409.82 in Jan 1990 to $3,351.86 in Jun 2025) — use it for the level and history, but see the staleness warning in notes.',
  'infrastructure', 'currency', 'monthly', 'official',
- 'US Dollars per troy ounce (latest 3351.86)', NULL, 2, 'dbnomics', 'IMF/PCPS/M.W00.PGOLD.USD',
+ 'US Dollars per troy ounce', NULL, 2, 'dbnomics', 'IMF/PCPS/M.W00.PGOLD.USD',
  'https://db.nomics.world/IMF/PCPS/M.W00.PGOLD.USD',
  NULL, FALSE, FALSE, FALSE, INTERVAL '1 day', NULL),
 
@@ -487,7 +487,7 @@ INSERT INTO indicators (
  'Total Construction Spending: Manufacturing in the United States',
  'Captures the physical fab-building boom — CHIPS Act and AI-driven semiconductor plant construction — running $172.7bn annualised in Jun 2026 versus roughly $70bn pre-2021.',
  'infrastructure', 'rate', 'monthly', 'official',
- 'Millions of Dollars, seasonally adjusted annual rate (latest', NULL, 2, 'fred', 'TLMFGCONS',
+ 'Millions of Dollars, seasonally adjusted annual rate', NULL, 2, 'fred', 'TLMFGCONS',
  'https://fred.stlouisfed.org/series/TLMFGCONS',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -495,7 +495,7 @@ INSERT INTO indicators (
  'Private Fixed Investment: Nonresidential: Intellectual Property Products: Software',
  'Isolates the software half of AI capex from the hardware half, so you can show whether the boom is chips-led or code-led — $814.5bn annualised in 2026Q2.',
  'infrastructure', 'currency', 'quarterly', 'official',
- 'Billions of Dollars (latest 814.524)', NULL, 2, 'fred', 'B985RC1Q027SBEA',
+ 'Billions of Dollars', NULL, 2, 'fred', 'B985RC1Q027SBEA',
  'https://fred.stlouisfed.org/series/B985RC1Q027SBEA',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -503,7 +503,7 @@ INSERT INTO indicators (
  'Retail Sales of Electricity, Industrial Sector, United States',
  'The flat-line control against which commercial (data-centre) electricity growth reads as a genuine AI signal rather than economy-wide electrification: 83,477 GWh in Jan 2001 against 85,228 GWh in Mar 2026.',
  'infrastructure', 'currency', 'monthly', 'official',
- 'Million kilowatthours (latest 85,227.76)', NULL, 2, 'dbnomics', 'EIA/ELEC/SALES.US-IND.M',
+ 'Million kilowatthours', NULL, 2, 'dbnomics', 'EIA/ELEC/SALES.US-IND.M',
  'https://db.nomics.world/EIA/ELEC/SALES.US-IND.M',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
 
@@ -511,7 +511,7 @@ INSERT INTO indicators (
  'Manufacturers'' New Orders: Computers and Electronic Products',
  'A forward-looking monthly order book for AI hardware demand, faster to move than the quarterly BEA investment series.',
  'effects', 'currency', 'monthly', 'official',
- 'Millions of Dollars (latest 31,105)', NULL, 2, 'fred', 'A34SNO',
+ 'Millions of Dollars', NULL, 2, 'fred', 'A34SNO',
  'https://fred.stlouisfed.org/series/A34SNO',
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA')
 

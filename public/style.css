@@ -655,3 +655,157 @@ input.input {
   .rail-foot { display: flex; gap: 6px; align-items: center; margin: 0 0 0 auto; }
   .rail-foot .nav-item { width: auto; }
 }
+
+/* ==========================================================================
+   Lens page — thesis, ticker strip, question cards
+   ========================================================================== */
+
+.crumb { margin: 0 0 10px; }
+.crumb-link {
+  border: 0; background: none; cursor: pointer; padding: 6px 8px; margin-left: -8px;
+  color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+.crumb-link:hover { color: var(--ink); background: var(--surface-2); }
+
+/* --- the strip ----------------------------------------------------------
+   Scrolls to read as a feed rather than a snapshot. Every rule below that
+   stops the motion is load-bearing, not a nicety: motion a reader cannot
+   halt is an accessibility failure, and this motion is decorative.
+   ------------------------------------------------------------------------ */
+.ticker-host { margin: 0 0 22px; }
+
+.ticker {
+  display: flex; gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+  /* Fade the ends so items enter and leave rather than being clipped mid-word. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+          mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+}
+
+.ticker-track {
+  display: flex; flex: 0 0 auto; align-items: stretch;
+  animation: ticker-scroll 48s linear infinite;
+}
+
+/* Pause on hover AND focus-within. Without the focus rule a keyboard user
+   tabbing through the strip chases a moving target and can never land. */
+.ticker:hover .ticker-track,
+.ticker:focus-within .ticker-track,
+.ticker.paused .ticker-track { animation-play-state: paused; }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker { overflow-x: auto; }
+  .ticker-track { animation: none; }
+  /* With motion off the duplicate track is dead weight and doubles the
+     scroll width for no gain. */
+  .ticker-track[aria-hidden='true'] { display: none; }
+}
+
+.ticker-item {
+  display: flex; align-items: center; gap: 8px;
+  flex: 0 0 auto;
+  /* 44px minimum touch target — see the mobile audit. */
+  min-height: 44px; padding: 0 16px;
+  border: 0; border-right: 1px solid var(--border); background: none;
+  cursor: pointer; font: inherit; color: var(--ink);
+  white-space: nowrap;
+}
+.ticker-item:hover { background: var(--surface-2); }
+.ticker-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.ticker-label { font-size: 12px; color: var(--ink-2); font-weight: 500; }
+.ticker-value { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+.ticker-foot {
+  display: flex; align-items: center; gap: 12px; margin: 6px 2px 0;
+}
+.ticker-hint { margin: 0; font-size: 11.5px; color: var(--ink-3); }
+
+.ticker-pause {
+  margin-left: auto; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 11.5px; cursor: pointer;
+  /* Small, but never below the 24px WCAG target floor. */
+  min-height: 24px; padding: 3px 10px;
+}
+.ticker-pause:hover { color: var(--ink); border-color: var(--border-strong); }
+.ticker-pause[aria-pressed='true'] { background: var(--surface-2); color: var(--ink); }
+
+/* With motion off there is nothing to pause, and a dead control is worse
+   than none. */
+@media (prefers-reduced-motion: reduce) { .ticker-pause { display: none; } }
+
+/* A series whose last figure is months old. Shows the date INSTEAD of a
+   change: a stale percentage is read as a recent one no matter what sits
+   beside it. */
+.ticker-item.is-stale .ticker-value { color: var(--ink-2); }
+.ticker-asof {
+  font-size: 11px; color: var(--ink-3);
+  padding: 2px 7px; border-radius: 20px;
+  background: var(--surface-2); border: 1px dashed var(--border-strong);
+}
+.ticker-stale-note {
+  margin: 8px 0 0; padding: 8px 10px;
+  font-size: 12px; line-height: 1.55; color: var(--ink-2);
+  background: var(--warn-soft); border-radius: var(--radius-sm);
+  max-width: 68ch;
+}
+.ticker-stale-note strong { color: var(--warn); }
+
+/* The rationale. This is the whole point of the strip — a price with no
+   stated reason for being on the page is decoration. */
+.ticker-detail {
+  margin-top: 10px; padding: 14px 16px;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); background: var(--surface);
+}
+.ticker-detail-head {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.ticker-detail-name { font-weight: 600; font-size: 13.5px; }
+.ticker-detail-val {
+  font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.ticker-why { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-2); max-width: 68ch; }
+.ticker-detail-meta {
+  display: flex; gap: 12px; margin-top: 8px;
+  font-size: 11.5px; color: var(--ink-3);
+}
+.ticker-detail-meta a { color: var(--ink-2); }
+
+/* --- questions within a lens -------------------------------------------- */
+.q-list { display: grid; gap: 10px; margin-bottom: 26px; }
+
+.q-card {
+  display: grid; gap: 6px; text-align: left; width: 100%;
+  padding: 16px 18px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--ink); font: inherit;
+}
+.q-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.q-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.q-card-q { font-size: 15px; font-weight: 600; line-height: 1.35; }
+.q-card-a {
+  font-size: 13px; line-height: 1.6; color: var(--ink-2); max-width: 76ch;
+  /* Three lines then clip. The full answer is on the question page; this is
+     enough to decide whether to open it. */
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.q-card-foot {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 2px; font-size: 11.5px; color: var(--ink-3);
+}
+.q-card-go { margin-left: auto; color: var(--ink-3); }
+.q-card:hover .q-card-go { color: var(--accent); }

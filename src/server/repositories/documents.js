@@ -197,6 +197,56 @@ export async function documentsInWindow({ from, to, limit = 20, minRelevance = 4
 }
 
 /**
+ * Coverage relevant to one lens.
+ *
+ * Two filters, deliberately both: the article must already have cleared the
+ * AI-relevance scorer, AND it must match the lens's stored search. The scorer
+ * decides whether a story is about AI economics at all; the lens query decides
+ * which of those stories is about jobs rather than chips. Dropping the first
+ * filter would let the Work lens surface any article containing "hiring".
+ *
+ * `websearch_to_tsquery` rather than `to_tsquery`: it accepts ordinary phrasing
+ * and CANNOT throw on malformed input. `to_tsquery` raises a syntax error on a
+ * stray operator, which would turn an editorial typo in a seed file into a 500
+ * on a public page.
+ *
+ * Deliberately TWO round trips rather than one join. Reading news_query in the
+ * same statement means the tsquery is built from another table's column, so
+ * the planner cannot treat it as a constant and documents_search_idx goes
+ * unused — measured at 771ms against 77k rows. Passing the text as a bound
+ * parameter restores the index scan.
+ *
+ * Ordered by recency, not by ts_rank_cd. Rank counts term hits, which on the
+ * Money lens put a Bloomberg markets round-up above every story about AI
+ * capital spending: it happened to contain more of the words. The lens query
+ * is a FILTER — a statement about which stories belong here — and the
+ * relevance floor is the quality bar. Neither is an ordering.
+ */
+export async function documentsForLens(slug, { limit = 24, minRelevance = 40 } = {}) {
+  const { rows: lens } = await query(
+    `SELECT news_query FROM lenses WHERE slug = $1 AND is_active`,
+    [slug]
+  );
+  // No lens, or a lens with no query: an empty list, not an error. The client
+  // renders no news section, which is honest — as against showing whatever
+  // matched nothing in particular.
+  if (!lens.length || !lens[0].news_query) return [];
+
+  const { rows } = await query(
+    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, d.url, d.title,
+            d.summary, d.published_at, d.ai_relevance
+       FROM documents d
+       JOIN sources s ON s.id = d.source_id
+      WHERE d.ai_relevance >= $2
+        AND d.search_tsv @@ websearch_to_tsquery('english', $1)
+      ORDER BY d.published_at DESC
+      LIMIT $3`,
+    [lens[0].news_query, minRelevance, limit]
+  );
+  return rows;
+}
+
+/**
  * Monthly counts of relevant documents — the raw material for
  * `derived.ai_news_volume`.
  *
