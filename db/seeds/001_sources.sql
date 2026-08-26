@@ -104,6 +104,11 @@ INSERT INTO sources (id, name, homepage_url, licence, attribution_text, credibil
   ('rss:arstechnica',  'Ars Technica',             'https://arstechnica.com',               'Headline/excerpt use', 'Ars Technica',                   8, FALSE, 'RSS'),
   ('rss:guardian',     'The Guardian',             'https://www.theguardian.com',           'Headline/excerpt use', 'The Guardian',                   8, FALSE, 'RSS'),
   ('rss:bbc_tech',     'BBC Technology',           'https://www.bbc.co.uk/news/technology', 'Headline/excerpt use', 'BBC News',                       9, FALSE, 'RSS'),
+  -- Not an RSS feed. Listed here because it is the other document source,
+  -- and because derived.ai_news_volume was attributed to the Financial
+  -- Times purely for want of this row — the chart named a source that had
+  -- nothing to do with the number.
+  ('gdelt',            'GDELT Project',            'https://www.gdeltproject.org',          'CC BY 4.0',            'The GDELT Project',              7, FALSE, 'Global news volume index, 2017-. Free, no key, aggressive rate limiting.'),
   ('gov:federal_reserve','Federal Reserve',        'https://www.federalreserve.gov',        'Public Domain',        'Federal Reserve',               10, FALSE, 'Government RSS'),
   ('gov:boe',          'Bank of England',          'https://www.bankofengland.co.uk',       'Open Government Licence','Bank of England',             10, FALSE, 'Government RSS'),
   ('gov:ecb',          'European Central Bank',    'https://www.ecb.europa.eu',             'ECB terms',            'European Central Bank',         10, FALSE, 'Government RSS'),

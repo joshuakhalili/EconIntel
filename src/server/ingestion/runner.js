@@ -392,18 +392,27 @@ const DERIVED_JOBS = {
   },
 };
 
-/** Derived indicators that are due, i.e. the ones `dueIndicators` cannot see. */
-async function dueDerivedIndicators({ force = false } = {}) {
+/**
+ * Derived indicators that are due, i.e. the ones `dueIndicators` cannot see.
+ *
+ * Honours sourceId for the same reason the fetch pass does. Without it,
+ * `ingest -- rss` ran all eleven derived jobs including the GDELT one, whose
+ * connect timeout and retry take minutes — so a targeted run of one fast job
+ * took as long as a full one, which is a good way to stop running targeted
+ * jobs at all.
+ */
+async function dueDerivedIndicators({ sourceId = null, force = false } = {}) {
   const { rows } = await query(
     `SELECT id, source_id, cadence
        FROM indicators
       WHERE is_active
         AND source_series_code IS NULL
-        AND ($1::boolean
+        AND ($1::text IS NULL OR source_id = $1)
+        AND ($2::boolean
              OR last_ingested_at IS NULL
              OR last_ingested_at + COALESCE(refresh_interval, INTERVAL '1 day') < now())
       ORDER BY id`,
-    [force]
+    [sourceId, force]
   );
   return rows;
 }
@@ -442,15 +451,31 @@ async function runDerivedJob(indicator) {
  * data" rather than "broken", and it is why this is keyed by name and reported
  * explicitly below.
  */
-const DOCUMENT_JOBS = {
-  async rss() {
-    const documents = await rss.fetchAllFeeds();
-    const { written, duplicates, skipped } = await insertDocuments(documents);
-    // Duplicates are the normal case, not an error: a feed re-serves the same
-    // items on every poll and the URL unique constraint absorbs them.
-    return { written, fetched: documents.length, skipped: skipped + duplicates };
-  },
-};
+const DOCUMENT_JOBS = Object.fromEntries(
+  rss.FEEDS.map((feed) => [
+    feed.sourceId,
+    async () => {
+      const documents = await rss.fetchFeed(feed);
+      const { written, duplicates, skipped } = await insertDocuments(documents);
+      // Duplicates are the normal case, not an error: a feed re-serves the same
+      // items on every poll and the URL unique constraint absorbs them.
+      return { written, fetched: documents.length, skipped: skipped + duplicates };
+    },
+  ])
+);
+
+/**
+ * Match a job filter against document job names.
+ *
+ * `rss` matches every `rss:*` feed; `rss:guardian` matches exactly one. The
+ * prefix form is what anyone actually types, and having it silently match
+ * nothing is the failure this whole section exists to fix.
+ */
+export function matchDocumentJobs(sourceId) {
+  const names = Object.keys(DOCUMENT_JOBS);
+  if (!sourceId) return names;
+  return names.filter((n) => n === sourceId || n.startsWith(`${sourceId}:`));
+}
 
 /** Run one document job inside the same audit wrapper as everything else. */
 async function runDocumentJob(name) {
@@ -516,9 +541,7 @@ export async function runIngestion({ sourceId = null, force = false } = {}) {
   // ── Pass two: documents ───────────────────────────────────────────────────
   // Before the derived pass, because `derived.ai_news_volume` is computed FROM
   // the documents table and would otherwise measure the previous run's corpus.
-  const docJobs = sourceId
-    ? (DOCUMENT_JOBS[sourceId] ? [sourceId] : [])
-    : Object.keys(DOCUMENT_JOBS);
+  const docJobs = matchDocumentJobs(sourceId);
 
   // Naming a job that does not exist must be loud. Silently running nothing is
   // exactly how this pipeline went unnoticed for as long as it did.
@@ -547,7 +570,7 @@ export async function runIngestion({ sourceId = null, force = false } = {}) {
   // ── Pass three: derived indicators ────────────────────────────────────────
   // Run after fetch jobs, not alongside them: a derived metric computed from
   // observations must see this run's fresh data, not the previous run's.
-  const derived = await dueDerivedIndicators({ force });
+  const derived = await dueDerivedIndicators({ sourceId, force });
   const unimplemented = [];
 
   if (derived.length > 0) {

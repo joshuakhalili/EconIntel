@@ -245,9 +245,9 @@ INSERT INTO indicators (
 
 ('derived.ai_news_volume',
  'AI Economic News Volume',
- 'Count of ingested articles scoring above the AI-relevance threshold. A measure of media attention, included as a deliberate contrast to the hard indicators — divergence between attention and measured productivity is itself the finding.',
+ 'Share of worldwide news coverage matching an AI-economics query, from GDELT''s index of global media. A measure of ATTENTION, included as a deliberate contrast to the hard indicators — divergence between attention and measured productivity is itself the finding. Expressed as a share of all monitored coverage rather than a raw count, so it cannot rise merely because GDELT indexed more outlets.',
  'effects', 'count', 'daily', 'news_derived',
- 'articles', NULL, 0, 'rss:ft', NULL,
+ 'articles', NULL, 0, 'gdelt', NULL,
  NULL,
  NULL, TRUE, TRUE, FALSE, INTERVAL '1 hour')
 
