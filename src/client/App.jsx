@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { PreferencesProvider } from '@/lib/preferences';
+import { ContextDrawerProvider } from '@/components/chrome/ContextDrawer';
 import AppShell from '@/components/chrome/AppShell';
 import LensPage from '@/routes/LensPage';
 import QuestionPage from '@/routes/QuestionPage';
@@ -42,7 +43,11 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PreferencesProvider>
-        <RouterProvider router={router} />
+        {/* Outside the router: one drawer instance serves every page, and any
+            chart can open it without passing a handler down through them. */}
+        <ContextDrawerProvider>
+          <RouterProvider router={router} />
+        </ContextDrawerProvider>
       </PreferencesProvider>
     </QueryClientProvider>
   );

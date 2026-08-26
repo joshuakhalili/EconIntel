@@ -41,8 +41,13 @@ export default function AppShell() {
 
       {/* The rail is fixed, so the content column is inset by its width rather
           than sitting in a grid — that keeps the main region scrolling on its
-          own without the rail moving. */}
-      <div className="min-h-screen lg:pl-rail">
+          own without the rail moving.
+
+          The inset reads the variable directly: Tailwind's --width-* namespace
+          generates w-*, but padding comes from the spacing scale, so a pl-rail
+          class does not exist and silently collapses to nothing — which puts
+          the content underneath the rail. */}
+      <div className="min-h-screen lg:pl-[var(--width-rail)]">
         <header className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-border-secondary bg-background-primary-default/85 px-4 py-3 backdrop-blur-sm sm:px-6">
           <div className="min-w-0">
             <h1 className="truncate text-heading-medium text-text-primary">{heading.title}</h1>

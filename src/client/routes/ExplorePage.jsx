@@ -6,6 +6,7 @@ import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock, EmptyBlock, Section } from '@/components/Page';
 import ChartCard from '@/components/charts/ChartCard';
 import CountrySelect from '@/components/CountrySelect';
+import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import SeriesChart from '@/components/charts/SeriesChart';
 
 /** The server rejects more than this in one request. */
@@ -28,6 +29,7 @@ export default function ExplorePage() {
   // flattened together.
   const [countries, setCountries] = useState({});
   const [search, setSearch] = useState('');
+  const { open } = useContextDrawer();
 
   usePageTitle('Build a chart', 'Put any indicators on one pair of axes');
 
@@ -171,7 +173,7 @@ export default function ExplorePage() {
           >
             {seriesPending && <LoadingBlock rows={1} />}
             {seriesError && <ErrorBlock error={seriesErrorObj} what="the series" />}
-            {payload && <SeriesChart payload={payload} height={320} />}
+            {payload && <SeriesChart payload={payload} height={320} onPick={open} />}
           </ChartCard>
         )}
       </Section>
