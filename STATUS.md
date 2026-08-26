@@ -3,7 +3,43 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-26.
+Last updated: 2026-08-27.
+
+## The front end was rewritten in React — read this first
+
+The hand-built `public/app.js` is gone. The front end is now React 19 + Tailwind
+v4 + **BoardUI** components, built by Vite from `src/client/` into `public/`.
+
+**`public/` is build output now and is gitignored.** Nothing in it is source.
+If you edit a file there it will be destroyed by the next build. The old
+hand-written files are kept in `legacy/` as the reference for behaviour that was
+tuned over time; they are not loaded by anything and can be deleted once you are
+confident nothing else needs porting.
+
+**You must run a build before `npm start` shows anything**, because `public/`
+starts empty on a fresh clone:
+
+```
+npm install
+npm run build      # writes public/
+npm start          # http://localhost:3000
+```
+
+For development use `npm run dev`, which runs Express on 3000 and Vite on 5173
+together — open **5173**, which hot-reloads and proxies `/api` to Express.
+
+Two things BoardUI assumes that are not true here, both handled without editing
+its generated files so `npx boardui@latest init` can be re-run later:
+
+- It is built for Next.js and expects `next/font` to define `--font-inter` and
+  `--font-mono-source`. Those are defined in `src/client/styles/app.css`.
+- Its dark mode keys off a `.dark` class, so the app uses that too rather than
+  the old `data-theme` attribute.
+
+**BoardUI's chart components are all paid**, as are its page templates. Charts
+are **Recharts**. The free BoardUI set is still large (28 base components plus
+Data Table, Sidebar, Settings Modal, Notification Center) — run
+`npx boardui@latest list` to see it.
 
 ## What this project is
 
@@ -19,14 +55,17 @@ connect them in a sentence. See `narrations.input_hash` in the schema.
 
 ## ⚠️ Not pushed to GitHub
 
-25 local commits, none pushed. Run `git push` when ready — nothing here exists
-anywhere but this laptop until then.
+Still nothing pushed, and the rewrite lives on a **`react-rewrite`** branch —
+`main` still holds the working vanilla version. Run `git push -u origin
+react-rewrite` when ready. Nothing here exists anywhere but this laptop.
 
 ## Stack
 
-Node 24 ESM, Express 4, Postgres 18.4 on Render (Frankfurt). Hand-built SVG
-charts, no chart library, no front-end framework. Cloudflare Workers AI for the
-LLM layer (free tier, 10k neurons/day) — key is in `.env`, never committed.
+Node 24 ESM, Express 4, Postgres 18.4 on Render (Frankfurt). Front end is
+React 19 + Tailwind v4 + BoardUI, bundled by Vite; charts are Recharts; data
+fetching is TanStack Query; routing is React Router on real paths (Express has
+a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
+(free tier, 10k neurons/day) — key is in `.env`, never committed.
 
 ## What's built and working
 
@@ -40,17 +79,20 @@ LLM layer (free tier, 10k neurons/day) — key is in `.env`, never committed.
 - **Question layer:** 7 questions nested under lenses, each with hero/supporting/
   context charts, a stored answer in both registers, and a caveat as a first-class
   section — not a footnote.
-- **Front end:** lens pages, question pages, a chart-builder ("Build a chart"),
-  a news feed, a pipeline/status page. Context drawer: click a point on any chart
-  → see news and events from that period.
-- **Mobile:** just finished. Chart axis text was rendering at 8.8px on real
-  screens — fixed, now renders at a true 14px at every width. Bottom tab bar
-  below 700px. 44px touch targets. `manifest.json` + PWA icons so "Add to Home
-  Screen" works.
+- **Front end:** all five pages ported to React — lens, question, chart-builder
+  ("Build a chart"), news feed, pipeline/status. Context drawer: click a point on
+  any chart → news and events from that period.
+- **Mobile:** rail becomes a bottom tab bar below the `lg` breakpoint (1024px),
+  with a "More" sheet rendering the same nav data. 44px touch targets.
+  `manifest.json` + PWA icons so "Add to Home Screen" works.
 - **Security:** `.env` gitignored, pre-commit hook blocks anything shaped like a
   key/token/secret (case-insensitive, shape-based — not a list of known provider
   names, which had already gone stale twice).
-- **44 tests passing.**
+- **Chart palette re-validated** against BoardUI's surfaces with the dataviz
+  validator. Dark mode needed its own steps because BoardUI's dark card is
+  lighter than the old one — see the note in `src/client/styles/charts.css`,
+  which records the numbers and the command to re-run.
+- **44 tests passing** — all backend. There are no front-end tests yet.
 
 ## What's NOT built yet
 
@@ -93,7 +135,8 @@ npm run ingest -- rss --force
 
 ```
 cd ~/Projects/EconIntel
-npm start                    # runs on localhost:3000
+npm run dev                  # Express :3000 + Vite :5173 — open 5173
+npm run build && npm start   # production build, served on :3000
 npm test                     # 44 tests, should all pass
 npm run ingest -- rss --force   # refresh news (do this periodically — nothing auto-schedules it yet)
 ```
