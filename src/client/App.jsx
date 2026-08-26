@@ -1,22 +1,49 @@
-import { Button } from '@/components/base/buttons/button';
-import { Badge } from '@/components/base/badges/badge';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { PreferencesProvider } from '@/lib/preferences';
+import AppShell from '@/components/chrome/AppShell';
+import LensPage from '@/routes/LensPage';
+import QuestionPage from '@/routes/QuestionPage';
+import ExplorePage from '@/routes/ExplorePage';
+import NewsPage from '@/routes/NewsPage';
+import PipelinePage from '@/routes/PipelinePage';
 
-// Placeholder shell. Replaced in the next step by the router, the query client
-// and the real chrome. It exists now to prove the whole chain end to end:
-// Vite builds JSX, the @/ alias resolves, BoardUI's .tsx components compile
-// alongside plain .jsx, and its theme tokens actually paint.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Everything here is pre-ingested into Postgres on a schedule; nothing
+      // changes because a reader switched back to the tab, so the default
+      // refetch on window focus is pure noise.
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <AppShell />,
+    children: [
+      // Adoption is the entry point: whether the thing is being used at all
+      // comes before what it costs or what it displaces.
+      { index: true, element: <Navigate to="/lens/adoption" replace /> },
+      { path: 'lens/:slug', element: <LensPage /> },
+      { path: 'q/:slug', element: <QuestionPage /> },
+      { path: 'explore', element: <ExplorePage /> },
+      { path: 'news', element: <NewsPage /> },
+      { path: 'pipeline', element: <PipelinePage /> },
+      { path: '*', element: <Navigate to="/lens/adoption" replace /> },
+    ],
+  },
+]);
+
 export default function App() {
   return (
-    <main id="main" className="min-h-screen bg-background-secondary-default p-10 font-sans">
-      <h1 className="text-2xl font-semibold text-text-primary">EconIntel</h1>
-      <p className="mt-1 text-sm text-text-tertiary">
-        React + Tailwind + BoardUI shell is up.
-      </p>
-      <div className="mt-6 flex items-center gap-3">
-        <Button>Primary</Button>
-        <Button color="secondary">Secondary</Button>
-        <Badge>Badge</Badge>
-      </div>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <PreferencesProvider>
+        <RouterProvider router={router} />
+      </PreferencesProvider>
+    </QueryClientProvider>
   );
 }
