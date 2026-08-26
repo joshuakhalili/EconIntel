@@ -5,6 +5,11 @@ build/
 .DS_Store
 coverage/
 
+# public/ is build output, not source, since the front end moved to
+# src/client/ and Vite writes here. Express still serves this directory —
+# it just no longer contains anything hand-written.
+public/
+
 # Secrets. `.env.example` is the committed template and is re-included below;
 # every other .env variant is ignored by default so a new one (.env.production,
 # .env.staging) is safe the moment it is created rather than when remembered.

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EconIntel — Is AI changing the economy?</title>
+<meta name="description" content="Tracking artificial intelligence's measurable effect on the world economy, from official statistics.">
+<!-- Fonts as <link> rather than a CSS @import: an @import inside the stylesheet
+     cannot start downloading until the stylesheet has itself arrived and been
+     parsed, so the two requests queue in front of first paint instead of running
+     together. preconnect opens the connection during that gap. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231F7A4D'/><path d='M8 21l5-6 4 3 6-8' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<!-- iOS ignores SVG favicons entirely; without a PNG, "Add to Home Screen"
+     produces a blank grey tile. -->
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/manifest.json">
+<!-- Colours the browser chrome around the page on Android and in standalone
+     mode, so the app does not sit in a white band on a dark phone. -->
+<meta name="theme-color" content="#F4F3EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131312" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<!-- Theme is applied before first paint, not in React. Waiting for the app to
+     mount would show a light flash on a dark-mode reload. The .dark class is
+     BoardUI's own convention; its dark: utilities key off it. -->
+<script>
+  try {
+    var stored = localStorage.getItem('econintel:theme');
+    var dark = stored ? stored === 'dark'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (dark) document.documentElement.classList.add('dark');
+  } catch (e) { /* private mode: fall through to light */ }
+</script>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to main content</a>
+<div id="root"></div>
+<script type="module" src="/main.jsx"></script>
+</body>
+</html>

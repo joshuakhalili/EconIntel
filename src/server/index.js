@@ -410,6 +410,21 @@ app.use(express.static(publicDir, { maxAge: config.env === 'production' ? '1h' :
 app.use('/api', (_req, res) => res.status(404).json({ error: 'No such endpoint' }));
 
 /**
+ * SPA fallback. The front end routes on real paths (/lens/money, /q/:slug), so
+ * a reader who opens one directly or refreshes on it asks this server for a file
+ * that does not exist. Hand back the app shell and let the client router read
+ * the URL. Registered after /api so a mistyped endpoint still gets JSON 404
+ * rather than a page, and it never answers a request that expects data.
+ */
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path === '/healthz') return next();
+  res.sendFile(path.join(publicDir, 'index.html'), (error) => {
+    // Before the first `npm run build` there is no index.html to serve.
+    if (error) next(error);
+  });
+});
+
+/**
  * Error handler. Returns the message in development and hides it in production:
  * a database error message can disclose schema details, and this dashboard is
  * public. The full error is always logged server-side either way.

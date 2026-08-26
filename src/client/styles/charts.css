@@ -1,0 +1,66 @@
+/* ==========================================================================
+   EconIntel — chart and economic-semantic tokens
+
+   BoardUI's theme.css owns surface, text, accent colour and typography; that
+   was a deliberate choice to adopt its look wholesale. This file holds only
+   what BoardUI does not supply and must not be allowed to override: the
+   direction-of-travel colours and the categorical chart palette.
+
+   Tailwind v4 is CSS-first — keys declared in @theme become utility classes
+   automatically (--color-pos gives bg-pos, text-pos, border-pos).
+   ========================================================================== */
+
+@theme {
+  /* The fixed left nav width. Referenced by the shell grid, so it lives here
+     rather than as a magic number in two places. */
+  --width-rail: 232px;
+
+  /* Direction-of-travel colours. These are semantic, not decorative: a reader
+     should never have to work out whether green meant up or good. */
+  --color-pos: #1F7A4D;
+  --color-pos-soft: #E3F2E9;
+  --color-neg: #B4423A;
+  --color-neg-soft: #FBEAE8;
+  --color-warn: #A66A12;
+  --color-warn-soft: #FBF0DC;
+}
+
+/* --------------------------------------------------------------------------
+   Categorical chart palette
+
+   NOT a taste decision, and not Tailwind utilities — these are read at runtime
+   by the chart components, which map series index to colour in this order.
+
+   The order was checked with the dataviz validator in both light and dark:
+   lightness band, chroma floor, colour-vision separation, normal-vision floor,
+   and contrast against the card surface. The hue ORDER is fixed and must not be
+   reordered or cycled — putting green and orange adjacent drops protanopia
+   separation to dE 5.9, below the floor, at which point the two series are
+   indistinguishable for a reader with that condition.
+
+   The hues are identical in dark mode. They were validated to pass on both
+   surfaces; lightening them for dark actually FAILED the band and CVD checks.
+
+   RE-VALIDATE THESE against BoardUI's card surface before shipping charts.
+   -------------------------------------------------------------------------- */
+:root {
+  --c1: #1F7A4D;
+  --c2: #2563C9;
+  --c3: #C2570B;
+  --c4: #7C3AED;
+  --c5: #0891B2;
+  --c6: #C93A6E;
+}
+
+/* Dark steps are chosen against the dark surface, not flipped from light.
+   The selector is .dark, not [data-theme], because BoardUI's own theme flips
+   on a .dark class — using one convention for both avoids two competing
+   switches that can disagree. */
+.dark {
+  --color-pos: #35A46B;
+  --color-pos-soft: #16301F;
+  --color-neg: #E0736A;
+  --color-neg-soft: #341B18;
+  --color-warn: #D2963A;
+  --color-warn-soft: #2E2210;
+}

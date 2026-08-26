@@ -5,7 +5,10 @@
   "main": "src/server/index.js",
   "scripts": {
     "start": "node src/server/index.js",
-    "dev": "node --watch src/server/index.js",
+    "build": "vite build",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "node --watch src/server/index.js",
+    "dev:web": "vite",
     "db:migrate": "node src/server/db/migrate.js",
     "db:status": "node src/server/db/migrate.js status",
     "db:seed": "node src/server/db/seed.js",
@@ -13,16 +16,32 @@
     "ingest": "node src/server/ingestion/runner.js",
     "ingest:force": "node src/server/ingestion/runner.js --force",
     "verify:sources": "node scripts/verify-sources.js",
-    "test": "node --test src/**/*.test.js"
+    "test": "node --test \"src/server/**/*.test.js\""
   },
   "dependencies": {
+    "@remixicon/react": "^4.9.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tanstack/react-query": "^5.102.6",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "pg": "^8.23.0",
-    "rss-parser": "^3.13.0"
+    "react": "^19.2.8",
+    "react-aria-components": "^1.20.0",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2",
+    "recharts": "^3.10.1",
+    "rss-parser": "^3.13.0",
+    "tailwind-merge": "^3.6.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.0",
+    "concurrently": "^10.0.5",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.2"
+  }
 }
