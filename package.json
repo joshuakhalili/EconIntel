@@ -1,7 +1,7 @@
 {
-  "name": "econ-intel",
+  "name": "diffusion",
   "version": "1.0.0",
-  "description": "Economics Intelligence Dashboard - Aggregates, summarizes, and ranks global economic news",
+  "description": "Measuring AI's effect on the economy — investment cycles, labour markets, productivity, prices and policy, from sourced data with the limits stated",
   "main": "src/server/index.js",
   "scripts": {
     "start": "node src/server/index.js",

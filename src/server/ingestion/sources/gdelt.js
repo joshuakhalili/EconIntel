@@ -85,7 +85,7 @@ async function fetchTimeline(url) {
     response = await fetch(url, {
       headers: {
         'User-Agent':
-          'EconIntel/1.0 (+https://github.com/joshuakhalili/EconIntel; joshuakhalili20@gmail.com)',
+          'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion; joshuakhalili20@gmail.com)',
       },
       signal: AbortSignal.timeout(120_000),
     });

@@ -23,7 +23,7 @@ export function usePageTitle(title, subtitle) {
 }
 
 export default function AppShell() {
-  const [heading, setHeading] = useState({ title: 'EconIntel', subtitle: '' });
+  const [heading, setHeading] = useState({ title: 'Diffusion', subtitle: '' });
   const queryClient = useQueryClient();
 
   const ctx = useMemo(() => ({ set: setHeading }), []);
@@ -31,8 +31,8 @@ export default function AppShell() {
   // The browser tab should say where the reader is, not just what the site is.
   useEffect(() => {
     document.title = heading.title
-      ? `${heading.title} — EconIntel`
-      : 'EconIntel — Is AI changing the economy?';
+      ? `${heading.title} — Diffusion`
+      : 'Diffusion — Is AI changing the economy?';
   }, [heading.title]);
 
   return (

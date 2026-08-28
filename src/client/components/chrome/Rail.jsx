@@ -39,9 +39,9 @@ export function RailContents({ onNavigate }) {
           className="grid size-7 place-items-center rounded-lg bg-linear-to-b from-accent-500 to-accent-600 text-[11px] font-semibold text-white"
           aria-hidden
         >
-          EI
+          D
         </span>
-        <span className="text-body-medium text-text-primary">EconIntel</span>
+        <span className="text-body-medium text-text-primary">Diffusion</span>
       </div>
 
       <nav className="mt-4 flex flex-col gap-0.5" aria-label="Lenses">

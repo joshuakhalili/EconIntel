@@ -12,8 +12,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const THEME_KEY = 'econintel:theme';
-const MODE_KEY = 'econintel:mode';
+const THEME_KEY = 'diffusion:theme';
+const MODE_KEY = 'diffusion:mode';
 
 const PreferencesContext = createContext(null);
 

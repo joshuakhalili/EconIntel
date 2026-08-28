@@ -54,7 +54,7 @@ export async function fetchCsv(url) {
   }
 
   const response = await fetch(url, {
-    headers: { Accept: 'text/csv', 'User-Agent': 'EconIntel/1.0 (research dashboard)' },
+    headers: { Accept: 'text/csv', 'User-Agent': 'Diffusion/1.0 (research dashboard)' },
     signal: AbortSignal.timeout(30_000),
   });
 

@@ -52,7 +52,7 @@ const env = process.env.NODE_ENV ?? 'development';
  * They are deliberately the only secret-shaped string in the repository, and
  * they unlock nothing that is not already on your own machine.
  */
-const LOCAL_DEV_DATABASE = 'postgres://econintel:econintel_dev@localhost:5432/econintel';
+const LOCAL_DEV_DATABASE = 'postgres://diffusion:diffusion_dev@localhost:5432/diffusion';
 
 export const config = Object.freeze({
   env,

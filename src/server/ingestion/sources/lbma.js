@@ -46,7 +46,7 @@ export async function fetchMetal(metal, indicatorId) {
 
   const url = `${BASE}/${spec.path}`;
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'EconIntel/1.0 (+https://github.com/joshuakhalili/EconIntel)' },
+    headers: { 'User-Agent': 'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion)' },
     signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) {

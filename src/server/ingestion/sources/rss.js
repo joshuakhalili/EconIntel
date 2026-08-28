@@ -26,7 +26,7 @@ import { scoreRelevance } from '../../lib/relevance.js';
  * working choice.
  */
 const USER_AGENT =
-  'EconIntel/1.0 (+https://github.com/joshuakhalili/EconIntel; joshuakhalili20@gmail.com)';
+  'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion; joshuakhalili20@gmail.com)';
 
 /**
  * Curated feed list.

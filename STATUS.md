@@ -1,9 +1,32 @@
-# EconIntel — where things stand
+# Diffusion — where things stand
 
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
 Last updated: 2026-08-28.
+
+## The project is now called Diffusion (was EconIntel)
+
+In economics, *technology diffusion* is the term for how an innovation spreads
+through an economy and shows up in measured output. In AI, diffusion models are
+a core architecture. The name states the subject and the thesis at once.
+
+The rename is done in code. **Two things still carry the old name and are
+Phase 6 work:** the GitHub repo is still `joshuakhalili/EconIntel`, and the
+outbound `User-Agent` strings in the ingestion adapters already point at
+`github.com/joshuakhalili/Diffusion`, which will 404 until the repo is
+renamed. The contact email in those strings is correct and working, which is
+what SEC EDGAR actually requires. The folder on disk is still
+`~/Projects/EconIntel`.
+
+`legacy/` still says EconIntel throughout. That is dead reference code kept
+for behaviour that was tuned over time; it is loaded by nothing.
+
+**The concept was substantially rethought on 2026-08-28.** The full decision
+record — purpose, audience, the lens taxonomy replacement, the research layer,
+the circular-financing feature, and what is deliberately deferred — is in
+`CONCEPT-GRILL-LOG.md`. Read that before planning any new work; it is more
+current than the sections below.
 
 **Standing rule for this file:** nothing gets written here as a present-tense
 fact ("X prevents Y", "the rule that governs Z") unless there's a code path

@@ -1,12 +1,12 @@
 /* ==========================================================================
-   EconIntel application styles
+   Diffusion application styles
 
    This is the stylesheet the app imports. It layers on top of BoardUI's
    foundations rather than editing them: globals.css, theme.css and
    typography.css are left exactly as the CLI wrote them, so `boardui init`
    can be re-run to pick up upstream fixes without losing our work.
 
-   Anything EconIntel-specific belongs here or in charts.css.
+   Anything Diffusion-specific belongs here or in charts.css.
    ========================================================================== */
 
 @import "./globals.css";

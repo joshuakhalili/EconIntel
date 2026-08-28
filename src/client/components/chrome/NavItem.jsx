@@ -7,7 +7,7 @@ import { cx } from '@/utils/cx';
  * The visual treatment — 2lg radius, the accent gradient and nav-selected
  * shadow when current, secondary-hover otherwise — is taken from BoardUI's own
  * dashboard sidebar so this matches the rest of the kit. What differs is that
- * BoardUI's rows are a fixed list written into the component; EconIntel's are
+ * BoardUI's rows are a fixed list written into the component; Diffusion's are
  * editorial data from /api/lenses, so this takes a route and renders whatever
  * it is given.
  */

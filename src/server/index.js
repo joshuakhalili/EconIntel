@@ -442,7 +442,7 @@ app.use((error, _req, res, _next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const server = app.listen(config.port, () => {
-  console.log(`\n  EconIntel listening on http://localhost:${config.port}`);
+  console.log(`\n  Diffusion listening on http://localhost:${config.port}`);
   console.log(`  health: http://localhost:${config.port}/healthz\n`);
 
   const ready = describeIntegrations().filter((i) => i.ready).length;
