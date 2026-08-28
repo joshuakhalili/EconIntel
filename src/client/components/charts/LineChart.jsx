@@ -39,6 +39,10 @@ export default function LineChart({
   unit,
   height = 260,
   onPick,
+  // True only when every value on this chart is an index (rebased to 100 at a
+  // shared base period). Only an index scale is allowed a non-zero floor —
+  // see buildChartModel.
+  indexed = false,
 }) {
   const palette = useSeriesPalette();
 
@@ -46,9 +50,9 @@ export default function LineChart({
   // series are tracked by label and the remaining ones keep their own colour.
   const [hidden, setHidden] = useState(() => new Set());
 
-  const { rows, ticks, domain, tickFormatter, duplicateDates } = useMemo(
-    () => buildChartModel(series, cadence),
-    [series, cadence]
+  const { rows, ticks, domain, tickFormatter, duplicateDates, axisTruncated } = useMemo(
+    () => buildChartModel(series, cadence, indexed),
+    [series, cadence, indexed]
   );
 
   // A series holding two values for one date cannot be drawn as a line without
@@ -80,6 +84,15 @@ export default function LineChart({
 
   return (
     <div className="min-w-0">
+      {/* A padded floor moves the bottom of the frame off zero, which is the
+          textbook way to exaggerate a trend. Allowed only for an index scale
+          (see buildChartModel) — and even there, said out loud rather than
+          left for a reader to notice or not. */}
+      {axisTruncated && (
+        <p className="mb-1 text-right text-caption-medium text-text-tertiary">
+          Axis does not start at 0 — index scale
+        </p>
+      )}
       <ResponsiveContainer width="100%" height={height}>
         <RLineChart
           data={rows}
@@ -138,6 +151,12 @@ export default function LineChart({
                 dataKey={s.label}
                 stroke={colorAt(palette, index)}
                 strokeWidth={2}
+                // A series the server could not index (its anchor value was 0)
+                // is drawn dashed, because it shares this axis in raw units
+                // while its siblings are index points — a shared axis without
+                // a shared scale has to look different, not just say so in a
+                // caption a reader may not read.
+                strokeDasharray={s.raw ? '5 4' : undefined}
                 dot={false}
                 activeDot={{ r: 4, strokeWidth: 0 }}
                 connectNulls={false}
@@ -178,7 +197,7 @@ export default function LineChart({
  * A missing date for a series becomes null rather than a skipped key, which is
  * what lets connectNulls={false} break the line at a real gap.
  */
-function buildChartModel(series, cadence) {
+function buildChartModel(series, cadence, indexed) {
   const dates = [
     ...new Set(series.flatMap((s) => s.points.map((p) => p.date))),
   ].sort();
@@ -207,14 +226,22 @@ function buildChartModel(series, cadence) {
   const max = values.length ? Math.max(...values) : 1;
   const range = max - min || Math.abs(max) || 1;
 
+  // Zero is included whenever the data already sits near it OR the chart is
+  // not an index scale — a raw-unit chart floors at zero (or at the true
+  // negative minimum) by default, full stop. A padded floor below the
+  // observed minimum is a real trend-exaggeration technique, so it is only
+  // permitted for an index that moves in a tight band around 100, where
+  // forcing zero would flatten the whole shape into a line at the top of the
+  // frame — and even then it says so on the chart (see axisTruncated below).
+  const nearZero = min >= 0 && min < range * 0.35;
+  const floor = nearZero ? 0 : indexed ? niceFloor(min, range) : Math.min(0, min);
+
   return {
     rows,
     duplicateDates,
     ticks: pickTicks(dates),
-    // Zero is included only when the data already sits near it. Forcing a zero
-    // baseline onto an index that moves between 95 and 108 flattens the entire
-    // shape into a line at the top of the frame.
-    domain: [min >= 0 && min < range * 0.35 ? 0 : niceFloor(min, range), 'auto'],
+    domain: [floor, 'auto'],
+    axisTruncated: floor > 0,
     tickFormatter: (value) => fmt(value, precisionFor(range)),
   };
 }

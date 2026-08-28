@@ -52,6 +52,20 @@ export default function QuestionPage() {
         </section>
       )}
 
+      {/* Directly under the answer, at equal visual weight to it — a reader
+          should hit the caveat before any chart, not after all of them. A
+          card a person has to scroll past four charts to reach is a footnote
+          with a bigger border, whatever the schema calls it. */}
+      {question.caveat && (
+        <section className="mb-8 flex items-start gap-3 rounded-2xl border border-warn/40 bg-background-primary-default p-5">
+          <RiAlertLine className="mt-0.5 size-5 shrink-0 text-warn" aria-hidden />
+          <div>
+            <h2 className="text-body-medium text-text-primary">What this does not show</h2>
+            <p className="mt-1 text-body-regular text-text-secondary">{question.caveat}</p>
+          </div>
+        </section>
+      )}
+
       {groups.hero.length > 0 && (
         <Section>
           {groups.hero.map((group) => (
@@ -85,16 +99,6 @@ export default function QuestionPage() {
 
       {question.indicators?.length === 0 && (
         <EmptyBlock>No indicators are attached to this question yet.</EmptyBlock>
-      )}
-
-      {question.caveat && (
-        <section className="mt-8 flex items-start gap-3 rounded-2xl border border-border-secondary bg-background-secondary-default p-5">
-          <RiAlertLine className="mt-0.5 size-5 shrink-0 text-warn" aria-hidden />
-          <div>
-            <h2 className="text-body-medium text-text-primary">What this does not show</h2>
-            <p className="mt-1 text-body-regular text-text-secondary">{question.caveat}</p>
-          </div>
-        </section>
       )}
     </div>
   );

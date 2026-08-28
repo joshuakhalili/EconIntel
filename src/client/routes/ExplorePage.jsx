@@ -161,9 +161,17 @@ export default function ExplorePage() {
           <ChartCard
             title={chosenMeta.map((i) => i.name).join(' · ')}
             caption={
-              mustIndex
-                ? 'These indicators use different units, so every series is rebased to 100 at its first shared period. The shape is comparable; the levels are not.'
-                : undefined
+              // What the request asked for (`mustIndex`) and what the
+              // response actually managed (`payload.indexed`, per-series
+              // `indexed`) can differ — a series anchored at 0, or no shared
+              // period at all, means "every series" would be a lie. See the
+              // per-series raw/dashed handling in SeriesChart for the case
+              // where only some of them got rebased.
+              mustIndex && payload?.indexed
+                ? 'These indicators use different units, so series are rebased to 100 at their first shared period (dashed lines stayed in raw units — see the chart below). The shape is comparable; the levels are not.'
+                : mustIndex && payload?.indexNote
+                  ? payload.indexNote
+                  : undefined
             }
             footer={
               <span>

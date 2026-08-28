@@ -3,7 +3,14 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-27.
+Last updated: 2026-08-28.
+
+**Standing rule for this file:** nothing gets written here as a present-tense
+fact ("X prevents Y", "the rule that governs Z") unless there's a code path
+that actually enforces it right now. Schema and intent go under "What's NOT
+built yet" or get an explicit "designed, not enforced" caveat — a grill session
+on 2026-08-28 found the narration/grounding rule below stated as governing
+fact with zero enforcing code behind it.
 
 ## The front end was rewritten in React — read this first
 
@@ -49,9 +56,15 @@ Infrastructure, Policy, Adoption), each containing questions, contextual price
 tickers, and news. Two reading modes (Plain / Technical) show different registers
 of the same stored answer, not the same text with jargon added.
 
-**The rule that governs everything:** an LLM is never asked to invent a number or
-a citation. It's handed SQL-computed values and stored claims and asked only to
-connect them in a sentence. See `narrations.input_hash` in the schema.
+**The rule that will govern the LLM layer, once it exists:** an LLM must never be
+asked to invent a number or a citation — only handed SQL-computed values and
+stored claims and asked to connect them in a sentence. **This is schema, not
+enforcement.** The `narrations` table (`input_hash`, `grounding`, `prompt_version`
+— see `0006_analysis.sql`) exists to key and cache that rule once something calls
+an LLM, but as of this writing nothing in `src/` constructs a prompt, calls
+Cloudflare Workers AI, or validates model output against it. There is no LLM call
+site yet, so there is currently nothing for this rule to protect. Do not describe
+it as active until a call site exists and this note is updated.
 
 ## ⚠️ Not pushed to GitHub
 

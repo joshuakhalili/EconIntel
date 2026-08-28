@@ -39,6 +39,13 @@ export default function ChartGroup({ members, height = 260, onPick }) {
 
   const sources = [...new Set(members.map((m) => m.source_name ?? m.source_id).filter(Boolean))];
 
+  // The footer states what the response actually did, not what was requested
+  // — `mustIndex` only asked for a rebase; whether every series got one (or
+  // any did, if there was no shared period) is `payload`'s to say once it
+  // arrives, and claiming it before then would be a guess dressed as a fact.
+  const rawSeries = payload?.series?.filter((s) => s.indexed === false) ?? [];
+  const indexedSeries = payload?.series?.filter((s) => s.indexed === true) ?? [];
+
   return (
     <ChartCard
       title={title}
@@ -46,7 +53,16 @@ export default function ChartGroup({ members, height = 260, onPick }) {
       footer={
         <span className="flex flex-wrap items-center gap-x-2">
           <span>{sources.join(', ')}</span>
-          {mustIndex && <span>· rebased to 100 at the first shared period</span>}
+          {payload?.indexed && rawSeries.length === 0 && (
+            <span>· rebased to 100 at the first shared period</span>
+          )}
+          {payload?.indexed && rawSeries.length > 0 && (
+            <span className="text-warn">
+              · {indexedSeries.length} of {indexedSeries.length + rawSeries.length} series rebased
+              to 100 — the rest (dashed) stayed in raw units, value was 0 at the shared base period
+            </span>
+          )}
+          {payload?.indexNote && <span className="text-warn">· {payload.indexNote}</span>}
         </span>
       }
     >
