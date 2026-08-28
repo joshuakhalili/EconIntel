@@ -115,9 +115,27 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
 - **Question layer:** 7 questions nested under lenses, each with hero/supporting/
   context charts, a stored answer in both registers, and a caveat as a first-class
   section — not a footnote.
-- **Front end:** all five pages ported to React — lens, question, chart-builder
-  ("Build a chart"), news feed, pipeline/status. Context drawer: click a point on
-  any chart → news and events from that period.
+- **Front end — rebuilt as an editorial site, not a dashboard.** Eight routes:
+  overview (`/`), lens, question, **the data browser (`/data`) and per-series
+  detail (`/data/:id`)**, chart-builder, news, pipeline/status. Context drawer:
+  click a point on any chart → news and events from that period.
+  - **Lens and question pages read as articles** — heading, thesis as prose,
+    then the claim being tested, how it is measured, the evidence, and what
+    others have published. Caveat sits directly under the answer, above every
+    chart.
+  - **`/data` makes every series reachable without going through an argument**,
+    and the detail page is the only place licence and attribution have ever
+    been shown, despite being recorded for every source since 0002.
+  - **No country filter anywhere, deliberately.** The catalogue has one country
+    with real depth (USA, 61 indicators); 39 of 49 have the same six World Bank
+    series. A country control would promise a comparison the data cannot
+    support. *(This changes when more data lands.)*
+  - **11 questions across 5 lenses** (was 7). `jobs` had 24 indicators and
+    `policy` 4; the split is in `016_question_split.sql`.
+  - Identity: warm neutrals, vermilion accent used only for interactive state,
+    Instrument Serif headings. The chrome stays quiet because nine colours
+    already carry meaning (six chart hues + the direction trio) and every
+    vivid brand hue collided with one of them.
 - **Mobile:** rail becomes a bottom tab bar below the `lg` breakpoint (1024px),
   with a "More" sheet rendering the same nav data. 44px touch targets.
   `manifest.json` + PWA icons so "Add to Home Screen" works.

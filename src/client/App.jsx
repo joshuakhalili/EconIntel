@@ -7,6 +7,8 @@ import OverviewPage from '@/routes/OverviewPage';
 import LensPage from '@/routes/LensPage';
 import QuestionPage from '@/routes/QuestionPage';
 import ExplorePage from '@/routes/ExplorePage';
+import DataPage from '@/routes/DataPage';
+import IndicatorPage from '@/routes/IndicatorPage';
 import NewsPage from '@/routes/NewsPage';
 import PipelinePage from '@/routes/PipelinePage';
 
@@ -35,6 +37,8 @@ const router = createBrowserRouter([
       { path: 'lens/:slug', element: <LensPage /> },
       { path: 'q/:slug', element: <QuestionPage /> },
       { path: 'explore', element: <ExplorePage /> },
+      { path: 'data', element: <DataPage /> },
+      { path: 'data/:id', element: <IndicatorPage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'pipeline', element: <PipelinePage /> },
       // An unknown path lands on the overview rather than a lens, so a stale

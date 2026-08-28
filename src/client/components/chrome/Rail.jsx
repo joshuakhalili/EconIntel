@@ -1,5 +1,6 @@
 import {
   RiBarChartBoxLine,
+  RiDatabase2Line,
   RiNewspaperLine,
   RiFlowChart,
   RiCompass3Line,
@@ -12,6 +13,7 @@ import { usePreferences } from '@/lib/preferences';
 import NavItem from './NavItem';
 
 const TOOLS = [
+  { to: '/data', icon: RiDatabase2Line, label: 'Browse the data' },
   { to: '/explore', icon: RiBarChartBoxLine, label: 'Build a chart' },
   { to: '/news', icon: RiNewspaperLine, label: 'News' },
   { to: '/pipeline', icon: RiFlowChart, label: 'Where this comes from' },

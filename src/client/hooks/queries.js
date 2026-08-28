@@ -101,6 +101,17 @@ export function useIndicators(params = {}) {
   });
 }
 
+/** One indicator with its licence, attribution and the question that argues with it. */
+export function useIndicator(id) {
+  return useQuery({
+    queryKey: ['indicator', id],
+    queryFn: ({ signal }) => fetchJson(`/api/indicators/${id}`, { signal }),
+    select: (body) => body?.indicator ?? null,
+    enabled: Boolean(id),
+    ...CATALOGUE,
+  });
+}
+
 export function useIndicatorCountries(id) {
   return useQuery({
     queryKey: ['indicator-countries', id],

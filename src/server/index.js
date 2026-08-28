@@ -358,6 +358,53 @@ app.get('/api/context', route(async (req, res) => {
 }));
 
 /** Which countries an indicator actually holds data for — populates dropdowns. */
+/**
+ * One indicator with its provenance.
+ *
+ * The catalogue endpoint deliberately does not carry licence and attribution —
+ * it returns 110 rows and that text would be repeated on most of them. A
+ * detail page is the one place a reader is asking where a number came from and
+ * on what terms it may be reused, so the source join lives here.
+ *
+ * `question_slug` is included because an indicator reached from the data
+ * browser is context-free: knowing which page argues with it is most of what
+ * makes a bare series legible.
+ */
+app.get('/api/indicators/:id', route(async (req, res) => {
+  const { rows } = await query(
+    `SELECT i.id, i.name, i.description, i.pillar, i.unit, i.unit_symbol,
+            i.decimals, i.cadence, i.quantity_kind, i.confidence_tier,
+            i.higher_is_better, i.has_country_dim, i.default_country_iso3,
+            i.index_base_period::text, i.last_ingested_at, i.source_url,
+            s.id   AS source_id,
+            s.name AS source_name,
+            s.homepage_url AS source_homepage,
+            s.licence      AS source_licence,
+            s.attribution_text,
+            o.n AS observation_count,
+            o.first_period, o.last_period,
+            q.slug AS question_slug, q.question,
+            qi.caption_plain, qi.caption_expert
+       FROM indicators i
+       LEFT JOIN sources s ON s.id = i.source_id
+       LEFT JOIN LATERAL (
+         SELECT count(*)::int           AS n,
+                min(period_start)::text AS first_period,
+                max(period_start)::text AS last_period
+           FROM observations WHERE indicator_id = i.id
+       ) o ON true
+       LEFT JOIN question_indicators qi ON qi.indicator_id = i.id
+       LEFT JOIN questions q ON q.id = qi.question_id AND q.is_active
+      WHERE i.id = $1`,
+    [req.params.id]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ error: `No indicator "${req.params.id}"` });
+  }
+  res.json({ indicator: rows[0] });
+}));
+
 app.get('/api/indicators/:id/countries', route(async (req, res) => {
   const { rows } = await query(
     `SELECT o.country_iso3, c.name, count(*)::int AS n
