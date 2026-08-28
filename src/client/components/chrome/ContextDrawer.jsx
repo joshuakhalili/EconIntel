@@ -98,12 +98,21 @@ function ContextDrawer({ target, onClose }) {
                         key={event.id}
                         className="rounded-2lg border border-border-button-default p-3"
                       >
-                        <p className="text-body-regular text-text-primary">{event.title}</p>
-                        {event.occurred_at && (
-                          <p className="mt-0.5 text-caption-1-regular text-text-tertiary">
-                            {event.occurred_at.slice(0, 10)}
-                          </p>
-                        )}
+                        {/* headline/announced_date, not title/occurred_at.
+                            The wrong names rendered every event as an empty
+                            row, and it was invisible only because `events` is
+                            still empty — it would have shipped broken the day
+                            extraction landed. */}
+                        <p className="text-body-regular text-text-primary">{event.headline}</p>
+                        <p className="mt-0.5 flex flex-wrap gap-x-2 text-caption-1-regular text-text-tertiary">
+                          {event.announced_date && <span>{event.announced_date.slice(0, 10)}</span>}
+                          {event.from_name && (
+                            <span>
+                              {event.from_name}
+                              {event.to_name ? ` → ${event.to_name}` : ''}
+                            </span>
+                          )}
+                        </p>
                       </li>
                     ))}
                   </ul>

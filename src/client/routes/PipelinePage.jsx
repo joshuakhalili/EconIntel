@@ -124,14 +124,18 @@ export default function PipelinePage() {
           <Table aria-label="Stale indicators">
             <TableHeader>
               <TableColumn id="indicator" isRowHeader>Indicator</TableColumn>
-              <TableColumn id="last">Last observation</TableColumn>
+              {/* The query behind this returns when the job last RAN, which is
+                  not the same as the last period observed — an adapter can
+                  fetch successfully and find nothing new. The column is named
+                  for what it actually holds. */}
+              <TableColumn id="last">Last fetched</TableColumn>
             </TableHeader>
             <TableBody>
               {staleIndicators.map((row) => (
                 <TableRow key={row.id ?? row.indicator_id} id={row.id ?? row.indicator_id}>
                   <TableCell>{row.name ?? row.id ?? row.indicator_id}</TableCell>
                   <TableCell className="text-text-tertiary">
-                    {row.last_observation ?? row.latest_date ?? '—'}
+                    {row.last_ingested_at ? row.last_ingested_at.slice(0, 10) : 'never'}
                   </TableCell>
                 </TableRow>
               ))}
