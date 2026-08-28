@@ -121,9 +121,8 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
 - **Mobile:** rail becomes a bottom tab bar below the `lg` breakpoint (1024px),
   with a "More" sheet rendering the same nav data. 44px touch targets.
   `manifest.json` + PWA icons so "Add to Home Screen" works.
-- **Security:** `.env` gitignored, pre-commit hook blocks anything shaped like a
-  key/token/secret (case-insensitive, shape-based — not a list of known provider
-  names, which had already gone stale twice).
+- **Security:** audited 2026-08-28, before the first public push. See the
+  dedicated section below.
 - **Chart palette re-validated** against BoardUI's surfaces with the dataviz
   validator. Dark mode needed its own steps because BoardUI's dark card is
   lighter than the old one — see the note in `src/client/styles/charts.css`,
@@ -145,6 +144,64 @@ In rough priority order:
 4. **`render.yaml` + actual deploy.** The local `.env` already points at the
    live Render Postgres, so production data is already migrated and seeded —
    just the app itself isn't deployed yet.
+
+## Security
+
+Audited 2026-08-28, before the first push of this branch. **The GitHub repo is
+public**, so anything committed is published immediately.
+
+Verified clean:
+
+- **Secrets have never entered git history.** `.env` is gitignored and was
+  never committed; all 30k added lines across the 34 unpushed commits were
+  scanned against the pre-commit hook's own patterns with zero hits;
+  `.env.example` holds only empty fields and a localhost placeholder. The hook
+  is active (`core.hooksPath = .githooks`) and is shape-based rather than a
+  list of provider names, which had already gone stale twice.
+- **SQL injection surface is zero.** Every query is parameterised, including
+  the optional filters, which use `$1::text IS NULL OR …` rather than
+  assembling SQL strings. No `ORDER BY` is caller-controlled.
+- **XSS surface is minimal.** No `dangerouslySetInnerHTML` or `innerHTML`
+  anywhere in the client, so React escapes all rendered content — which matters
+  because news headlines come from third-party RSS. Both external links carry
+  `rel="noopener noreferrer"`.
+- **Every endpoint has a bounded cost** (observations capped at 20k rows,
+  `/api/series` at 12 series, documents at 200), and the pool sets
+  `statement_timeout` at 30s, so no request can run away.
+- **Zero vulnerabilities** in production dependencies (`npm audit --omit=dev`).
+- Error messages are hidden in production, `x-powered-by` is disabled.
+
+Fixed in this pass:
+
+- **`ingestion_runs.error_message` is served publicly by `/api/status` and was
+  stored unredacted.** `HttpError` redacts its own message, but only some
+  failures are `HttpError`s — a native fetch `TypeError`, a pg error, or
+  anything a future adapter throws arrived unfiltered, and a request URL
+  carrying `api_key=` in one of those would have been rendered on a public
+  page. Redaction now happens in `finishRun`, at the point of storage, so the
+  guarantee holds for every error type rather than depending on every throw
+  site getting it right.
+- **Response security headers added** (`src/server/lib/security.js`): CSP,
+  `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, and HSTS in production only. The CSP hashes the one
+  inline script (the pre-paint theme block) **computed at boot from the served
+  `index.html`**, rather than a hash pasted into source that would drift
+  silently the moment anyone edited that script. `style-src` deliberately keeps
+  `'unsafe-inline'` because Recharts renders through React's `style` prop.
+- **CORS is now a deliberate decision, not a default.** It stays open because
+  the API is read-only public data with no auth, no cookies and no session —
+  a cross-origin caller can do nothing `curl` cannot, and open access is a
+  stated goal. `credentials` is explicitly off. **If authentication is ever
+  added this must become an allowlist**, since open CORS plus cookie auth is
+  how a read API becomes a CSRF hole.
+
+Known gap, deliberately deferred:
+
+- **No rate limiting.** In-process limiting is close to useless on serverless,
+  where each instance keeps its own counters, so this belongs at the edge —
+  Vercel's firewall or a KV-backed limiter — and is Phase 6 deploy work rather
+  than application code. Bounded query cost and `statement_timeout` are what
+  currently limit the damage.
 
 ## Known broken things
 

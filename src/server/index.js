@@ -18,6 +18,7 @@ import path from 'node:path';
 
 import { config, describeIntegrations } from './config.js';
 import { query, closePool, pool } from './db/pool.js';
+import { securityHeaders } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 import { listLenses, getLens, getLensTickers } from './repositories/lenses.js';
@@ -27,7 +28,19 @@ const publicDir = path.resolve(here, '../../public');
 
 const app = express();
 
-app.use(cors());
+/**
+ * CORS is open on purpose, and it is safe to be open only because of what this
+ * API is: read-only public data, no authentication, no cookies, no session.
+ * There is nothing a cross-origin caller can do that curl cannot, and letting
+ * researchers query it from their own pages is a stated goal of the project.
+ *
+ * That stops being true the moment any endpoint accepts a credential. If auth
+ * is ever added, this must become an allowlist and `credentials` must stay off
+ * — an open CORS policy plus cookie auth is how a read API becomes a CSRF hole.
+ */
+app.use(cors({ credentials: false }));
+
+app.use(securityHeaders({ publicDir, isProduction: config.env === 'production' }));
 app.disable('x-powered-by');
 
 /**

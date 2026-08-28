@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 import { query, closePool } from '../db/pool.js';
 import { config } from '../config.js';
+import { redactUrl } from '../lib/http.js';
 import { upsertObservations, touchIndicator } from '../repositories/observations.js';
 import * as fred from './sources/fred.js';
 import * as worldbank from './sources/worldbank.js';
@@ -41,13 +42,32 @@ async function startRun(jobName, sourceId) {
   return rows[0].id;
 }
 
+/**
+ * `error_message` is served publicly by /api/status, so it is redacted HERE,
+ * at the point of storage, rather than trusted to arrive clean.
+ *
+ * HttpError already redacts its own message and url, but only some failures are
+ * HttpErrors — a native fetch TypeError, a pg error, or anything a future
+ * adapter throws arrives unfiltered, and a request URL carrying `api_key=` in
+ * one of those would be written to a column the public dashboard renders. A key
+ * that reaches a public page has to be rotated, so the guarantee belongs at the
+ * boundary where it can be made once for every error type rather than
+ * re-established at every throw site.
+ */
 async function finishRun(runId, { status, written = 0, skipped = 0, error = null, details = null }) {
   await query(
     `UPDATE ingestion_runs
         SET status = $2, finished_at = now(), rows_written = $3,
             rows_skipped = $4, error_message = $5, details = $6
       WHERE id = $1`,
-    [runId, status, written, skipped, error, details ? JSON.stringify(details) : null]
+    [
+      runId,
+      status,
+      written,
+      skipped,
+      redactUrl(error),
+      details ? redactUrl(JSON.stringify(details)) : null,
+    ]
   );
 }
 
