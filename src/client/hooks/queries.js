@@ -37,6 +37,16 @@ export function useLenses() {
   });
 }
 
+/** Every lens with its thesis and one live number — the front page, in one request. */
+export function useOverview() {
+  return useQuery({
+    queryKey: ['overview'],
+    queryFn: ({ signal }) => fetchJson('/api/overview', { signal }),
+    select: unwrap('lenses'),
+    ...STRUCTURAL,
+  });
+}
+
 export function useLens(slug) {
   return useQuery({
     queryKey: ['lens', slug],

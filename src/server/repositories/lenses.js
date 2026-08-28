@@ -25,6 +25,86 @@ export async function listLenses() {
   return rows;
 }
 
+/**
+ * Every lens with its thesis and one representative number, for the overview.
+ *
+ * The front page has to make an argument, not present a menu. That means each
+ * lens needs to arrive carrying something — a claim and a live figure — rather
+ * than a name and a link. Fetching this as five separate ticker requests would
+ * put six round trips in front of the first thing a visitor ever sees.
+ *
+ * The lead indicator is the placement the editorial layer already sorted first,
+ * so which number represents a lens stays an editorial decision made in
+ * 012_lenses.sql rather than one made here by whichever row came back first.
+ */
+export async function overview() {
+  const { rows } = await query(
+    // Resolving the lead placement in its own CTE, BEFORE touching
+    // observations, is what makes this cheap. Nesting the observation lookup
+    // inside a lateral that ended in `ORDER BY sort_order LIMIT 1` made
+    // Postgres evaluate it for every ticker on every lens and then throw all
+    // but one away — around thirty scans instead of five, and a 5.9s first
+    // load on the page a visitor sees before any other.
+    `WITH lead AS (
+       SELECT DISTINCT ON (t.lens_id)
+              t.lens_id,
+              i.id AS indicator_id,
+              COALESCE(t.label, i.name) AS label,
+              i.unit, i.unit_symbol,
+              i.has_country_dim, i.default_country_iso3
+         FROM lens_tickers t
+         JOIN indicators i ON i.id = t.indicator_id
+        ORDER BY t.lens_id, t.sort_order
+     ),
+     question_counts AS (
+       SELECT lens_id, count(*)::int AS question_count
+         FROM questions
+        WHERE is_active AND lens_id IS NOT NULL
+        GROUP BY lens_id
+     )
+     SELECT l.id, l.slug, l.name, l.subtitle, l.thesis_plain, l.thesis_expert,
+            l.sort_order,
+            COALESCE(qc.question_count, 0) AS question_count,
+            lead.label AS lead_label,
+            lead.unit,
+            lead.unit_symbol,
+            recent.latest_value,
+            recent.latest_period,
+            recent.previous_value
+       FROM lenses l
+       LEFT JOIN lead           ON lead.lens_id = l.id
+       LEFT JOIN question_counts qc ON qc.lens_id = l.id
+       LEFT JOIN LATERAL (
+         SELECT max(value)        FILTER (WHERE rn = 1) AS latest_value,
+                max(period_start) FILTER (WHERE rn = 1) AS latest_period,
+                max(value)        FILTER (WHERE rn = 2) AS previous_value
+           FROM (
+             SELECT o.value, o.period_start,
+                    row_number() OVER (ORDER BY o.period_start DESC) AS rn
+               FROM observations o
+              WHERE o.indicator_id = lead.indicator_id
+                AND o.value IS NOT NULL
+                -- See getLensTickers: keying off default_country_iso3 rather
+                -- than the dimension flag returns a blank ticker.
+                AND (NOT lead.has_country_dim
+                     OR lead.default_country_iso3 IS NULL
+                     OR o.country_iso3 = lead.default_country_iso3)
+              ORDER BY o.period_start DESC
+              LIMIT 2
+           ) top2
+       ) recent ON lead.indicator_id IS NOT NULL
+      WHERE l.is_active
+      ORDER BY l.sort_order`
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    latest_value: r.latest_value === null ? null : Number(r.latest_value),
+    previous_value: r.previous_value === null ? null : Number(r.previous_value),
+    latest_period: r.latest_period ? String(r.latest_period).slice(0, 10) : null,
+  }));
+}
+
 /** One lens with its questions. Charts are fetched per question, not here. */
 export async function getLens(slug) {
   const { rows: lenses } = await query(

@@ -3,6 +3,11 @@ import { Outlet } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { RiRefreshLine } from '@remixicon/react';
 import { Button } from '@/components/base/buttons/button';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+} from '@/components/base/segmented-control/segmented-control';
+import { usePreferences } from '@/lib/preferences';
 import Rail from './Rail';
 import MobileNav from './MobileNav';
 
@@ -28,11 +33,14 @@ export default function AppShell() {
 
   const ctx = useMemo(() => ({ set: setHeading }), []);
 
-  // The browser tab should say where the reader is, not just what the site is.
+  // The browser tab should say where the reader is, not just what the site is —
+  // except on the overview, whose title IS the site name and would otherwise
+  // render as "Diffusion — Diffusion".
   useEffect(() => {
-    document.title = heading.title
-      ? `${heading.title} — Diffusion`
-      : 'Diffusion — Is AI changing the economy?';
+    document.title =
+      !heading.title || heading.title === 'Diffusion'
+        ? 'Diffusion — Is AI changing the economy?'
+        : `${heading.title} — Diffusion`;
   }, [heading.title]);
 
   return (
@@ -58,14 +66,23 @@ export default function AppShell() {
             )}
           </div>
 
-          <Button
-            variant="secondary"
-            size="small"
-            leadingIcon={RiRefreshLine}
-            onClick={() => queryClient.invalidateQueries()}
-          >
-            Refresh
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Reading level sits in the header because it changes the register
+                of every claim on the page under it. At the bottom of the rail
+                it read as a preference someone had buried; here it reads as a
+                property of what you are looking at. */}
+            <ReadingLevel />
+
+            <Button
+              variant="secondary"
+              size="small"
+              leadingIcon={RiRefreshLine}
+              onClick={() => queryClient.invalidateQueries()}
+              aria-label="Refresh data"
+            >
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
         </header>
 
         {/* Bottom padding clears the mobile tab bar, which is fixed over the
@@ -77,5 +94,35 @@ export default function AppShell() {
 
       <MobileNav />
     </PageTitleContext.Provider>
+  );
+}
+
+/**
+ * Plain / Technical.
+ *
+ * Not a settings toggle — the two registers answer different questions about
+ * the same finding, so this is closer to choosing an edition than changing a
+ * preference. Labelled in full on desktop; the label collapses on small
+ * screens where the header has to share room with the title.
+ */
+function ReadingLevel() {
+  const { mode, setMode } = usePreferences();
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden text-caption-1-regular text-text-tertiary md:inline">Reading</span>
+      {/* React Aria's ToggleButtonGroup selects by Set, not a single key. */}
+      <SegmentedControl
+        aria-label="Reading level"
+        selectedKeys={new Set([mode])}
+        onSelectionChange={(keys) => {
+          const next = [...keys][0];
+          if (next) setMode(String(next));
+        }}
+      >
+        <SegmentedControlItem id="plain">Plain</SegmentedControlItem>
+        <SegmentedControlItem id="expert">Technical</SegmentedControlItem>
+      </SegmentedControl>
+    </div>
   );
 }

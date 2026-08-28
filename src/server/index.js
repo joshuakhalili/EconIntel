@@ -21,7 +21,7 @@ import { query, closePool, pool } from './db/pool.js';
 import { securityHeaders } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
-import { listLenses, getLens, getLensTickers } from './repositories/lenses.js';
+import { listLenses, getLens, getLensTickers, overview } from './repositories/lenses.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '../../public');
@@ -123,6 +123,14 @@ app.get('/api/indicators', route(async (req, res) => {
 
 app.get('/api/lenses', route(async (_req, res) => {
   res.json({ lenses: await listLenses() });
+}));
+
+/**
+ * The front page. Every lens with its thesis and one live number, in one
+ * request — see the note on `overview()` for why this is not five ticker calls.
+ */
+app.get('/api/overview', route(async (_req, res) => {
+  res.json({ lenses: await overview() });
 }));
 
 app.get('/api/lenses/:slug', route(async (req, res) => {

@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { PreferencesProvider } from '@/lib/preferences';
 import { ContextDrawerProvider } from '@/components/chrome/ContextDrawer';
 import AppShell from '@/components/chrome/AppShell';
+import OverviewPage from '@/routes/OverviewPage';
 import LensPage from '@/routes/LensPage';
 import QuestionPage from '@/routes/QuestionPage';
 import ExplorePage from '@/routes/ExplorePage';
@@ -26,17 +27,20 @@ const router = createBrowserRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      // Investment is the entry point: the money is committed before any of
-      // it shows up in output, in employment, or in a regulation, so it is
-      // where the story starts and the one lens with data that is not in
-      // dispute.
-      { index: true, element: <Navigate to="/lens/investment" replace /> },
+      // The overview is the entry point. Landing straight inside a lens gave a
+      // first-time visitor no statement of what the site is or how the lenses
+      // relate, which made five ways of looking at one subject read as five
+      // unrelated sections.
+      { index: true, element: <OverviewPage /> },
       { path: 'lens/:slug', element: <LensPage /> },
       { path: 'q/:slug', element: <QuestionPage /> },
       { path: 'explore', element: <ExplorePage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'pipeline', element: <PipelinePage /> },
-      { path: '*', element: <Navigate to="/lens/investment" replace /> },
+      // An unknown path lands on the overview rather than a lens, so a stale
+      // or mistyped link explains where it has arrived instead of dropping a
+      // reader into the middle of an argument.
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
 ]);

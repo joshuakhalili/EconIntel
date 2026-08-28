@@ -2,14 +2,11 @@ import {
   RiBarChartBoxLine,
   RiNewspaperLine,
   RiFlowChart,
+  RiCompass3Line,
   RiSunLine,
   RiMoonLine,
 } from '@remixicon/react';
 import { Divider } from '@/components/base/divider/divider';
-import {
-  SegmentedControl,
-  SegmentedControlItem,
-} from '@/components/base/segmented-control/segmented-control';
 import { useLenses } from '@/hooks/queries';
 import { usePreferences } from '@/lib/preferences';
 import NavItem from './NavItem';
@@ -30,7 +27,7 @@ const TOOLS = [
  */
 export function RailContents({ onNavigate }) {
   const { data: lenses, isPending, isError } = useLenses();
-  const { theme, toggleTheme, mode, setMode } = usePreferences();
+  const { theme, toggleTheme } = usePreferences();
 
   return (
     <>
@@ -44,7 +41,14 @@ export function RailContents({ onNavigate }) {
         <span className="text-body-medium text-text-primary">Diffusion</span>
       </div>
 
-      <nav className="mt-4 flex flex-col gap-0.5" aria-label="Lenses">
+      {/* The way back to the argument as a whole. Without it, a reader who
+          follows a lens link has no route back to the orientation the overview
+          gives except the browser's back button. */}
+      <nav className="mt-4 flex flex-col gap-0.5" aria-label="Overview">
+        <NavItem to="/" end icon={RiCompass3Line} label="Overview" onClick={onNavigate} />
+      </nav>
+
+      <nav className="mt-3 flex flex-col gap-0.5" aria-label="Lenses">
         <p className="px-2 pb-1 text-caption-1-medium uppercase tracking-wide text-text-tertiary">
           Lenses
         </p>
@@ -82,28 +86,11 @@ export function RailContents({ onNavigate }) {
         ))}
       </nav>
 
+      {/* Reading level used to live here, at the bottom of the rail below the
+          fold. It changes the register of every claim on the site, which makes
+          it a property of what you are reading rather than a setting — so it
+          now sits in the page header beside the title. */}
       <div className="mt-auto flex flex-col gap-3 pt-4">
-        {/* Reader mode. The same finding has to reach a generalist and a
-            researcher; this switches which register of the stored text is
-            shown, not which application is running. */}
-        <div>
-          <p className="px-2 pb-1.5 text-caption-1-medium uppercase tracking-wide text-text-tertiary">
-            Reading level
-          </p>
-          {/* React Aria's ToggleButtonGroup selects by Set, not a single key. */}
-          <SegmentedControl
-            aria-label="Reading level"
-            selectedKeys={new Set([mode])}
-            onSelectionChange={(keys) => {
-              const next = [...keys][0];
-              if (next) setMode(String(next));
-            }}
-          >
-            <SegmentedControlItem id="plain">Plain</SegmentedControlItem>
-            <SegmentedControlItem id="expert">Technical</SegmentedControlItem>
-          </SegmentedControl>
-        </div>
-
         <button
           type="button"
           onClick={toggleTheme}
