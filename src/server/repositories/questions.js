@@ -39,13 +39,35 @@ export async function listQuestions() {
 export async function getQuestion(slug) {
   const { rows: questions } = await query(
     `SELECT q.id, q.slug, q.question, q.subtitle, q.answer_plain, q.answer_expert,
-            q.caveat, q.icon, q.lens_id, l.name AS lens_name, l.slug AS lens_slug
+            q.caveat, q.icon, q.lens_id,
+            q.theory, q.method, q.strength, q.last_reviewed::text,
+            l.name AS lens_name, l.slug AS lens_slug
        FROM questions q
        LEFT JOIN lenses l ON l.id = q.lens_id AND l.is_active
       WHERE q.slug = $1 AND q.is_active`,
     [slug]
   );
   if (questions.length === 0) return null;
+
+  /**
+   * Outside literature for this page, plus anything filed against its parent
+   * lens.
+   *
+   * Both are returned because a source can legitimately sit at either level —
+   * a paper on youth employment belongs to one question, an institutional
+   * report on AI capex belongs to the whole lens — and a reader does not care
+   * which table row it hangs from. `scope` is carried through so the UI can
+   * say "on this question" versus "on this lens" rather than implying the
+   * lens-level source was written about this question specifically.
+   */
+  const { rows: reading } = await query(
+    `SELECT id, title, publisher, published::text, url, kind, stance, takeaway,
+            CASE WHEN question_id IS NULL THEN 'lens' ELSE 'question' END AS scope
+       FROM question_reading
+      WHERE question_id = $1 OR lens_id = $2
+      ORDER BY (question_id IS NULL), sort_order, published DESC NULLS LAST`,
+    [questions[0].id, questions[0].lens_id]
+  );
 
   const { rows: indicators } = await query(
     `SELECT qi.indicator_id, qi.role, qi.sort_order, qi.chart_group,
@@ -82,7 +104,7 @@ export async function getQuestion(slug) {
     [questions[0].id]
   );
 
-  return { ...questions[0], indicators };
+  return { ...questions[0], indicators, reading };
 }
 
 /**

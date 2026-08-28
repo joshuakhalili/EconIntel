@@ -133,10 +133,22 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
 
 In rough priority order:
 
-1. **Literature layer** — academic papers via OpenAlex, findings extracted by
-   the Cloudflare LLM, structured so a conflict between two papers is a SQL
-   query. Schema not written yet (`0011_literature.sql` planned but doesn't
-   exist — the `0011` migration that does exist is `lens_news_query`, unrelated).
+1. **Literature layer — schema built, content empty, nothing renders it yet.**
+   `0012_editorial.sql` adds `question_reading` (citations attached to a
+   question *or* a lens, with `kind` — academic / consulting / think_tank /
+   official / industry — and `stance`), plus `theory`, `method`, `strength`
+   and `last_reviewed` on `questions`. The repositories and `/api/questions/:slug`
+   and `/api/lenses/:slug` return all of it.
+   **Twelve real reports are seeded as citations only** (`014_reading.sql`):
+   BIS, IMF ×2, OECD, WEF, Stanford HAI, McKinsey, PwC, Deloitte, KPMG, EY,
+   Accenture. Every `takeaway` and `stance` is NULL, and every new question
+   column is NULL, because those are claims that require reading the sources
+   and writing the prose — not something to infer from a title. The PDFs are
+   on the Desktop and are deliberately not in this repo: link and cite, never
+   redistribute.
+   Still to come: the OpenAlex academic corpus, and any front end that shows
+   this. `stale_questions` lists pages whose prose has not been reviewed in six
+   months — all 7 currently, since none has ever been reviewed.
 2. **Event extraction** — the `events` table is empty. This is what would power
    the circular-financing diagram (Nvidia → OpenAI → Oracle → Nvidia) the user
    asked for. Needs the LLM extracting from SEC 8-Ks and news.

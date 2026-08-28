@@ -131,7 +131,18 @@ export async function getLens(slug) {
     [lenses[0].id]
   );
 
-  return { ...lenses[0], questions };
+  // Reading filed against the lens itself. Question-level sources are not
+  // pulled up here — they belong to their own page, and hoisting them would
+  // make a lens look better read than it is.
+  const { rows: reading } = await query(
+    `SELECT id, title, publisher, published::text, url, kind, stance, takeaway
+       FROM question_reading
+      WHERE lens_id = $1
+      ORDER BY sort_order, published DESC NULLS LAST`,
+    [lenses[0].id]
+  );
+
+  return { ...lenses[0], questions, reading };
 }
 
 /**
