@@ -34,8 +34,8 @@ export default function LensPage() {
   return (
     <div className="mx-auto max-w-5xl">
       {thesis && (
-        <section className="mb-8 rounded-2xl border border-border-secondary bg-background-primary-default p-5">
-          <p className="text-body-large text-text-primary">{thesis}</p>
+        <section className="mb-8 rounded-2xl border border-border-button-default bg-background-primary-default p-5">
+          <p className="text-headline-regular text-text-primary">{thesis}</p>
         </section>
       )}
 
@@ -48,10 +48,10 @@ export default function LensPage() {
               <li key={question.slug}>
                 <Link
                   to={`/q/${question.slug}`}
-                  className="group flex h-full flex-col rounded-2xl border border-border-secondary bg-background-primary-default p-5 transition-colors hover:bg-background-secondary-hover"
+                  className="group flex h-full flex-col rounded-2xl border border-border-button-default bg-background-primary-default p-5 transition-colors hover:bg-background-secondary-hover"
                 >
                   <span className="flex items-start justify-between gap-3">
-                    <span className="text-title-medium text-text-primary">{question.question}</span>
+                    <span className="text-title-3-medium text-text-primary">{question.question}</span>
                     <RiArrowRightLine
                       className="mt-1 size-4 shrink-0 text-foreground-icon-secondary transition-transform group-hover:translate-x-0.5"
                       aria-hidden
@@ -65,7 +65,7 @@ export default function LensPage() {
                   <span className="mt-3 line-clamp-3 text-body-regular text-text-secondary">
                     {register(question.answer_plain, question.answer_expert)}
                   </span>
-                  <span className="mt-3 text-caption-regular text-text-tertiary">
+                  <span className="mt-3 text-caption-1-regular text-text-tertiary">
                     {question.indicator_count} indicators
                   </span>
                 </Link>

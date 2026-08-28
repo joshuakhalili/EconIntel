@@ -38,11 +38,11 @@ export default function TickerStrip({ tickers }) {
                 className={`flex min-w-44 flex-col items-start gap-0.5 rounded-2lg border px-3 py-2 text-left transition-colors ${
                   isOpen
                     ? 'border-accent-500 bg-background-secondary-default'
-                    : 'border-border-secondary bg-background-primary-default hover:bg-background-secondary-hover'
+                    : 'border-border-button-default bg-background-primary-default hover:bg-background-secondary-hover'
                 }`}
               >
-                <span className="text-caption-medium text-text-tertiary">{ticker.label}</span>
-                <span className="text-title-medium tabular-nums text-text-primary">
+                <span className="text-caption-1-medium text-text-tertiary">{ticker.label}</span>
+                <span className="text-title-3-medium tabular-nums text-text-primary">
                   {withUnit(ticker.latest_value, ticker.unit_symbol ?? ticker.unit)}
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">
@@ -61,7 +61,7 @@ export default function TickerStrip({ tickers }) {
                       stale
                     </Chip>
                   )}
-                  <span className="text-caption-regular text-text-tertiary">
+                  <span className="text-caption-1-regular text-text-tertiary">
                     {ticker.latest_period
                       ? fmtDate(ticker.latest_period.slice(0, 10), 'monthly')
                       : ''}
@@ -76,7 +76,7 @@ export default function TickerStrip({ tickers }) {
       {/* The rationale is the point, so it gets room to be read rather than
           being squeezed into the tile as a tooltip. */}
       {open && (
-        <div className="mt-2 rounded-2lg border border-border-secondary bg-background-secondary-default p-4">
+        <div className="mt-2 rounded-2lg border border-border-button-default bg-background-secondary-default p-4">
           <p className="text-body-medium text-text-primary">{open.name}</p>
           <p className="mt-1 text-body-regular text-text-secondary">{open.why}</p>
           {open.source_url && (
@@ -84,7 +84,7 @@ export default function TickerStrip({ tickers }) {
               href={open.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block text-caption-regular text-accent-600 underline"
+              className="mt-2 inline-block text-caption-1-regular text-accent-600 underline"
             >
               Source
             </a>

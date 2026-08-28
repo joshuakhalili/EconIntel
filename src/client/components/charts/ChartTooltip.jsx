@@ -15,8 +15,8 @@ export default function ChartTooltip({ active, payload, label, cadence, unit, pa
   if (!rows.length) return null;
 
   return (
-    <div className="rounded-lg border border-border-secondary bg-background-primary-default px-3 py-2 shadow-dropdown">
-      <p className="mb-1 text-caption-medium text-text-secondary">{fmtDate(label, cadence)}</p>
+    <div className="rounded-lg border border-border-button-default bg-background-primary-default px-3 py-2 shadow-dropdown">
+      <p className="mb-1 text-caption-1-medium text-text-secondary">{fmtDate(label, cadence)}</p>
       <ul className="flex flex-col gap-1">
         {rows.map((entry) => {
           // Index into the original series list so the swatch matches the line

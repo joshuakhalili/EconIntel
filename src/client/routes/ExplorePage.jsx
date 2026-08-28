@@ -77,7 +77,7 @@ export default function ExplorePage() {
   return (
     <div className="mx-auto max-w-5xl">
       <Section>
-        <div className="rounded-2xl border border-border-secondary bg-background-primary-default p-4">
+        <div className="rounded-2xl border border-border-button-default bg-background-primary-default p-4">
           <label className="flex items-center gap-2 rounded-2lg bg-background-secondary-default px-3 py-2">
             <RiSearchLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
             <input
@@ -130,7 +130,7 @@ export default function ExplorePage() {
                       <span className="block truncate text-body-regular text-text-primary">
                         {indicator.name}
                       </span>
-                      <span className="block truncate text-caption-regular text-text-tertiary">
+                      <span className="block truncate text-caption-1-regular text-text-tertiary">
                         {indicator.unit} · {indicator.cadence} · {indicator.confidence_tier}
                       </span>
                     </span>
@@ -147,7 +147,7 @@ export default function ExplorePage() {
           </ul>
 
           {chosen.length >= MAX_SERIES && (
-            <p className="mt-2 text-caption-regular text-text-tertiary">
+            <p className="mt-2 text-caption-1-regular text-text-tertiary">
               {MAX_SERIES} is the most the series endpoint will return at once.
             </p>
           )}

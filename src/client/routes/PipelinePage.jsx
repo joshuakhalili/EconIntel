@@ -90,7 +90,7 @@ export default function PipelinePage() {
             <TableBody>
               {recentRuns.map((run, i) => (
                 <TableRow key={`${run.job_name}-${run.started_at}-${i}`} id={`${run.job_name}-${i}`}>
-                  <TableCell className="font-mono text-caption-regular">{run.job_name}</TableCell>
+                  <TableCell className="font-mono text-caption-1-regular">{run.job_name}</TableCell>
                   <TableCell>
                     <Chip variant="caption" color={runColor(run.status)}>
                       {run.status}

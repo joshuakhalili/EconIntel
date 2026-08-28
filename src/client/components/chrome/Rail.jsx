@@ -45,7 +45,7 @@ export function RailContents({ onNavigate }) {
       </div>
 
       <nav className="mt-4 flex flex-col gap-0.5" aria-label="Lenses">
-        <p className="px-2 pb-1 text-caption-medium uppercase tracking-wide text-text-tertiary">
+        <p className="px-2 pb-1 text-caption-1-medium uppercase tracking-wide text-text-tertiary">
           Lenses
         </p>
 
@@ -74,7 +74,7 @@ export function RailContents({ onNavigate }) {
       <Divider className="my-3" />
 
       <nav className="flex flex-col gap-0.5" aria-label="Tools">
-        <p className="px-2 pb-1 text-caption-medium uppercase tracking-wide text-text-tertiary">
+        <p className="px-2 pb-1 text-caption-1-medium uppercase tracking-wide text-text-tertiary">
           Tools
         </p>
         {TOOLS.map((tool) => (
@@ -87,7 +87,7 @@ export function RailContents({ onNavigate }) {
             researcher; this switches which register of the stored text is
             shown, not which application is running. */}
         <div>
-          <p className="px-2 pb-1.5 text-caption-medium uppercase tracking-wide text-text-tertiary">
+          <p className="px-2 pb-1.5 text-caption-1-medium uppercase tracking-wide text-text-tertiary">
             Reading level
           </p>
           {/* React Aria's ToggleButtonGroup selects by Set, not a single key. */}
@@ -125,7 +125,7 @@ export function RailContents({ onNavigate }) {
 export default function Rail() {
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-30 hidden w-rail flex-col overflow-y-auto border-r border-border-secondary bg-background-secondary-default p-3 lg:flex"
+      className="fixed inset-y-0 left-0 z-30 hidden w-rail flex-col overflow-y-auto border-r border-border-button-default bg-background-secondary-default p-3 lg:flex"
       aria-label="Sections"
     >
       <RailContents />

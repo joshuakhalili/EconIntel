@@ -47,8 +47,8 @@ export default function QuestionPage() {
       )}
 
       {answer && (
-        <section className="mb-8 rounded-2xl border border-border-secondary bg-background-primary-default p-5">
-          <p className="text-body-large text-text-primary">{answer}</p>
+        <section className="mb-8 rounded-2xl border border-border-button-default bg-background-primary-default p-5">
+          <p className="text-headline-regular text-text-primary">{answer}</p>
         </section>
       )}
 

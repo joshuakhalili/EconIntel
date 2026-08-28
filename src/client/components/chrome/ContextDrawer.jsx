@@ -61,12 +61,12 @@ function ContextDrawer({ target, onClose }) {
     <>
       <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} aria-hidden />
       <aside
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-y-auto border-l border-border-secondary bg-background-primary-default"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-y-auto border-l border-border-button-default bg-background-primary-default"
         aria-label="Context"
       >
-        <header className="sticky top-0 flex items-start justify-between gap-3 border-b border-border-secondary bg-background-primary-default px-4 py-3">
+        <header className="sticky top-0 flex items-start justify-between gap-3 border-b border-border-button-default bg-background-primary-default px-4 py-3">
           <div>
-            <h2 className="text-title-medium text-text-primary">Around this time</h2>
+            <h2 className="text-title-3-medium text-text-primary">Around this time</h2>
             {/* The real range, not the period's name: a monthly point covers a
                 month, and saying so avoids implying same-day causation. */}
             <p className="mt-0.5 text-body-regular text-text-tertiary">
@@ -96,11 +96,11 @@ function ContextDrawer({ target, onClose }) {
                     {events.map((event) => (
                       <li
                         key={event.id}
-                        className="rounded-2lg border border-border-secondary p-3"
+                        className="rounded-2lg border border-border-button-default p-3"
                       >
                         <p className="text-body-regular text-text-primary">{event.title}</p>
                         {event.occurred_at && (
-                          <p className="mt-0.5 text-caption-regular text-text-tertiary">
+                          <p className="mt-0.5 text-caption-1-regular text-text-tertiary">
                             {event.occurred_at.slice(0, 10)}
                           </p>
                         )}

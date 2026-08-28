@@ -43,7 +43,7 @@ export default function MobileNav() {
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border-secondary bg-background-secondary-default pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border-button-default bg-background-secondary-default pb-[env(safe-area-inset-bottom)] lg:hidden"
         aria-label="Sections"
       >
         {tabs.map((lens) => (
@@ -52,7 +52,7 @@ export default function MobileNav() {
             to={`/lens/${lens.slug}`}
             className={({ isActive }) =>
               cx(
-                'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-caption-medium',
+                'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-caption-1-medium',
                 isActive ? 'text-accent-600' : 'text-text-tertiary'
               )
             }
@@ -65,7 +65,7 @@ export default function MobileNav() {
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-expanded={sheetOpen}
-          className="flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-caption-medium text-text-tertiary"
+          className="flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-caption-1-medium text-text-tertiary"
         >
           <RiMenuLine className="size-5" aria-hidden />
           More
@@ -80,7 +80,7 @@ export default function MobileNav() {
             aria-hidden
           />
           <aside
-            className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-y-auto rounded-t-3xl border-t border-border-secondary bg-background-secondary-default p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden"
+            className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-y-auto rounded-t-3xl border-t border-border-button-default bg-background-secondary-default p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden"
             aria-label="More"
           >
             <div className="mb-2 flex items-center justify-end">

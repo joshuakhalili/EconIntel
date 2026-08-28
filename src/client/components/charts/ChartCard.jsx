@@ -11,7 +11,7 @@ export default function ChartCard({ title, caption, children, footer, className 
   return (
     <figure
       className={cx(
-        'flex flex-col rounded-2xl border border-border-secondary bg-background-primary-default p-4',
+        'flex flex-col rounded-2xl border border-border-button-default bg-background-primary-default p-4',
         className
       )}
     >
@@ -27,7 +27,7 @@ export default function ChartCard({ title, caption, children, footer, className 
       <div className="min-w-0 flex-1">{children}</div>
 
       {footer && (
-        <div className="mt-2 border-t border-border-secondary pt-2 text-caption-regular text-text-tertiary">
+        <div className="mt-2 border-t border-border-button-default pt-2 text-caption-1-regular text-text-tertiary">
           {footer}
         </div>
       )}

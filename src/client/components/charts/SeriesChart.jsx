@@ -60,7 +60,7 @@ export default function SeriesChart({ payload, height, onPick }) {
   return (
     <div>
       {cadenceMismatch && (
-        <p className="mb-2 text-caption-medium text-warn">
+        <p className="mb-2 text-caption-1-medium text-warn">
           These series report at different cadences ({cadenceMismatch.join(', ')}) but share one
           chart — spacing on this axis follows the finer one, not both evenly.
         </p>

@@ -89,7 +89,7 @@ export default function LineChart({
           (see buildChartModel) — and even there, said out loud rather than
           left for a reader to notice or not. */}
       {axisTruncated && (
-        <p className="mb-1 text-right text-caption-medium text-text-tertiary">
+        <p className="mb-1 text-right text-caption-1-medium text-text-tertiary">
           Axis does not start at 0 — index scale
         </p>
       )}
@@ -108,7 +108,7 @@ export default function LineChart({
         >
           {/* Grid and axes are recessive: they orient, they do not compete. */}
           <CartesianGrid
-            stroke="var(--color-border-secondary)"
+            stroke="var(--color-border-button-default)"
             strokeDasharray="0"
             vertical={false}
           />
@@ -120,7 +120,7 @@ export default function LineChart({
             tickFormatter={(iso) => fmtDate(iso, cadence)}
             tick={{ fill: 'var(--color-text-tertiary)', fontSize: 12 }}
             tickLine={false}
-            axisLine={{ stroke: 'var(--color-border-secondary)' }}
+            axisLine={{ stroke: 'var(--color-border-button-default)' }}
             interval={0}
             minTickGap={0}
           />

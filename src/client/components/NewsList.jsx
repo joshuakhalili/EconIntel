@@ -24,7 +24,7 @@ export default function NewsList({ documents, emptyMessage = 'No articles yet.' 
             href={doc.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col gap-1.5 rounded-2lg border border-border-secondary bg-background-primary-default p-4 transition-colors hover:bg-background-secondary-hover"
+            className="group flex flex-col gap-1.5 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:bg-background-secondary-hover"
           >
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-body-medium text-text-primary">{doc.title}</h3>
@@ -39,8 +39,8 @@ export default function NewsList({ documents, emptyMessage = 'No articles yet.' 
             )}
 
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <span className="text-caption-medium text-text-secondary">{doc.source_name}</span>
-              <span className="text-caption-regular text-text-tertiary">
+              <span className="text-caption-1-medium text-text-secondary">{doc.source_name}</span>
+              <span className="text-caption-1-regular text-text-tertiary">
                 {formatPublished(doc.published_at)}
               </span>
               {doc.ai_relevance != null && (

@@ -32,7 +32,7 @@ export default function CountrySelect({ indicator, value, onChange }) {
       value={value ?? ''}
       onChange={(event) => onChange(event.target.value)}
       aria-label={`Country for ${indicator.name}`}
-      className="min-h-8 rounded-md border border-border-secondary bg-background-primary-default px-2 text-caption-regular text-text-secondary"
+      className="min-h-8 rounded-md border border-border-button-default bg-background-primary-default px-2 text-caption-1-regular text-text-secondary"
     >
       {countries.map((country) => (
         <option key={country.country_iso3} value={country.country_iso3}>
