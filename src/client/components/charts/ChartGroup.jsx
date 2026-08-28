@@ -1,5 +1,6 @@
 import { useSeries } from '@/hooks/queries';
 import { useRegister } from '@/lib/preferences';
+import { displayUnit } from '@/lib/format';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import ChartCard from './ChartCard';
 import SeriesChart from './SeriesChart';
@@ -25,7 +26,13 @@ export default function ChartGroup({ members, height = 260, onPick }) {
 
   // Different units cannot share one axis, and a second axis is not an option,
   // so the server rebases them to a common base instead.
-  const units = new Set(members.map((m) => m.unit).filter(Boolean));
+  //
+  // Compared on the DISPLAY form, not the raw provider string. Several
+  // indicators share a real unit while carrying different notes after it —
+  // "index, 2015 = 100 (2015-01 = 99.9…)" against
+  // "index, 2015 = 100 (2015-01 = 100.8…)" — and comparing raw strings reads
+  // those as a mismatch, rebasing a chart that was already on one scale.
+  const units = new Set(members.map((m) => displayUnit(m.unit)).filter(Boolean));
   const mustIndex = units.size > 1;
 
   const { data: payload, isPending, isError, error } = useSeries(ids, {

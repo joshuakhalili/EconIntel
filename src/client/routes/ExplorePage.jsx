@@ -8,6 +8,7 @@ import ChartCard from '@/components/charts/ChartCard';
 import CountrySelect from '@/components/CountrySelect';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import SeriesChart from '@/components/charts/SeriesChart';
+import { displayUnit } from '@/lib/format';
 
 /** The server rejects more than this in one request. */
 const MAX_SERIES = 12;
@@ -40,7 +41,7 @@ export default function ExplorePage() {
 
   // Different units cannot share a scale. Indexing is the only honest way to
   // put them on one axis; a second axis is not an option.
-  const units = new Set(chosenMeta.map((i) => i.unit).filter(Boolean));
+  const units = new Set(chosenMeta.map((i) => displayUnit(i.unit)).filter(Boolean));
   const mustIndex = units.size > 1;
 
   // Positional: the endpoint pairs the nth country with the nth id, so a blank
@@ -130,8 +131,12 @@ export default function ExplorePage() {
                       <span className="block truncate text-body-regular text-text-primary">
                         {indicator.name}
                       </span>
-                      <span className="block truncate text-caption-1-regular text-text-tertiary">
-                        {indicator.unit} · {indicator.cadence} · {indicator.confidence_tier}
+                      <span
+                        className="block truncate text-caption-1-regular text-text-tertiary"
+                        title={indicator.unit ?? undefined}
+                      >
+                        {displayUnit(indicator.unit)} · {indicator.cadence} ·{' '}
+                        {indicator.confidence_tier}
                       </span>
                     </span>
                     {isChosen && <Chip variant="caption" color="lime">Added</Chip>}

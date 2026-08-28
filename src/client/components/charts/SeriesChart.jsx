@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import LineChart from './LineChart';
-import { inferCadence } from '@/lib/format';
+import { inferCadence, displayUnit } from '@/lib/format';
 
 const CADENCE_RANK = { daily: 0, weekly: 1, monthly: 2, quarterly: 3, annual: 4 };
 
@@ -38,7 +38,9 @@ export default function SeriesChart({ payload, height, onPick }) {
       return { label: raw ? `${labelFor(s, list)} (raw units)` : labelFor(s, list), points: s.points ?? [], raw };
     });
 
-    const units = new Set(list.map((s) => s.meta?.unit).filter(Boolean));
+    // Display form, so two series whose provider notes differ but whose real
+    // unit matches are not read as a mismatch — see ChartGroup.
+    const units = new Set(list.map((s) => displayUnit(s.meta?.unit)).filter(Boolean));
 
     const perSeriesCadence = mapped
       .filter((s) => s.points.some((p) => p.value != null))

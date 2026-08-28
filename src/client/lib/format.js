@@ -98,6 +98,39 @@ export function deltaLabel(d) {
   return `${arrow} ${mag >= 1000 ? fmt(mag, 0) : mag.toFixed(1)}${d.unit}`;
 }
 
+/**
+ * A unit string fit to put on screen.
+ *
+ * `indicators.unit` is provider metadata, not a label. 45 of them carry notes
+ * that were never meant to be read by anyone but whoever wired the adapter:
+ *
+ *   "ten thousand persons (2026-06 value 6,846 = 68.46 million employed)"
+ *   "Thousands of vacancies (NA-sentinel strings present; filter them)"
+ *   "index, 2015 = 100 (2015-01 = 99.9; 2024-04 = 114.0)"
+ *
+ * Rendering those verbatim is a real part of why this interface reads as
+ * unfinished. Cleaning them at the source would be a 45-row edit that the next
+ * ingestion undoes, so the fix belongs at the point of display — and it has to
+ * survive units this project has not seen yet, since more sources are coming.
+ *
+ * The comma rule is the fiddly one: splitting on a comma turns "10,000 yuan"
+ * into "10", so it only splits where a non-digit follows.
+ *
+ * The full string is never thrown away — callers put it in a `title` so the
+ * provider's own wording stays one hover away.
+ */
+export function displayUnit(unit) {
+  if (typeof unit !== 'string') return '';
+
+  let text = unit.split('(')[0].split(';')[0].trim();
+
+  // Long but legitimate descriptions ("Millions of Dollars, seasonally
+  // adjusted annual rate") keep only their head clause.
+  if (text.length > 30) text = text.split(/,(?!\d)/)[0].trim();
+
+  return text.replace(/[\s,;:–-]+$/, '');
+}
+
 export const isRateUnit = (unit) => /%|percent|share|rate|pp/i.test(unit ?? '');
 
 export function withUnit(value, unit) {
@@ -105,5 +138,6 @@ export function withUnit(value, unit) {
   if (!unit) return fmt(value);
   if (unit === 'USD' || unit === 'usd') return `$${fmt(value)}`;
   if (isRateUnit(unit)) return `${fmt(value)}%`;
-  return `${fmt(value)} ${unit}`;
+  // Never the raw provider string — see displayUnit.
+  return `${fmt(value)} ${displayUnit(unit)}`;
 }

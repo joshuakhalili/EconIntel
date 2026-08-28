@@ -4,7 +4,7 @@ import { useOverview, useStatus } from '@/hooks/queries';
 import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
-import { fmt, withUnit, fmtDate, deltaDirection } from '@/lib/format';
+import { fmt, withUnit, fmtDate, deltaDirection, displayUnit } from '@/lib/format';
 
 /**
  * The front page.
@@ -206,7 +206,7 @@ function LensRow({ lens, step, register }) {
           </span>
           {!symbol && lens.unit && (
             <span className="w-full truncate text-caption-1-regular text-text-tertiary" title={lens.unit}>
-              {lens.unit}
+              {displayUnit(lens.unit)}
             </span>
           )}
           {change != null && (

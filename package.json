@@ -18,7 +18,7 @@
     "ingest": "node src/server/ingestion/runner.js",
     "ingest:force": "node src/server/ingestion/runner.js --force",
     "verify:sources": "node scripts/verify-sources.js",
-    "test": "node --test \"src/server/**/*.test.js\""
+    "test": "node --test \"src/**/*.test.js\""
   },
   "dependencies": {
     "@internationalized/date": "^3.12.3",

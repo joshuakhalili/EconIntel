@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { RiArrowLeftSLine, RiArrowRightSLine } from '@remixicon/react';
 import { Chip } from '@/components/base/badges/chip';
 import { withUnit, fmtDate } from '@/lib/format';
 
@@ -17,6 +18,58 @@ import { withUnit, fmtDate } from '@/lib/format';
  */
 export default function TickerStrip({ tickers }) {
   const [openId, setOpenId] = useState(null);
+  const scroller = useRef(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  /**
+   * Which edges have more behind them.
+   *
+   * The strip previously had no affordance at all: it scrolled, but nothing
+   * said so, so a reader saw a row that appeared to be cut off rather than one
+   * that continues. This drives both the fades and whether an arrow is
+   * offered.
+   */
+  const measure = useCallback(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const next = { left: el.scrollLeft > 4, right: el.scrollLeft < max - 4 };
+
+    // Returning the SAME object when nothing has changed keeps this from
+    // re-rendering on every frame of every scroll — this fires continuously
+    // while a reader drags the strip, and a fresh object each time would
+    // re-render the whole row for nothing.
+    setEdges((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const el = scroller.current;
+    if (!el) return undefined;
+    // ResizeObserver as well as scroll: the arrows must disappear when the
+    // window gets wide enough to show every tile.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, tickers]);
+
+  /**
+   * Move the strip by roughly a screenful.
+   *
+   * CSS `scroll-behavior: smooth` is deliberately NOT set on the container:
+   * it would apply to the reader's own gestures too, making a flick feel
+   * laggy instead of native. Passing the behavior per call keeps the
+   * animation to the arrows, where it is wanted, and honours reduced-motion.
+   */
+  const nudge = (direction) => {
+    const el = scroller.current;
+    if (!el) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollBy({
+      left: direction * Math.max(el.clientWidth * 0.8, 200),
+      behavior: reduced ? 'auto' : 'smooth',
+    });
+  };
 
   if (!tickers?.length) return null;
 
@@ -24,16 +77,64 @@ export default function TickerStrip({ tickers }) {
 
   return (
     <div className="mb-8">
-      {/* items-stretch so every tile matches the tallest: a long unit label or
-          a "stale" chip on one series otherwise leaves that card taller than
-          its neighbours and the row visibly ragged. */}
-      <ul className="flex snap-x items-stretch gap-3 overflow-x-auto pb-2">
+      <div className="relative">
+        {/* Fades, not a hard edge, so it reads as "continues" rather than
+            "ends". pointer-events-none or they swallow clicks on the tiles
+            underneath. */}
+        {edges.left && (
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-linear-to-r from-background-full to-transparent"
+            aria-hidden
+          />
+        )}
+        {edges.right && (
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-linear-to-l from-background-full to-transparent"
+            aria-hidden
+          />
+        )}
+
+        {[
+          { side: 'left', dir: -1, show: edges.left, Icon: RiArrowLeftSLine },
+          { side: 'right', dir: 1, show: edges.right, Icon: RiArrowRightSLine },
+        ].map(({ side, dir, show, Icon }) =>
+          show ? (
+            <button
+              key={side}
+              type="button"
+              onClick={() => nudge(dir)}
+              aria-label={`Scroll prices ${side}`}
+              className={`absolute top-1/2 z-20 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-border-button-default bg-background-primary-default text-text-secondary shadow-sm transition-colors hover:bg-background-secondary-hover ${
+                side === 'left' ? 'left-1' : 'right-1'
+              }`}
+            >
+              <Icon className="size-5" aria-hidden />
+            </button>
+          ) : null
+        )}
+
+        {/* NO scroll snapping. It was the reason this strip felt like it
+            refused to move: the row overflows by well under one tile (92px at
+            desktop width for six tickers), so any scroll gesture overshoots
+            the end, and snapping then pulled it straight back to the first
+            tile. A reader flicks the strip and it returns to where it started.
+            Free scrolling is right for a short row of small tiles; the fades
+            and arrows are what communicate that more exists.
+
+            items-stretch keeps every tile the height of the tallest, and the
+            scrollbar is hidden because the fades already say the same thing
+            more quietly. */}
+        <ul
+          ref={scroller}
+          onScroll={measure}
+          className="flex items-stretch gap-3 overflow-x-auto overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
         {tickers.map((ticker) => {
           const stale = isStale(ticker);
           const delta = change(ticker);
           const isOpen = ticker.indicator_id === openId;
           return (
-            <li key={ticker.indicator_id} className="flex snap-start">
+            <li key={ticker.indicator_id} className="flex">
               <button
                 type="button"
                 onClick={() => setOpenId(isOpen ? null : ticker.indicator_id)}
@@ -83,7 +184,8 @@ export default function TickerStrip({ tickers }) {
             </li>
           );
         })}
-      </ul>
+        </ul>
+      </div>
 
       {/* The rationale is the point, so it gets room to be read rather than
           being squeezed into the tile as a tooltip. */}

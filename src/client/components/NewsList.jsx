@@ -17,14 +17,18 @@ export default function NewsList({ documents, emptyMessage = 'No articles yet.' 
   if (!documents?.length) return <EmptyBlock>{emptyMessage}</EmptyBlock>;
 
   return (
-    <ul className="flex flex-col gap-2">
+    /* A grid rather than a stack. Fifty full-width rows read as an endless
+       list you scroll past; the same fifty as boxes read as a set you can
+       scan. `items-stretch` plus h-full on the card keeps a row level when
+       one headline wraps to three lines and its neighbour to one. */
+    <ul className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {documents.map((doc) => (
-        <li key={doc.id}>
+        <li key={doc.id} className="flex">
           <a
             href={doc.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col gap-1.5 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:bg-background-secondary-hover"
+            className="group flex h-full w-full flex-col gap-1.5 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:border-accent-300 hover:bg-background-secondary-hover"
           >
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-body-medium text-text-primary">{doc.title}</h3>
@@ -35,16 +39,25 @@ export default function NewsList({ documents, emptyMessage = 'No articles yet.' 
             </div>
 
             {doc.summary && (
-              <p className="line-clamp-2 text-body-regular text-text-tertiary">{doc.summary}</p>
+              <p className="line-clamp-3 text-body-regular text-text-tertiary">{doc.summary}</p>
             )}
 
-            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            {/* mt-auto pins the provenance to the bottom edge, so the source
+                and date line up across a row whatever the headline did. */}
+            <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
               <span className="text-caption-1-medium text-text-secondary">{doc.source_name}</span>
               <span className="text-caption-1-regular text-text-tertiary">
                 {formatPublished(doc.published_at)}
               </span>
               {doc.ai_relevance != null && (
-                <Chip variant="caption" color={relevanceColor(doc.ai_relevance)}>
+                <Chip
+                  variant="caption"
+                  color={relevanceColor(doc.ai_relevance)}
+                  /* The bare number meant nothing without this. It is a
+                     keyword score from ingestion, shown rather than used to
+                     hide anything, so a reader can disagree with it. */
+                  title={`AI-economics relevance ${doc.ai_relevance} of 100 — a keyword score, not a judgement`}
+                >
                   {doc.ai_relevance}
                 </Chip>
               )}
