@@ -24,25 +24,37 @@ export default function TickerStrip({ tickers }) {
 
   return (
     <div className="mb-8">
-      <ul className="flex snap-x gap-3 overflow-x-auto pb-2">
+      {/* items-stretch so every tile matches the tallest: a long unit label or
+          a "stale" chip on one series otherwise leaves that card taller than
+          its neighbours and the row visibly ragged. */}
+      <ul className="flex snap-x items-stretch gap-3 overflow-x-auto pb-2">
         {tickers.map((ticker) => {
           const stale = isStale(ticker);
           const delta = change(ticker);
           const isOpen = ticker.indicator_id === openId;
           return (
-            <li key={ticker.indicator_id} className="snap-start">
+            <li key={ticker.indicator_id} className="flex snap-start">
               <button
                 type="button"
                 onClick={() => setOpenId(isOpen ? null : ticker.indicator_id)}
                 aria-expanded={isOpen}
-                className={`flex min-w-44 flex-col items-start gap-0.5 rounded-2lg border px-3 py-2 text-left transition-colors ${
+                className={`flex h-full w-44 shrink-0 flex-col items-start gap-0.5 rounded-2lg border px-3 py-2 text-left transition-colors ${
                   isOpen
                     ? 'border-accent-500 bg-background-secondary-default'
                     : 'border-border-button-default bg-background-primary-default hover:bg-background-secondary-hover'
                 }`}
               >
-                <span className="text-caption-1-medium text-text-tertiary">{ticker.label}</span>
-                <span className="text-title-3-medium tabular-nums text-text-primary">
+                <span className="w-full truncate text-caption-1-medium text-text-tertiary">
+                  {ticker.label}
+                </span>
+                {/* Kept to one line. Some units spell out in full ("Cent per
+                    kilowatthour"), which wraps to three lines and, because the
+                    tiles stretch to match, drags the whole strip taller. The
+                    full value stays available on hover. */}
+                <span
+                  className="w-full truncate text-title-3-medium tabular-nums text-text-primary"
+                  title={withUnit(ticker.latest_value, ticker.unit_symbol ?? ticker.unit)}
+                >
                   {withUnit(ticker.latest_value, ticker.unit_symbol ?? ticker.unit)}
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">

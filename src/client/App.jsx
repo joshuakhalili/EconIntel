@@ -26,15 +26,17 @@ const router = createBrowserRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      // Adoption is the entry point: whether the thing is being used at all
-      // comes before what it costs or what it displaces.
-      { index: true, element: <Navigate to="/lens/adoption" replace /> },
+      // Investment is the entry point: the money is committed before any of
+      // it shows up in output, in employment, or in a regulation, so it is
+      // where the story starts and the one lens with data that is not in
+      // dispute.
+      { index: true, element: <Navigate to="/lens/investment" replace /> },
       { path: 'lens/:slug', element: <LensPage /> },
       { path: 'q/:slug', element: <QuestionPage /> },
       { path: 'explore', element: <ExplorePage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'pipeline', element: <PipelinePage /> },
-      { path: '*', element: <Navigate to="/lens/adoption" replace /> },
+      { path: '*', element: <Navigate to="/lens/investment" replace /> },
     ],
   },
 ]);
