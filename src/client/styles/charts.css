@@ -21,7 +21,10 @@
   --color-pos-soft: #E3F2E9;
   --color-neg: #B4423A;
   --color-neg-soft: #FBEAE8;
-  --color-warn: #A66A12;
+  /* Darkened from #A66A12, which measured 4.48:1 on white — a rounding error
+     short of the 4.5 floor, and this carries the caveat, which is the one
+     thing on a question page that must never be the hard bit to read. */
+  --color-warn: #9A5F0F;
   --color-warn-soft: #FBF0DC;
 }
 
@@ -56,7 +59,16 @@
      contrast            all six >= 3:1
 
    Re-run before changing any of this:
+
+     npm run check:contrast    — every colour used as text or as a UI mark,
+                                 against both card surfaces (in this repo)
+
      node scripts/validate_palette.js "<hex,...>" --mode dark --surface "#262626"
+                                 — colour-vision separation between series.
+                                 Ships with the `dataviz` skill, not this repo;
+                                 this path was referenced here for months and
+                                 resolved to nothing, which is why the contrast
+                                 half now lives in the repo where it can be run.
    -------------------------------------------------------------------------- */
 :root {
   --c1: #1F7A4D;

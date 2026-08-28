@@ -22,6 +22,128 @@
   --font-mono-source: 'IBM Plex Mono';
 }
 
+/* ==========================================================================
+   Diffusion identity
+
+   WHY THE CHROME IS QUIET
+
+   Nine colours already carry meaning here: six categorical chart hues and the
+   direction-of-travel trio (pos green, neg brick red, warn amber). Those are
+   reserved — a reader must never have to work out whether a colour meant "up",
+   "bad", or "series 4". Checking candidate brand hues against them with the
+   palette validator, every vivid option collided with something: vermilion sat
+   ΔE 1.9 from the chart orange, crimson ΔE 4.2 from the chart pink, violet
+   ΔE 5.1 from the chart purple.
+
+   So the interface does not compete with the data. Surfaces are warm and
+   near-neutral, type does the work of hierarchy, and one accent is spent
+   deliberately on interactive state. This is how a publication looks rather
+   than how an admin panel looks, and it is the reason the charts read as the
+   loudest thing on the page.
+
+   HOW IT IS APPLIED
+
+   BoardUI's files are never edited, so `boardui init` stays re-runnable. Its
+   surfaces are all derived from --color-neutral-*, so warming that ramp warms
+   every card, border, divider and muted text in one move. Its accent ramp is
+   explicitly designed to be re-pointed (see the note in theme.css).
+   ========================================================================== */
+
+@theme {
+  /* ----- Warm neutrals -------------------------------------------------------
+   * Replaces Tailwind's blue-grey neutrals. Every BoardUI surface token reads
+   * from this ramp, so this single override is what removes the "grey and
+   * blue" character from the whole interface.
+   * -------------------------------------------------------------------------*/
+  --color-neutral-50:  #FAF9F7;
+  --color-neutral-100: #F5F3F0;
+  --color-neutral-200: #E9E6E1;
+  --color-neutral-300: #D8D3CC;
+  --color-neutral-400: #A8A29A;
+  --color-neutral-500: #78716A;
+  --color-neutral-600: #57534E;
+  --color-neutral-700: #44403C;
+  --color-neutral-800: #2C2825;
+  --color-neutral-900: #1F1C19;
+  --color-neutral-925: #191614;
+  --color-neutral-950: #1A1714;
+
+  /* ----- Accent: vermilion ---------------------------------------------------
+   * Interactive state only — links, active nav, focus rings, selection. Never
+   * a data colour, which is what keeps it clear of the reserved nine.
+   *
+   * Steps are chosen for contrast, not by generating a ramp:
+   *   700 #B82E14 — 6.11:1 on white. Link and body-weight text in light mode.
+   *   600 #D93B1E — 4.57:1 on white. Buttons, borders, larger UI.
+   *   400 #FF7454 — 5.68:1 on the dark card. The dark-mode text step.
+   * Verified with scripts/check-contrast.js; re-run it after touching these.
+   * -------------------------------------------------------------------------*/
+  --color-accent-50:  #FFF4F1;
+  --color-accent-100: #FFE4DD;
+  --color-accent-200: #FFC8BA;
+  --color-accent-300: #FFA48D;
+  --color-accent-400: #FF7454;
+  --color-accent-500: #F04E2C;
+  --color-accent-600: #D93B1E;
+  --color-accent-700: #B82E14;
+  --color-accent-800: #932510;
+  --color-accent-900: #78200F;
+  --color-accent-950: #410D05;
+
+  /* ----- Display face --------------------------------------------------------
+   * Lens and question pages are becoming articles, so headings get a face with
+   * an editorial voice while Inter keeps everything that has to line up in a
+   * column — UI, labels, and every figure, where tabular numerals matter more
+   * than character.
+   * -------------------------------------------------------------------------*/
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+}
+
+/* The page sits a shade below the cards so a white card reads as raised.
+   BoardUI ships both as pure white, which flattens every surface into one
+   plane and is a large part of why the current UI reads as undesigned. */
+:root {
+  --color-background-full: #F1EEE9;
+}
+
+.dark {
+  /* Dark gets its own accent steps rather than the light ones inverted: at
+     #D93B1E the light text step falls to 3.31:1 on the dark card, under the
+     4.5 floor. 400 is the step that clears it at 5.68:1. */
+  --color-accent-600: #FF7454;
+  --color-accent-700: #FF9070;
+  --color-background-full: #141210;
+
+  /* Warming the neutral ramp pulled neutral-500 down to #78716A, which reads
+     fine on white (4.81:1) but only 3.15:1 on the dark card. Secondary text
+     is most of the prose on a lens page, so dark takes a lighter step rather
+     than inheriting the light one. */
+  --color-text-secondary: #B0A9A0;
+}
+
+/* The display face carries page and section headings. Applied here by element
+   rather than by adding a class to every heading in every route, so a new page
+   inherits the voice without having to remember to opt in.
+
+   Only h1 and h2 — a serif at h3 and below starts competing with body copy at
+   the sizes this interface uses. Line height is tightened because Instrument
+   Serif sets loose at display sizes, and the optical sizing keeps the thin
+   strokes from disappearing on a light surface. */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* Long-form prose gets a readable measure. Lens and question pages are becoming
+   articles, and a paragraph running the full width of a desktop container is
+   one of the reasons the current text is hard to read. */
+.prose-measure {
+  max-width: 68ch;
+}
+
 /* Keyboard users need a way past the nav on every page. Visible only on focus. */
 .skip-link {
   position: absolute;
