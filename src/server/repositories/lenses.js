@@ -121,7 +121,7 @@ export async function getLens(slug) {
 
   const { rows: questions } = await query(
     `SELECT q.id, q.slug, q.question, q.subtitle, q.answer_plain, q.answer_expert,
-            q.caveat, q.sort_order,
+            q.caveat, q.sort_order, q.strength,
             count(qi.*)::int AS indicator_count
        FROM questions q
        LEFT JOIN question_indicators qi ON qi.question_id = q.id

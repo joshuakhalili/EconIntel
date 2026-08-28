@@ -7,6 +7,7 @@ import { usePageTitle } from '@/components/chrome/AppShell';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock, EmptyBlock } from '@/components/Page';
 import ChartGroup from '@/components/charts/ChartGroup';
+import StrengthBadge, { STRENGTH } from '@/components/StrengthBadge';
 import { groupIndicators } from '@/lib/groupIndicators';
 
 /**
@@ -125,47 +126,15 @@ export default function QuestionPage() {
  * How far the evidence can be pushed, and when a person last checked.
  *
  * Shown at the top rather than buried, because it changes how everything below
- * should be read. `insufficient` is not a failure state — on this subject it is
- * frequently the honest answer, and a page that cannot say so ends up implying
- * more than it found.
+ * should be read.
  */
-const STRENGTH = {
-  insufficient: {
-    label: 'Evidence insufficient',
-    detail: 'The data cannot answer this yet. Saying so is the finding.',
-    tone: 'border-warn/40 text-warn',
-  },
-  suggestive: {
-    label: 'Suggestive',
-    detail: 'Early signs, from too few measures or too short a series to lean on.',
-    tone: 'border-border-button-default text-text-secondary',
-  },
-  consistent: {
-    label: 'Consistent',
-    detail: 'Several independent measures point the same way.',
-    tone: 'border-pos/40 text-pos',
-  },
-  contested: {
-    label: 'Contested',
-    detail: 'Credible sources disagree. The disagreement is the finding.',
-    tone: 'border-warn/40 text-warn',
-  },
-};
-
 function Strength({ strength, reviewed }) {
   const meta = STRENGTH[strength];
   if (!meta && !reviewed) return null;
 
   return (
     <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      {meta && (
-        <span
-          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-caption-1-medium ${meta.tone}`}
-          title={meta.detail}
-        >
-          {meta.label}
-        </span>
-      )}
+      <StrengthBadge strength={strength} />
       {meta && (
         <span className="text-caption-1-regular text-text-tertiary">{meta.detail}</span>
       )}
