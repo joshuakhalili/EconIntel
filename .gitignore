@@ -20,3 +20,8 @@ public/
 *.key
 *.p12
 secrets.json
+
+# Row dumps written by the one-off repair scripts before they delete anything.
+# They are a safety net for the machine that ran the repair, not source, and
+# they hold observation data that belongs in the database.
+.backup-*.json
