@@ -11,6 +11,10 @@
 
 @import "./globals.css";
 @import "./charts.css";
+/* The identity layer. Imported here rather than from main.jsx because
+   Tailwind only compiles @theme in files reachable from the stylesheet it
+   processes; imported as a plain sheet, its tokens resolve to nothing. */
+@import "./atmos.css";
 
 /* BoardUI's theme.css expects next/font to expose --font-inter and
    --font-mono-source. This is not a Next.js project — the faces are loaded as
@@ -90,36 +94,13 @@
   --color-accent-900: #78200F;
   --color-accent-950: #410D05;
 
-  /* ----- Display face --------------------------------------------------------
-   * Lens and question pages are becoming articles, so headings get a face with
-   * an editorial voice while Inter keeps everything that has to line up in a
-   * column — UI, labels, and every figure, where tabular numerals matter more
-   * than character.
-   * -------------------------------------------------------------------------*/
-  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+  /* The display face and the surface colours moved to atmos.css when the
+     identity went dark. Nothing here should redefine them. */
 }
 
-/* The page sits a shade below the cards so a white card reads as raised.
-   BoardUI ships both as pure white, which flattens every surface into one
-   plane and is a large part of why the current UI reads as undesigned. */
-:root {
-  --color-background-full: #F1EEE9;
-}
 
-.dark {
-  /* Dark gets its own accent steps rather than the light ones inverted: at
-     #D93B1E the light text step falls to 3.31:1 on the dark card, under the
-     4.5 floor. 400 is the step that clears it at 5.68:1. */
-  --color-accent-600: #FF7454;
-  --color-accent-700: #FF9070;
-  --color-background-full: #141210;
 
-  /* Warming the neutral ramp pulled neutral-500 down to #78716A, which reads
-     fine on white (4.81:1) but only 3.15:1 on the dark card. Secondary text
-     is most of the prose on a lens page, so dark takes a lighter step rather
-     than inheriting the light one. */
-  --color-text-secondary: #B0A9A0;
-}
+
 
 /* The display face carries page and section headings. Applied here by element
    rather than by adding a class to every heading in every route, so a new page
@@ -131,10 +112,7 @@
    strokes from disappearing on a light surface. */
 h1,
 h2 {
-  font-family: var(--font-display);
-  font-weight: 400;
   line-height: 1.1;
-  letter-spacing: -0.01em;
 }
 
 /* Long-form prose gets a readable measure. Lens and question pages are becoming

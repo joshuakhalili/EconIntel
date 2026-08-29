@@ -1,0 +1,182 @@
+/* Diffusion's visual identity, second pass.
+   ==========================================
+
+   The first identity was warm neutrals and a vermilion accent on a light page.
+   It was coherent and it read as a dashboard, because it sat inside BoardUI's
+   dashboard shell. This replaces the palette with a dark, deep-blue system
+   taken from a reference site, as the first half of turning the project from an
+   app into a publication.
+
+   Every value below was read out of that reference's compiled CSS rather than
+   sampled by eye — the token block it ships, not a screenshot. Notably it is
+   NOT a light theme with green accents, which is what a text scrape of the page
+   suggested; it is near-black at the top of the page fading to electric blue at
+   the bottom.
+
+   Loaded last, after globals/charts/app, so it wins the cascade without those
+   files being edited. BoardUI's own generated CSS is still untouched, so
+   `npx boardui@latest init` stays re-runnable.
+
+   The chart hues are NOT re-pointed here. They are CVD-validated against their
+   surfaces and re-tuning them is a separate job with its own validator —
+   `npm run check:contrast` is the gate, and it has to pass against these
+   surfaces before this is finished. */
+
+/* Trispace carries the display type: a variable-width squarish grotesque, set
+   very wide at large sizes. Fragment Mono is the eyebrow/label face. Both are
+   the reference's own choices and both are open-licensed via Google Fonts, so
+   nothing proprietary is being lifted. */
+@import url('https://fonts.googleapis.com/css2?family=Trispace:wght@100..800&family=Fragment+Mono:ital@0;1&display=swap');
+
+@theme {
+  /* Surfaces, darkest first. --page is what the body paints; --panel is the
+     raised card; --deep is the blue-tinted panel used where a section wants to
+     feel submerged rather than lifted. */
+  --color-atmos-page: #010101;
+  --color-atmos-surface: #0d0d0d;
+  --color-atmos-deep: #0f1a38;
+
+  /* The accent ramp. --signal is the workhorse: eyebrow labels, links, the
+     subtitle over the wordmark. --bright is the light end of the display
+     gradient. --deepblue is the saturated bottom of the page gradient. */
+  --color-atmos-signal: #7da0ff;
+  --color-atmos-bright: #7be2fe;
+  --color-atmos-blue: #2f61f7;
+  --color-atmos-mid: #3156c4;
+  --color-atmos-slate: #335695;
+
+  /* Status. The reference ships its own trio; these are close enough to
+     Diffusion's existing pos/warn/neg roles to carry them without a second
+     vocabulary, and they are legible on a near-black surface where the old
+     light-surface values were not. */
+  --color-atmos-good: #2fc941;
+  --color-atmos-warn: #ffbe32;
+  --color-atmos-bad: #ff5f54;
+
+  --font-display: 'Trispace', ui-sans-serif, system-ui, sans-serif;
+  --font-label: 'Fragment Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+/* ── The dark theme becomes the theme ──────────────────────────────────────
+   Not a `.dark` variant. The publication is dark; there is no light version of
+   this design, and maintaining one would mean two sets of chart colours to
+   validate for a second look nobody asked for. `.dark` is still set on the root
+   so BoardUI's own components resolve their dark values. */
+
+:root,
+.dark {
+  --color-background-full: var(--color-atmos-page);
+
+  --color-neutral-50: #f7f8fa;
+  --color-neutral-100: #e8eaef;
+  --color-neutral-200: #c9cedb;
+  --color-neutral-300: #9aa3b8;
+  --color-neutral-400: #6b7690;
+  --color-neutral-500: #4a5570;
+  --color-neutral-600: #333c54;
+  --color-neutral-700: #212838;
+  --color-neutral-800: #151a26;
+  --color-neutral-900: #0d0d0d;
+  --color-neutral-950: #010101;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #d1d1d1;
+  --color-text-tertiary: #ababab;
+
+  /* Re-pointed to the reference's accent. The old vermilion was chosen to sit
+     on warm paper and turns muddy on near-black. */
+  --color-accent-300: #a8c0ff;
+  --color-accent-400: var(--color-atmos-signal);
+  --color-accent-500: var(--color-atmos-signal);
+  --color-accent-600: var(--color-atmos-signal);
+  --color-accent-700: #a8c0ff;
+
+  --color-pos: var(--color-atmos-good);
+  --color-neg: var(--color-atmos-bad);
+  --color-warn: var(--color-atmos-warn);
+
+  /* Hairlines. The reference builds every border from white at low alpha
+     rather than from a grey, which is what keeps them from going flat against
+     the page gradient. */
+  --color-border-button-default: #ffffff1f;
+  --color-border-secondary: #ffffff14;
+}
+
+body {
+  background: var(--color-atmos-page);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Type ────────────────────────────────────────────────────────────────── */
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* The wordmark treatment: Trispace at its widest, tracked out, filled with the
+   page gradient rather than a flat colour. Reserved for the landing hero — at
+   this size it is a graphic, not a heading. */
+.display-wordmark {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 125;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 0.82;
+  background: linear-gradient(
+    180deg,
+    var(--color-atmos-blue) 0%,
+    var(--color-atmos-bright) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  /* Both properties, not one. `color: transparent` alone loses to any rule
+     that sets colour on h1 with equal specificity, and the wordmark then
+     renders as a solid block of whatever that rule said — or, if the gradient
+     wins, as nothing at all. -webkit-text-fill-color has no competitor. */
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Eyebrow labels above section headings — uppercase mono in the accent, the
+   reference's most recognisable small detail. */
+.eyebrow {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-atmos-signal);
+}
+
+/* ── The page gradient ────────────────────────────────────────────────────
+   Near-black at the top falling to saturated blue at the bottom of a section.
+   Applied per-section rather than to the body so it can restart, which is what
+   gives the reference its rhythm of dark-to-blue, dark-to-blue. */
+.atmos-gradient {
+  background:
+    radial-gradient(120% 80% at 50% 100%, #2f61f7 0%, #1332a8 26%, transparent 62%),
+    linear-gradient(180deg, #010101 0%, #050914 45%, #071133 100%);
+}
+
+/* A field of faint stars, behind the gradient. Pure CSS rather than a canvas:
+   it never animates, so a second WebGL context for it would be waste. */
+.atmos-stars {
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, #ffffff40 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 12%, #7da0ff55 50%, transparent 50%),
+    radial-gradient(1px 1px at 42% 68%, #ffffff30 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 54%, #7be2fe45 50%, transparent 50%),
+    radial-gradient(1px 1px at 12% 82%, #ffffff25 50%, transparent 50%),
+    radial-gradient(1px 1px at 61% 90%, #7da0ff35 50%, transparent 50%);
+  background-size: 340px 340px, 520px 520px, 410px 410px, 630px 630px, 290px 290px, 470px 470px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmos-stars {
+    animation: none;
+  }
+}

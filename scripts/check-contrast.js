@@ -67,7 +67,12 @@ function tokens() {
   // (which pulls theme), then charts, then declares its own rules. So the
   // project's overrides are read LAST and win — reading them first, which is
   // the intuitive order, silently reports BoardUI's values instead of ours.
-  const css = ['theme.css', 'charts.css', 'app.css']
+  // atmos.css is in this list because it is imported from app.css and re-points
+  // most of what is checked below. It was added when the identity went dark;
+  // omitting it meant this script kept passing on the warm palette the site had
+  // stopped using, which is worse than not running at all — a guard that
+  // validates the wrong values reports green while the real ones go unchecked.
+  const css = ['theme.css', 'charts.css', 'atmos.css', 'app.css']
     .map((f) => readFileSync(join(STYLES, f), 'utf8'))
     .join('\n');
 
@@ -142,26 +147,40 @@ const CHECKS = [
   })),
 ];
 
-/** The surface each mode actually paints behind a card. */
-const SURFACE = { light: '#FFFFFF', dark: '#262626' };
+/**
+ * The surface each mode actually paints behind a card.
+ *
+ * There is only one mode now. The identity is dark throughout — atmos.css
+ * defines the same values under `:root` and `.dark`, so there is no light
+ * variant to check and inventing one would test a page nobody can reach.
+ * Both entries point at real surfaces from that file: the page itself, and the
+ * raised panel used for cards.
+ */
+const SURFACES = [
+  ['page', '#010101'],
+  ['panel', '#0D0D0D'],
+];
 
 let failed = 0;
 let checked = 0;
 
-for (const mode of ['light', 'dark']) {
-  console.log(`\n${DIM}${mode} — on card ${SURFACE[mode]}${RESET}`);
+for (const [label, surface] of SURFACES) {
+  console.log(`\n${DIM}on ${label} ${surface}${RESET}`);
 
   for (const { cssVar, role, min, modes } of CHECKS) {
-    if (modes && !modes.includes(mode)) continue;
+    // `modes` used to gate a token to light or dark. There is one palette now,
+    // so a token scoped to the theme that no longer exists is skipped rather
+    // than checked against a surface it never sits on.
+    if (modes && !modes.includes('dark')) continue;
 
-    const hex = read(cssVar, mode);
+    const hex = read(cssVar, 'dark');
     if (!hex) {
       console.log(`  ${YELLOW}?${RESET} ${cssVar.padEnd(24)} ${DIM}unresolved — skipped${RESET}`);
       continue;
     }
 
     checked += 1;
-    const ratio = contrast(hex, SURFACE[mode]);
+    const ratio = contrast(hex, surface);
     const ok = ratio >= min;
     if (!ok) failed += 1;
 

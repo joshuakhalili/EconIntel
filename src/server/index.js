@@ -22,6 +22,7 @@ import { securityHeaders } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 import { listLenses, getLens, getLensTickers, overview } from './repositories/lenses.js';
+import { globe } from './repositories/globe.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '../../public');
@@ -120,6 +121,14 @@ app.get('/api/indicators', route(async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Lenses: the top level of navigation ──────────────────────────────────────
+
+/**
+ * Every country, its position, its adoption history and how much is stored
+ * about it. Backs the globe on the landing page.
+ */
+app.get('/api/globe', route(async (_req, res) => {
+  res.json(await globe());
+}));
 
 app.get('/api/lenses', route(async (_req, res) => {
   res.json({ lenses: await listLenses() });

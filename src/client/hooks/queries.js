@@ -47,6 +47,22 @@ export function useOverview() {
   });
 }
 
+/**
+ * Every country's position, adoption history and stored depth, for the globe.
+ *
+ * Not unwrapped: the envelope carries `measured` and `total` alongside the
+ * countries, and the caption under the globe has to state both. Computing them
+ * in the client from the array would let the caption drift from the query the
+ * globe is actually drawing.
+ */
+export function useGlobe() {
+  return useQuery({
+    queryKey: ['globe'],
+    queryFn: ({ signal }) => fetchJson('/api/globe', { signal }),
+    ...CATALOGUE,
+  });
+}
+
 export function useLens(slug) {
   return useQuery({
     queryKey: ['lens', slug],
