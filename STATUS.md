@@ -3,7 +3,7 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-28.
+Last updated: 2026-08-29.
 
 ## The project is now called Diffusion (was EconIntel)
 
@@ -74,10 +74,15 @@ Data Table, Sidebar, Settings Modal, Notification Center) — run
 ## What this project is
 
 A public dashboard measuring AI's economic effect worldwide. Not a database
-browser — organised as **lenses** (ways of looking at the subject: Money, Work,
-Infrastructure, Policy, Adoption), each containing questions, contextual price
+browser — organised as **lenses**, each containing questions, contextual price
 tickers, and news. Two reading modes (Plain / Technical) show different registers
 of the same stored answer, not the same text with jargon added.
+
+The five lenses are classical economics subfields, ordered the way the causation
+is supposed to run: **Investment & Capital → Growth & Productivity → Labour
+Markets → Prices & Markets → Policy & Regulation**. They replaced an earlier
+mixed set (Money / Work / Infrastructure / Policy / Adoption) that mixed inputs,
+outputs and mechanisms at the same level — see `CONCEPT-GRILL-LOG.md`.
 
 **The rule that will govern the LLM layer, once it exists:** an LLM must never be
 asked to invent a number or a citation — only handed SQL-computed values and
@@ -89,11 +94,20 @@ Cloudflare Workers AI, or validates model output against it. There is no LLM cal
 site yet, so there is currently nothing for this rule to protect. Do not describe
 it as active until a call site exists and this note is updated.
 
-## ⚠️ Not pushed to GitHub
+## On GitHub, public, `main` is current
 
-Still nothing pushed, and the rewrite lives on a **`react-rewrite`** branch —
-`main` still holds the working vanilla version. Run `git push -u origin
-react-rewrite` when ready. Nothing here exists anywhere but this laptop.
+Pushed 2026-08-29. `react-rewrite` was fast-forward merged into `main`, and the
+two are kept in sync — there is no longer a "working vanilla version" anywhere;
+the React site *is* the site. Repo: `github.com/joshuakhalili/EconIntel`, public,
+0 open Dependabot alerts.
+
+**There is no LICENSE file.** The README says "cite, don't redistribute", but
+with no licence declared, nobody can legally reuse the code at all. MIT is the
+usual answer for a portfolio project; it is a decision, not an oversight, and
+it is still open.
+
+Two remote branches are not local work: a Dependabot branch (`undici-7.29.0`)
+and `claude/capabilities-workflow-questions-76ss3l`. Neither is merged.
 
 ## Stack
 
@@ -105,14 +119,17 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
 
 ## What's built and working
 
-- **Data:** 76,788 observations across 115 indicators, 50 countries. Sources:
+- **Data:** 76,788 observations. 115 indicators declared, **111 of which have
+  any observations** — the other four are the declared-but-uncomputed ones
+  listed under "Known broken things". 50 countries, but see the country note
+  below before quoting that number. 24 sources:
   FRED, World Bank, DBnomics (93 agencies via one adapter), SEC EDGAR, Epoch AI,
   Federal Register, LBMA (gold/silver), GDELT (broken — see below), 7 RSS feeds.
 - **Lens layer:** 5 lenses, each with a thesis (plain + technical), a ticker
   strip (each price states *why* it's on that specific lens — copper means
   something different on Money vs Infrastructure), and lens-filtered news via a
   stored search query per lens (deterministic, not model-classified).
-- **Question layer:** 7 questions nested under lenses, each with hero/supporting/
+- **Question layer:** 11 questions nested under lenses, each with hero/supporting/
   context charts, a stored answer in both registers, and a caveat as a first-class
   section — not a footnote.
 - **Front end — rebuilt as an editorial site, not a dashboard.** Eight routes:
@@ -145,35 +162,61 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
   validator. Dark mode needed its own steps because BoardUI's dark card is
   lighter than the old one — see the note in `src/client/styles/charts.css`,
   which records the numbers and the command to re-run.
-- **44 tests passing** — all backend. There are no front-end tests yet.
+- **62 tests passing.** Mostly backend; `src/client/lib/format.test.js` is the
+  only front-end suite, covering the number and unit formatting. There are no
+  component or route tests.
+- **Three build gates**, all green: `npm test`, `npm run check:tokens` (every
+  Tailwind utility and runtime `var()` resolves to a real token — the guard
+  built after seven nonexistent classes silently generated no CSS for weeks),
+  and `npm run check:contrast` (WCAG AA on both themes).
+- **A README** that leads with the project's rules rather than its stack, and
+  states the data weaknesses in the open. Five screenshots in
+  `docs/screenshots/`.
 
 ## What's NOT built yet
 
 In rough priority order:
 
-1. **Literature layer — schema built, content empty, nothing renders it yet.**
-   `0012_editorial.sql` adds `question_reading` (citations attached to a
-   question *or* a lens, with `kind` — academic / consulting / think_tank /
-   official / industry — and `stance`), plus `theory`, `method`, `strength`
-   and `last_reviewed` on `questions`. The repositories and `/api/questions/:slug`
-   and `/api/lenses/:slug` return all of it.
-   **Twelve real reports are seeded as citations only** (`014_reading.sql`):
-   BIS, IMF ×2, OECD, WEF, Stanford HAI, McKinsey, PwC, Deloitte, KPMG, EY,
-   Accenture. Every `takeaway` and `stance` is NULL, and every new question
-   column is NULL, because those are claims that require reading the sources
-   and writing the prose — not something to infer from a title. The PDFs are
-   on the Desktop and are deliberately not in this repo: link and cite, never
-   redistribute.
-   Still to come: the OpenAlex academic corpus, and any front end that shows
-   this. `stale_questions` lists pages whose prose has not been reviewed in six
-   months — all 7 currently, since none has ever been reviewed.
-2. **Event extraction** — the `events` table is empty. This is what would power
+1. **Country coverage — the known gap, and the thing to work on next.**
+   The catalogue reports 50 countries, and that number flatters it badly. The
+   USA has 61 indicators; Japan is next at 15; **39 of 49 carry the same six
+   World Bank annual series** (~26 points each, 2000–2025). So the gap is not
+   missing countries, it is missing *depth* — the fix is more series for the
+   handful of countries that already have some breadth (UK, Japan, Australia,
+   France, Canada, Germany, Korea, China), not more flags.
+   The DBnomics adapter already reaches 93 statistical agencies through one
+   code path and is the obvious route. **No country filter or comparison UI
+   exists, deliberately**, and none should be built before the data supports
+   the comparison it would imply.
+2. **The twelve reports are cited but not read.** `014_reading.sql` seeds BIS,
+   IMF ×2, OECD, WEF, Stanford HAI, McKinsey, PwC, Deloitte, KPMG, EY and
+   Accenture as citations. **Every `takeaway` is NULL and every `stance` is
+   `background`** — that value is a placeholder meaning "not yet read", not a
+   judgement about what the report argues. Filling either in requires reading
+   the PDFs (on the Desktop, deliberately never committed: link and cite,
+   never redistribute), and is a job to do *with* Joshua rather than infer
+   from a title.
+   The rest of the layer is done: `question_reading` renders on both question
+   and lens pages, and `theory`, `method`, `strength` and `last_reviewed` are
+   populated on all 11 questions. **That prose is Claude-drafted and Joshua has
+   not reviewed the economics yet** — `productivity` most of all.
+   Still to come: the OpenAlex academic corpus. `stale_questions` lists pages
+   whose prose has not been reviewed in six months.
+3. **Event extraction** — the `events` table is empty. This is what would power
    the circular-financing diagram (Nvidia → OpenAI → Oracle → Nvidia) the user
-   asked for. Needs the LLM extracting from SEC 8-Ks and news.
-3. **News images and source logos** — asked for, not done.
-4. **`render.yaml` + actual deploy.** The local `.env` already points at the
-   live Render Postgres, so production data is already migrated and seeded —
-   just the app itself isn't deployed yet.
+   asked for. `entities` already holds 35 real rows and the
+   `investment_edges` / `monthly_investment` views are built on top, so the
+   feature needs rows, not schema.
+4. **News images and source logos** — asked for, not done.
+5. **Deploy.** Decided: **Vercel + Neon**. The local `.env` points at the live
+   Render Postgres, so data is already migrated and seeded — but the app is
+   written as a long-lived Express process (`app.listen`, a `pg.Pool`), which
+   is the wrong shape for serverless. Needs `@neondatabase/serverless`, a
+   handler export, `fra1` region pinning, and every endpoint under the 10s
+   function timeout. The `/api/overview` query was 5.9s cold before it was
+   restructured around a CTE; it is 0.87s cold now, which is the only reason
+   that budget is reachable.
+6. **A LICENSE file** — see the GitHub section above.
 
 ## Security
 
@@ -260,7 +303,9 @@ npm run ingest -- rss --force
 cd ~/Projects/EconIntel
 npm run dev                  # Express :3000 + Vite :5173 — open 5173
 npm run build && npm start   # production build, served on :3000
-npm test                     # 44 tests, should all pass
+npm test                     # 62 tests, should all pass
+npm run check:tokens         # every Tailwind class and var() resolves
+npm run check:contrast       # WCAG AA on both themes
 npm run ingest -- rss --force   # refresh news (do this periodically — nothing auto-schedules it yet)
 ```
 

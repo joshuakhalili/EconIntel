@@ -100,7 +100,10 @@ argument — with its licence, its attribution, and a link back to the publisher
 
 ## The data
 
-**76,788 observations · 110 indicators · 24 sources**
+**76,788 observations · 111 indicators with data · 24 sources**
+
+(115 series are declared; four are defined but not yet computed, and are listed
+as such rather than counted as if they existed.)
 
 FRED · World Bank · DBnomics (93 statistical agencies through one adapter) ·
 SEC EDGAR · Epoch AI · US Federal Register · LBMA · GDELT · 7 news feeds.
