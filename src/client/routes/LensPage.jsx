@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { RiArrowRightLine, RiExternalLinkLine } from '@remixicon/react';
+import { RiArrowRightLine } from '@remixicon/react';
 import { useLens, useLensTickers, useLensNews } from '@/hooks/queries';
 import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
@@ -7,6 +7,7 @@ import { LoadingBlock, ErrorBlock, EmptyBlock } from '@/components/Page';
 import StrengthBadge from '@/components/StrengthBadge';
 import TickerStrip from '@/components/TickerStrip';
 import NewsList from '@/components/NewsList';
+import Reading from '@/components/Reading';
 
 /**
  * A lens: one way of looking at the subject.
@@ -120,55 +121,10 @@ export default function LensPage() {
         )}
       </section>
 
-      {lens.reading?.length > 0 && (
-        <section className="mt-10">
-          <h2 className="text-title-3-medium text-text-primary">Published on this lens</h2>
-          <p className="mb-4 mt-1 max-w-2xl text-body-regular text-text-tertiary">
-            Institutional and industry work covering this subject as a whole. Labelled by who
-            produced it, not ranked.
-          </p>
-          <ul className="flex flex-col gap-2">
-            {lens.reading.map((item) => (
-              <li key={item.id}>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-start gap-3 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:border-accent-300 hover:bg-background-secondary-hover"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-border-button-default px-2 py-0.5 text-caption-1-medium text-text-tertiary">
-                        {READING_KIND[item.kind] ?? item.kind}
-                      </span>
-                      <span className="text-caption-1-medium text-text-secondary">
-                        {item.publisher}
-                      </span>
-                      {item.published && (
-                        <span className="text-caption-1-regular text-text-tertiary">
-                          {new Date(item.published).getUTCFullYear()}
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-1 block text-body-medium text-text-primary">
-                      {item.title}
-                    </span>
-                    {item.takeaway && (
-                      <span className="mt-1 block text-body-regular text-text-secondary">
-                        {item.takeaway}
-                      </span>
-                    )}
-                  </span>
-                  <RiExternalLinkLine
-                    className="mt-0.5 size-4 shrink-0 text-foreground-icon-secondary opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-hidden
-                  />
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <Reading
+        items={lens.reading}
+        scopeNote="Institutional and industry work covering this subject as a whole."
+      />
 
       {lens.has_news !== false && (
         <section className="mt-10">
@@ -187,11 +143,3 @@ export default function LensPage() {
     </article>
   );
 }
-
-const READING_KIND = {
-  academic: 'Academic',
-  consulting: 'Consulting',
-  think_tank: 'Think tank',
-  official: 'Official',
-  industry: 'Industry',
-};

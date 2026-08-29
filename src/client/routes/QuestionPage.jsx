@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { RiArrowLeftLine, RiAlertLine, RiExternalLinkLine } from '@remixicon/react';
+import { RiArrowLeftLine, RiAlertLine } from '@remixicon/react';
 import { useQuestion } from '@/hooks/queries';
 import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
@@ -8,6 +8,7 @@ import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock, EmptyBlock } from '@/components/Page';
 import ChartGroup from '@/components/charts/ChartGroup';
 import StrengthBadge, { STRENGTH } from '@/components/StrengthBadge';
+import Reading from '@/components/Reading';
 import { groupIndicators } from '@/lib/groupIndicators';
 
 /**
@@ -117,7 +118,10 @@ export default function QuestionPage() {
         <EmptyBlock>No indicators are attached to this question yet.</EmptyBlock>
       )}
 
-      <Reading items={question.reading} />
+      <Reading
+        items={question.reading}
+        scopeNote="Published elsewhere on this question."
+      />
     </article>
   );
 }
@@ -170,82 +174,6 @@ function Section({ title, note, children }) {
   );
 }
 
-/**
- * What other people have found.
- *
- * Sources are labelled by kind and never ranked. A peer-reviewed paper and a
- * consulting survey are not the same evidence, but which one to believe is the
- * reader's call, and the differences in method, motive and data access are the
- * interesting part rather than a scoring problem.
- */
-const KIND = {
-  academic: 'Academic',
-  consulting: 'Consulting',
-  think_tank: 'Think tank',
-  official: 'Official',
-  industry: 'Industry',
-};
-
-function Reading({ items }) {
-  if (!items?.length) return null;
-
-  return (
-    <section className="mt-10">
-      <h2 className="text-title-3-medium text-text-primary">What others have found</h2>
-      <p className="mt-1 max-w-2xl text-body-regular text-text-tertiary">
-        Published elsewhere on this question. Labelled by who produced it, not ranked — method,
-        motive and data access differ, and that is the part worth seeing.
-      </p>
-
-      <ul className="mt-4 flex flex-col gap-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-start gap-3 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:border-accent-300 hover:bg-background-secondary-hover"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-border-button-default px-2 py-0.5 text-caption-1-medium text-text-tertiary">
-                    {KIND[item.kind] ?? item.kind}
-                  </span>
-                  <span className="text-caption-1-medium text-text-secondary">
-                    {item.publisher}
-                  </span>
-                  {item.published && (
-                    <span className="text-caption-1-regular text-text-tertiary">
-                      {new Date(item.published).getUTCFullYear()}
-                    </span>
-                  )}
-                  {/* Says whose page this source was filed against, so a
-                      lens-level report does not read as though it were written
-                      about this question specifically. */}
-                  {item.scope === 'lens' && (
-                    <span className="text-caption-1-regular text-text-tertiary">
-                      · on this lens
-                    </span>
-                  )}
-                </span>
-                <span className="mt-1 block text-body-medium text-text-primary">{item.title}</span>
-                {item.takeaway && (
-                  <span className="mt-1 block text-body-regular text-text-secondary">
-                    {item.takeaway}
-                  </span>
-                )}
-              </span>
-              <RiExternalLinkLine
-                className="mt-0.5 size-4 shrink-0 text-foreground-icon-secondary opacity-0 transition-opacity group-hover:opacity-100"
-                aria-hidden
-              />
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 function formatDay(iso) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {

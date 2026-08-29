@@ -47,21 +47,24 @@ INSERT INTO question_reading (lens_id, title, publisher, published, url, kind, s
 ('growth',
  'The State of AI: How Organizations Are Rewiring to Capture Value',
  'McKinsey & Company (QuantumBlack)',
- DATE '2025-11-01',
+ -- Cover reads March 2025; the survey behind it was fielded 16-31 July 2024.
+ DATE '2025-03-01',
  'https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-how-organizations-are-rewiring-to-capture-value',
  'consulting', 1),
 
 ('growth',
- 'The State of AI in the Enterprise, 7th edition',
+ -- The document's own subtitle. It carries no edition number.
+ 'The State of AI in the Enterprise: The untapped edge',
  'Deloitte AI Institute',
- NULL,
+ DATE '2026-01-01',
  'https://www.deloitte.com/global/en/issues/generative-ai/state-of-ai-in-enterprise.html',
  'consulting', 2),
 
 ('growth',
  'Global AI Pulse, Q2 2026',
  'KPMG International',
- DATE '2026-04-01',
+ -- Publication number 140558-G gives June; April opened the fielding window.
+ DATE '2026-06-01',
  'https://kpmg.com/xx/en/our-insights/ai-and-technology/ai-pulse.html',
  'consulting', 3),
 
@@ -102,19 +105,26 @@ INSERT INTO question_reading (lens_id, title, publisher, published, url, kind, s
  'consulting', 1),
 
 ('labour',
- 'New Jobs Creation in the AI Age',
+ -- Full printed title; IMF Staff Discussion Note SDN/2026/001.
+ 'Bridging Skill Gaps for the Future: New Jobs Creation in the AI Age',
  'International Monetary Fund',
- NULL,
+ DATE '2026-01-01',
  'https://www.imf.org/-/media/files/publications/sdn/2026/english/sdnea2026001.pdf',
  'official', 2),
 
 ('labour',
  'Four Futures for Jobs in the New Economy: AI and Talent in 2030',
  'World Economic Forum',
- NULL,
+ -- Printed January 2026, despite the 2025 in the publisher's filename.
+ DATE '2026-01-01',
  'https://www.weforum.org/publications/four-futures-for-jobs-in-the-new-economy-ai-and-talent-in-2030/',
  'think_tank', 3)
 
+-- takeaway/stance/takeaway_source/takeaway_ref are deliberately absent from
+-- this SET list. They are owned by 018_reading_takeaways.sql, which runs
+-- later; listing them here would blank a takeaway on every re-seed, since the
+-- VALUES block above does not supply one. An ON CONFLICT list is a silent
+-- filter on which of your edits actually apply, in both directions.
 ON CONFLICT (question_id, lens_id, url) DO UPDATE SET
   title      = EXCLUDED.title,
   publisher  = EXCLUDED.publisher,

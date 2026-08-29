@@ -59,14 +59,35 @@ export async function getQuestion(slug) {
    * which table row it hangs from. `scope` is carried through so the UI can
    * say "on this question" versus "on this lens" rather than implying the
    * lens-level source was written about this question specifically.
+   *
+   * DISTINCT ON (url) because a report can hold both placements at once: the
+   * PwC barometer sits on the Labour Markets lens as a whole AND on
+   * `entry-level` with the specific finding about early-career postings. Both
+   * rows are correct, and rendering both puts the same report on the page
+   * twice — once with a takeaway and once without, which reads as a bug and
+   * makes the page look padded. The question-scoped row wins, since it is the
+   * one written about this page.
    */
   const { rows: reading } = await query(
-    `SELECT id, title, publisher, published::text, url, kind, stance, takeaway,
+    `SELECT DISTINCT ON (url)
+            id, title, publisher, published::text, url, kind, stance, takeaway,
+            takeaway_source, takeaway_ref,
             CASE WHEN question_id IS NULL THEN 'lens' ELSE 'question' END AS scope
        FROM question_reading
       WHERE question_id = $1 OR lens_id = $2
-      ORDER BY (question_id IS NULL), sort_order, published DESC NULLS LAST`,
+      ORDER BY url, (question_id IS NULL)`,
     [questions[0].id, questions[0].lens_id]
+  );
+
+  /*
+   * DISTINCT ON forces its own ORDER BY, so the reader-facing order is applied
+   * here rather than in SQL: question-scoped sources first, then by the order
+   * they were placed, then newest.
+   */
+  reading.sort(
+    (a, b) =>
+      (a.scope === 'lens') - (b.scope === 'lens') ||
+      (b.published ?? '').localeCompare(a.published ?? '')
   );
 
   const { rows: indicators } = await query(
