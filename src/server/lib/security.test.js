@@ -50,9 +50,18 @@ describe('securityHeaders', () => {
     );
   });
 
-  test('hashes the inline theme script rather than allowing inline script', () => {
+  test('never allows inline script, and hashes any that exists', () => {
     const csp = run().headers['Content-Security-Policy'];
-    assert.match(csp, /script-src 'self' 'sha256-[A-Za-z0-9+/=]+'/);
+
+    // The app had one inline script — a pre-paint block that decided light or
+    // dark from localStorage. The site is dark only now, so that script is
+    // gone and there is nothing to hash. `script-src 'self'` with no hash at
+    // all is the stronger result, not a regression.
+    //
+    // The assertion that matters either way is the second one: inline script
+    // is never permitted wholesale. Should an inline script return, the hash
+    // branch has to hold, so both shapes are accepted here and neither is.
+    assert.match(csp, /script-src 'self'(?: 'sha256-[A-Za-z0-9+/=]+')*(?:;|$)/);
     assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
   });
 

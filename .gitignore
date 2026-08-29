@@ -25,3 +25,9 @@ secrets.json
 # They are a safety net for the machine that ran the repair, not source, and
 # they hold observation data that belongs in the database.
 .backup-*.json
+
+# The landing page's mirror tooling and caches. landing/ itself IS source and
+# is committed; these are the working files of the clone pipeline.
+landing/.mirror-cache/
+landing/docs/verify-shots/
+landing/.content-applied

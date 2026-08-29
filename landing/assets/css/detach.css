@@ -1,0 +1,18 @@
+/* Written by docs/detach.py. Hides the source template's own chrome:
+   the Framer badge, the template-store "Remix Template" link, and the floating
+   buy-this-template / marketplace buttons the template author pins to a corner.
+   Hidden rather than deleted so React hydration still finds its own DOM.
+   The :has() rules take the wrapping Framer container out of layout too, since
+   hiding only the anchor can leave a positioned empty box behind. */
+#__framer-badge-container,
+[data-framer-name="Remix Template"],
+a[href*="lemonsqueezy.com"],
+a[href*="framer.com/marketplace"],
+a[href*="frameruni.link"],
+a[href*="lunaui.co"],
+div:has(> a[href*="lemonsqueezy.com"]),
+div:has(> a[href*="framer.com/marketplace"]),
+div:has(> a[href*="frameruni.link"]),
+div:has(> a[href*="lunaui.co"]) {
+  display: none !important;
+}

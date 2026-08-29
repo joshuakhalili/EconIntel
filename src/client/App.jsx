@@ -3,7 +3,6 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { PreferencesProvider } from '@/lib/preferences';
 import { ContextDrawerProvider } from '@/components/chrome/ContextDrawer';
 import AppShell from '@/components/chrome/AppShell';
-import LandingPage from '@/routes/LandingPage';
 import OverviewPage from '@/routes/OverviewPage';
 import LensPage from '@/routes/LensPage';
 import QuestionPage from '@/routes/QuestionPage';
@@ -26,11 +25,6 @@ const queryClient = new QueryClient({
 });
 
 const router = createBrowserRouter([
-  // The landing page is deliberately outside AppShell. It is a full-bleed
-  // publication front page with its own navigation, and wrapping it in the
-  // app's rail would reintroduce exactly the dashboard framing it exists to
-  // replace.
-  { path: '/', element: <LandingPage /> },
   {
     path: '/',
     element: <AppShell />,
@@ -39,7 +33,7 @@ const router = createBrowserRouter([
       // first-time visitor no statement of what the site is or how the lenses
       // relate, which made five ways of looking at one subject read as five
       // unrelated sections.
-      { path: 'overview', element: <OverviewPage /> },
+      { index: true, element: <OverviewPage /> },
       { path: 'lens/:slug', element: <LensPage /> },
       { path: 'q/:slug', element: <QuestionPage /> },
       { path: 'explore', element: <ExplorePage /> },

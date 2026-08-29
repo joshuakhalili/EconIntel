@@ -1,0 +1,4 @@
+.mirror-cache/
+docs/verify-shots/
+.DS_Store
+.vercel/

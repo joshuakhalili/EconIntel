@@ -1,0 +1,23 @@
+/* Written by docs/build-diffusion.py.
+
+   Invented proof the template ships, and the template author's own links.
+   Hidden rather than removed: deleting nodes breaks hydration, and a failed
+   hydration reverts the entire page to template content. */
+
+/* The template author's personal socials, presented as the product's. */
+a[href*="instagram.com/liana"],
+a[href*="threads.com/@liana"],
+a[href*="linkedin.com/in/liana"],
+a[href*="x.com/liana_tme"],
+a[href*="lunaui.co"] {
+  display: none !important;
+}
+
+/* Stock portraits: a fabricated colleague and three fabricated signups. */
+img[src*="VQmBGVY3RVR2vigsT6z5YPHg"],
+img[src*="nZdCFW8odfx2dC37xGKQgC7dE"],
+img[src*="gq0nsTnXYqxuMaKwCGBuligAiMM"],
+img[src*="pULw97g0NbmYBdnrSAKemRBqzE"],
+img[src*="DFzG1yXny0N4VBIJify9JjzxUVE"] {
+  display: none !important;
+}

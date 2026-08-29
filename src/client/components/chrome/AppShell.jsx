@@ -1,22 +1,36 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { RiRefreshLine } from '@remixicon/react';
-import { Button } from '@/components/base/buttons/button';
 import {
   SegmentedControl,
   SegmentedControlItem,
 } from '@/components/base/segmented-control/segmented-control';
 import { usePreferences } from '@/lib/preferences';
-import Rail from './Rail';
-import MobileNav from './MobileNav';
+import TopNav from './TopNav';
 
 /**
- * Page heading state.
+ * The frame every page sits in.
  *
- * The title belongs to the page but is rendered in the shared topbar, so each
- * route reports its own via usePageTitle(). This replaces writing directly into
- * the heading element from the router, which the previous front end did.
+ * WHAT CHANGED AND WHY
+ *
+ * This used to hold a fixed 232px rail, a mobile bottom tab bar, and a sticky
+ * header that rendered the page's own title. All three were dashboard
+ * conventions on a site that is a publication, and together they meant a reader
+ * arriving at an article met a control surface before they met any writing.
+ *
+ * The rail and the tab bar are gone, replaced by `TopNav`. Two consequences
+ * had to be handled rather than inherited:
+ *
+ *   1. The shell no longer prints the page title. It only sets document.title.
+ *      Every route already rendered its own <h1>, so the old header was
+ *      printing the same string twice on lens, question, data and indicator
+ *      pages. Three routes had no <h1> of their own and relied on the header
+ *      entirely; those now carry one.
+ *
+ *   2. The reading-mode control lived only in that header. It moves here, into
+ *      a slim strip above the content, because it changes how every page reads
+ *      and losing it would leave the two registers unreachable.
+ *
+ * The theme toggle is not rehomed. There is one theme.
  */
 const PageTitleContext = createContext(null);
 
@@ -29,8 +43,6 @@ export function usePageTitle(title, subtitle) {
 
 export default function AppShell() {
   const [heading, setHeading] = useState({ title: 'Diffusion', subtitle: '' });
-  const queryClient = useQueryClient();
-
   const ctx = useMemo(() => ({ set: setHeading }), []);
 
   // The browser tab should say where the reader is, not just what the site is —
@@ -45,80 +57,41 @@ export default function AppShell() {
 
   return (
     <PageTitleContext.Provider value={ctx}>
-      <Rail />
+      <div className="min-h-dvh bg-page">
+        <TopNav />
 
-      {/* The rail is fixed, so the content column is inset by its width rather
-          than sitting in a grid — that keeps the main region scrolling on its
-          own without the rail moving.
-
-          The inset reads the variable directly: Tailwind's --width-* namespace
-          generates w-*, but padding comes from the spacing scale, so a pl-rail
-          class does not exist and silently collapses to nothing — which puts
-          the content underneath the rail. */}
-      <div className="min-h-screen lg:pl-[var(--width-rail)]">
-        <header className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-border-button-default bg-background-primary-default/85 px-4 py-3 backdrop-blur-sm sm:px-6">
-          <div className="min-w-0">
-            <h1 className="truncate text-title-2-medium text-text-primary">{heading.title}</h1>
-            {heading.subtitle && (
-              <p className="mt-0.5 truncate text-body-regular text-text-tertiary">
-                {heading.subtitle}
-              </p>
-            )}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {/* Reading level sits in the header because it changes the register
-                of every claim on the page under it. At the bottom of the rail
-                it read as a preference someone had buried; here it reads as a
-                property of what you are looking at. */}
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex justify-end pb-1 pt-2">
             <ReadingLevel />
-
-            <Button
-              variant="secondary"
-              size="small"
-              leadingIcon={RiRefreshLine}
-              onClick={() => queryClient.invalidateQueries()}
-              aria-label="Refresh data"
-            >
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
           </div>
-        </header>
 
-        {/* Bottom padding clears the mobile tab bar, which is fixed over the
-            content on small screens. */}
-        <main id="main" tabIndex={-1} className="px-4 pt-5 pb-28 sm:px-6 lg:pb-10">
-          <Outlet />
-        </main>
+          <main id="main" tabIndex={-1} className="pb-24 pt-2">
+            <Outlet />
+          </main>
+        </div>
       </div>
-
-      <MobileNav />
     </PageTitleContext.Provider>
   );
 }
 
 /**
- * Plain / Technical.
+ * Plain or Technical.
  *
- * Not a settings toggle — the two registers answer different questions about
- * the same finding, so this is closer to choosing an edition than changing a
- * preference. Labelled in full on desktop; the label collapses on small
- * screens where the header has to share room with the title.
+ * Not a display preference. The two registers answer different questions —
+ * Plain states the finding, Technical says how it was measured and where it
+ * misleads — so this is closer to a table of contents than to a font size, and
+ * it stays visible on every page rather than hiding in a settings menu.
  */
 function ReadingLevel() {
-  const { mode, setMode } = usePreferences();
+  const { register, setRegister } = usePreferences();
 
   return (
     <div className="flex items-center gap-2">
-      <span className="hidden text-caption-1-regular text-text-tertiary md:inline">Reading</span>
-      {/* React Aria's ToggleButtonGroup selects by Set, not a single key. */}
+      <span className="eyebrow">Reading</span>
       <SegmentedControl
-        aria-label="Reading level"
-        selectedKeys={new Set([mode])}
-        onSelectionChange={(keys) => {
-          const next = [...keys][0];
-          if (next) setMode(String(next));
-        }}
+        selectedValue={register}
+        onChange={(key) => setRegister(String(key))}
+        size="sm"
       >
         <SegmentedControlItem id="plain">Plain</SegmentedControlItem>
         <SegmentedControlItem id="expert">Technical</SegmentedControlItem>

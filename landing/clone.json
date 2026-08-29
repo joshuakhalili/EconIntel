@@ -1,0 +1,23 @@
+{
+  "source": "https://atmos-system.framer.website",
+  "pages": [
+    "/",
+    "/thanks",
+    "/legal/privacy-policy",
+    "/legal/terms-of-service",
+    "/404",
+    "/waitlist"
+  ],
+  "extra_hosts": [],
+  "unmirrored_hosts": [
+    "api.framer.com",
+    "frameruni.link",
+    "raw.githubusercontent.com",
+    "reactjs.org",
+    "rolldown.rs",
+    "www.instagram.com",
+    "www.linkedin.com",
+    "www.threads.com",
+    "x.com"
+  ]
+}

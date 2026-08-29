@@ -26,6 +26,16 @@ import { globe } from './repositories/globe.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '../../public');
+/**
+ * The landing page is a static site, not part of the React app.
+ *
+ * It is a hardened mirror of a Framer template, committed as source under
+ * `landing/`, and it owns the front door plus /waitlist, /thanks and /legal/*.
+ * The app owns everything else. Serving both from one origin is what makes the
+ * site one site rather than two — a reader clicking "Diffusion" in the app nav
+ * lands on the real landing page, not on a second copy of the overview.
+ */
+const landingDir = path.resolve(here, '../../landing');
 
 const app = express();
 
@@ -482,6 +492,44 @@ app.get('/api/status', route(async (_req, res) => {
 // Static files and errors
 // ─────────────────────────────────────────────────────────────────────────────
 
+/*
+ * Landing first, then the app build. Both mount at the root and both have an
+ * `assets/` directory, which is safe because their filenames cannot collide:
+ * the landing page carries Framer's content-hashed names and Vite emits
+ * `index-<hash>`. Express tries landing, misses, and falls through.
+ *
+ * `index: 'index.html'` is what makes `/` the landing page and what resolves
+ * `/legal/privacy-policy` and `/waitlist` to their directories' index files.
+ */
+app.use(
+  express.static(landingDir, {
+    index: 'index.html',
+    extensions: ['html'],
+    // No trailing-slash redirect. The mirror's links are slash-less
+    // (/waitlist, /legal/privacy-policy) and a 301 to /waitlist/ changes the
+    // URL under the reader and breaks the canonical tags written by detach.py.
+    // The resolver below serves those directly instead.
+    redirect: false,
+    maxAge: config.env === 'production' ? '1h' : 0,
+  })
+);
+
+/**
+ * Slash-less directory paths on the landing page.
+ *
+ * `express.static` will serve `landing/waitlist/index.html` for `/waitlist/`
+ * but not for `/waitlist`, and the mirror links to the latter everywhere. This
+ * resolves the slash-less form directly rather than redirecting to add one.
+ */
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path === '/healthz') return next();
+  const candidate = path.join(landingDir, req.path, 'index.html');
+  // Never let a crafted path climb out of landing/.
+  if (!candidate.startsWith(landingDir + path.sep)) return next();
+  res.sendFile(candidate, (error) => {
+    if (error) next();
+  });
+});
 app.use(express.static(publicDir, { maxAge: config.env === 'production' ? '1h' : 0 }));
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'No such endpoint' }));
