@@ -9,6 +9,7 @@ import TickerStrip from '@/components/TickerStrip';
 import NewsList from '@/components/NewsList';
 import Reading from '@/components/Reading';
 import LensSignature from '@/components/lens/LensSignature';
+import FigureChart from '@/components/charts/FigureChart';
 import { LENS_ACCENT } from '@/lib/lensAccent';
 
 /**
@@ -155,6 +156,30 @@ export default function LensPage() {
           ))}
         </div>
       </section>
+
+      {/* Figures filed against the lens rather than one of its questions — a
+          BIS chart on AI capex is about Investment & Capital as a whole. Not
+          this site's own measurements, and each one says so on its face. */}
+      {lens.figures?.length > 0 && (
+        <section className="mt-14">
+          <p className="eyebrow" style={{ color: accent.hex }}>
+            From the reports
+          </p>
+          <h2 className="mt-3 text-title-1-medium text-text-primary">
+            What the literature measured
+          </h2>
+          <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
+            Read off a named page of a named report and shown with the line they came from. Mostly
+            surveys and model results rather than measurements of the economy, and each chart says
+            which.
+          </p>
+          <div className="mt-6 flex flex-col gap-3">
+            {lens.figures.map((figure) => (
+              <FigureChart key={figure.id} figure={figure} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <Reading
         items={lens.reading}

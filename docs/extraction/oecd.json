@@ -1,0 +1,83 @@
+{
+  "report": {
+    "publisher": "OECD",
+    "title": "OECD Economic Outlook, Volume 2026 Issue 1",
+    "url": "https://www.oecd.org/en/publications/2026/06/oecd-economic-outlook-volume-2026-issue-1_8be0dba6.html",
+    "published": "2026-06-01",
+    "pdf": "2d1956f0-en.pdf"
+  },
+  "figures": [
+    {
+      "id": "oecd-software-share-of-us-private-capital",
+      "title": "Software sector share of US private capital portfolios",
+      "subtitle": "US business development companies' portfolios and new investments by US private equity funds, end-2025",
+      "page_ref": "p. 44",
+      "quote": "Private equity and credit funds are particularly exposed to the performance of technology-related companies, with the software sector accounting for 20% of US business development companies' portfolios and 42% of new investments of US private equity funds in 2025 (Figure 1.27, Panel B).",
+      "unit": "% of portfolio / of new investments",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "The two shares are not measured the same way: 20% is a share of an existing stock of portfolio exposures, 42% is a share of the flow of new investments made during 2025, so the second will move faster than the first. 'Software' is a sector label, not an AI label — it covers software and technology services firms generally, and the OECD uses it as a proxy for AI-linked exposure rather than a direct measure of it. Valuations of private, illiquid holdings are set by fund managers with, in the OECD's words, significant discretion.",
+      "points": [
+        { "series": "", "label": "US business development companies' portfolios", "value": 20 },
+        { "series": "", "label": "New investments of US private equity funds", "value": 42 }
+      ]
+    },
+    {
+      "id": "oecd-private-capital-assets-2012-2025",
+      "title": "Global assets managed by private equity and private credit funds",
+      "subtitle": "Worldwide assets of private equity and private credit funds, 2012 and 2025",
+      "page_ref": "p. 44",
+      "quote": "Globally, the assets managed by private equity and credit funds are estimated to have risen from USD 3 trillion in 2012 to USD 15 trillion in 2025.",
+      "unit": "USD trillion",
+      "unit_symbol": "USD tn",
+      "decimals": 0,
+      "axis_kind": "year",
+      "note": "This is all private equity and private credit, not AI-specific money — the OECD cites it as the backdrop to growing fund exposure to AI-linked collateral such as data centres and chip-collateralised loans, not as a measure of AI investment. The figures are estimates and include uninvested committed capital ('dry powder') as well as deployed assets, and only two points a decade apart are given, so the path between them is unknown.",
+      "points": [
+        { "series": "", "label": "2012", "value": 3 },
+        { "series": "", "label": "2025", "value": 15 }
+      ]
+    },
+    {
+      "id": "oecd-median-labour-productivity-growth",
+      "title": "Median labour productivity growth across OECD economies",
+      "subtitle": "Output per person employed, median of OECD economies, first half of 2024 versus fourth quarter of 2025",
+      "page_ref": "p. 25",
+      "quote": "Median labour productivity growth (output per person employed) across OECD economies rose from 0.3% in the first half of 2024 to 1.2% by the fourth quarter of 2025, a rate that was broadly in line with the average pace through 2010-19.",
+      "unit": "% growth in output per person employed",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "year",
+      "note": "A cyclical recovery, not an established trend: the OECD notes the 1.2% rate is only back in line with the 2010-19 average, and it attributes the pickup to a recovery in productivity growth broadly rather than to AI. Only in the United States country note does the OECD link stronger productivity growth to AI, and there only as 'likely driven by the capital deepening linked to AI-related investment'. Output per person employed does not adjust for hours worked, and a median across economies hides wide country variation.",
+      "points": [
+        { "series": "", "label": "First half of 2024", "value": 0.3 },
+        { "series": "", "label": "Fourth quarter of 2025", "value": 1.2 }
+      ]
+    },
+    {
+      "id": "oecd-growth-reform-recommendations-by-area",
+      "title": "Structural reform recommendations by policy area",
+      "subtitle": "Share of policy recommendations across 48 countries, OECD Foundations for Growth and Competitiveness country notes, 2026",
+      "page_ref": "pp. 63-64",
+      "quote": "Figure 1.37. Reform recommendations to strengthen the foundations for growth and competitiveness. Share of policy recommendations, per cent",
+      "unit": "% of policy recommendations",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A count of what the OECD recommended, not of what countries have done or of what would raise growth most — a policy area can be small here because most countries already do it well. The OECD's note says each bar is the share corresponding to the number of countries with a recommendation in that area, out of 48 countries. Housing appears in the text with no percentage given and is omitted. Shares are as stated in the running text; 'labour mobility and participation' is given as 'around 12%'.",
+      "points": [
+        { "series": "", "label": "Product market regulation and insolvency", "value": 18 },
+        { "series": "", "label": "Education, skills and human capital", "value": 18 },
+        { "series": "", "label": "Labour mobility and participation", "value": 12 },
+        { "series": "", "label": "Governance and institutions", "value": 11 },
+        { "series": "", "label": "Efficiency of the tax system", "value": 11 },
+        { "series": "", "label": "Physical infrastructure", "value": 8 },
+        { "series": "", "label": "Innovation policy", "value": 7 },
+        { "series": "", "label": "Rules-based open markets and openness to FDI", "value": 6 },
+        { "series": "", "label": "Acceleration of digital adoption", "value": 3 },
+        { "series": "", "label": "Investment in energy and natural capital", "value": 3 }
+      ]
+    }
+  ]
+}

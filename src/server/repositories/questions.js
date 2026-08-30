@@ -11,6 +11,7 @@
  */
 
 import { query } from '../db/pool.js';
+import { figuresForQuestion } from './figures.js';
 
 /** All active questions, for navigation. */
 export async function listQuestions() {
@@ -144,7 +145,18 @@ export async function getQuestion(slug) {
     [questions[0].lens_id]
   );
 
-  return { ...questions[0], indicators, reading, siblings };
+  /*
+   * Figures read out of the literature, placed on this question.
+   *
+   * Returned separately from `reading` even though both come from the same
+   * reports, because they answer different things: a takeaway says what a
+   * source concluded, a figure shows the numbers it printed. Merging them
+   * would mean a citation with a chart and one without rendering as the same
+   * kind of object.
+   */
+  const figures = await figuresForQuestion(questions[0].id);
+
+  return { ...questions[0], indicators, reading, siblings, figures };
 }
 
 /**

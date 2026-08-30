@@ -1,0 +1,113 @@
+{
+  "report": {
+    "publisher": "International Monetary Fund",
+    "title": "Bridging Skill Gaps for the Future: New Jobs Creation in the AI Age",
+    "url": "https://www.imf.org/-/media/files/publications/sdn/2026/english/sdnea2026001.pdf",
+    "published": "2026-01-01",
+    "pdf": "sdnea2026001.pdf"
+  },
+  "figures": [
+    {
+      "id": "imf-skills-ai-exposure-by-income-group",
+      "title": "Share of employment potentially exposed to AI, by country income group",
+      "subtitle": "All employment worldwide, grouped by country income level; exposure measured from the task content of occupations, as estimated in Cazzaniga and others (2024) and restated here",
+      "page_ref": "p. 11",
+      "quote": "This trend is especially noteworthy considering that previous analysis has established that 40 percent of global employment is potentially exposed to AI, albeit with notable differences across countries (Cazzaniga and others 2024). Although in advanced economies this share rises to 60 percent, in emerging markets it remains at 40 percent, and in low-income countries it stands at 28 percent.",
+      "unit": "% of employment potentially exposed to AI",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "An exposure index built from what tasks an occupation involves, not a count of jobs automated or lost. Exposure covers both cases where AI substitutes for the worker and cases where it complements them, so a high share is not a forecast of displacement. The numbers are carried over from an earlier IMF staff paper rather than estimated in this note.",
+      "points": [
+        { "series": "", "label": "World", "value": 40 },
+        { "series": "", "label": "Advanced economies", "value": 60 },
+        { "series": "", "label": "Emerging markets", "value": 40 },
+        { "series": "", "label": "Low-income countries", "value": 28 }
+      ]
+    },
+    {
+      "id": "imf-skills-us-local-labour-market-effects",
+      "title": "Estimated wage and employment effect of demand for new skills in US local labour markets",
+      "subtitle": "US commuting zones, 2013-23; effect of a rise in the share of local job postings that require at least one new skill",
+      "page_ref": "pp. 15-16",
+      "quote": "A 1 percentage point increase in job postings requiring new skills raises average hourly wages by 2.3 percent, which translates into a predicted gain of about 7.6 percent given the observed increase in new skill postings of 3.3 percentage points over the period considered. Employment effects are also positive, with the same increase in new skills linked to 1.3 percent higher employment, amounting to a predicted rise of about 4.3 percent, while the estimated effect on population is at 5.3 percent.",
+      "unit": "% change in wages or employment",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "Model output, not observed change. These are coefficients from an instrumental-variable shift-share regression across US commuting zones, instrumented on early new-skill adoption in California and the United Kingdom. The second series is not a separate measurement: it applies the same estimated elasticity to the 3.3 percentage point rise in new-skill postings that was actually observed over 2013-23. The comparable German estimate is a 0.9 percent wage gain per percentage point with no statistically significant employment effect. New skills here means all new skills; AI-specific skills behave differently.",
+      "points": [
+        { "series": "Per 1 percentage point rise in new-skill postings", "label": "Average hourly wages", "value": 2.3 },
+        { "series": "Per 1 percentage point rise in new-skill postings", "label": "Employment", "value": 1.3 },
+        { "series": "Predicted total over 2013-23 (3.3 pp observed rise)", "label": "Average hourly wages", "value": 7.6 },
+        { "series": "Predicted total over 2013-23 (3.3 pp observed rise)", "label": "Employment", "value": 4.3 }
+      ]
+    },
+    {
+      "id": "imf-skills-wage-premium-four-plus-new-skills",
+      "title": "Posted wage premium for vacancies listing four or more new skills",
+      "subtitle": "Online job postings with advertised pay, United Kingdom and United States, 2020-24 (Lightcast)",
+      "page_ref": "p. 14",
+      "quote": "The wage premium is higher when employers demand multiple new skills—reaching 15.1 percent in the United Kingdom for vacancies listing four or more new skills and 8.5 percent in the United States.",
+      "unit": "% higher posted hourly wage",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "A regression coefficient on advertised pay, not on pay actually received. Postings are compared only within the same 4-digit occupation, 6-digit industry, county and year, and the number of skills listed is controlled for, so this is the marginal value of a new skill over an existing one. It is an association: employers that ask for several new skills may differ in ways the fixed effects do not capture. Only US and UK postings carry usable wage data. The premium for any single new skill is much smaller, about 3 to 3.4 percent.",
+      "points": [
+        { "series": "", "label": "United Kingdom", "value": 15.1 },
+        { "series": "", "label": "United States", "value": 8.5 }
+      ]
+    },
+    {
+      "id": "imf-skills-degree-share-by-new-skill-use",
+      "title": "Share of workers holding at least a bachelor's degree, by whether their profile lists new skills",
+      "subtitle": "Nearly 18 million US online worker profiles with job information updated in 2024 (Lightcast)",
+      "page_ref": "p. 21",
+      "quote": "The evidence shows that 85 percent of workers listing new skills on their profiles have at least a bachelor's degree, compared with 60 percent among workers who list only non-new skills (Figure 11, panel 1). A similar pattern emerges for new IT skills: 84.5 percent of workers reporting these skills hold at least a bachelor's degree. Among new non-IT skills holders, the proportion of workers with at least a bachelor's degree is similar, at 86 percent.",
+      "unit": "% of workers with a bachelor's degree or higher",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "Self-reported online CVs and profiles, not a representative labour force survey. People who publish a profile skew towards professional and graduate-level work, so the absolute levels are likely too high; the gap between the groups is the more reliable part. Listing a skill is not evidence of proficiency in it.",
+      "points": [
+        { "series": "", "label": "Lists new skills", "value": 85 },
+        { "series": "", "label": "Lists only non-new skills", "value": 60 },
+        { "series": "", "label": "Lists new IT skills", "value": 84.5 },
+        { "series": "", "label": "Lists new non-IT skills", "value": 86 }
+      ]
+    },
+    {
+      "id": "imf-skills-new-skill-rate-by-job-title",
+      "title": "Share of US job postings listing at least one new skill, by whether the job title itself is new",
+      "subtitle": "US online job postings (Lightcast); new skills are those barely present in postings in 2010-11 that have since become common",
+      "page_ref": "p. 15",
+      "quote": "In the United States, job postings with new, emerging job titles are twice as likely to list a new skill as opposed to postings with existing titles (16.8 percent versus 8.8 percent). Yet job postings with emerging titles are not associated with higher wages.",
+      "unit": "% of job postings listing a new skill",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "Online postings over-represent formal, urban and higher-skill occupations, so this is the formal professional labour market rather than all US hiring. A posting is a request, not a hire. The paper is explicit that postings with emerging titles do not carry higher pay, so a new title is not by itself a sign of a better job.",
+      "points": [
+        { "series": "", "label": "New, emerging job titles", "value": 16.8 },
+        { "series": "", "label": "Existing job titles", "value": 8.8 }
+      ]
+    },
+    {
+      "id": "imf-skills-ai-exposed-employment-shortfall",
+      "title": "Estimated employment shortfall in AI-exposed occupations five years after AI skills appear locally",
+      "subtitle": "US commuting zones; occupations highly exposed to AI with limited scope for complementarity, measured five years after AI-related skills first appear in local job postings",
+      "page_ref": "p. 20",
+      "quote": "In the medium term (after five years), regions with a 1 percentage point higher demand for AI-related skills show employment levels that are 6.3 percent lower than other regions for occupations that are highly exposed to AI with limited scope for complementarity. This translates into a predicted lower employment level of about 3.6 percent given the observed increase in new skill postings (which amounts to 0.57 percentage point for workers in high-exposure, low-complementarity occupations over the period considered).",
+      "unit": "% difference in employment level versus other regions",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "Model output, not a headcount of jobs lost. Both figures come from a staggered difference-in-differences event study on US commuting zones; the second is the same estimated coefficient scaled to the 0.57 percentage point rise in AI-skill postings actually observed. Effects were statistically insignificant for occupations that are highly exposed but highly complementary to AI, and the paper cites French firm-level evidence pointing the other way. Around 30 percent of US employment falls in the high-exposure, low-complementarity group.",
+      "points": [
+        { "series": "", "label": "Per 1 percentage point higher AI-skill demand", "value": -6.3 },
+        { "series": "", "label": "Predicted, given the 0.57 pp rise observed", "value": -3.6 }
+      ]
+    }
+  ]
+}

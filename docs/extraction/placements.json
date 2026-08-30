@@ -1,0 +1,86 @@
+{
+  "_comment": [
+    "Where each extracted figure goes. Editorial, not inferrable — the loader",
+    "refuses to place anything itself and reports whatever is missing.",
+    "",
+    "A figure goes on a QUESTION when it bears on that question's specific",
+    "claim, and on a LENS when it is about the subject as a whole. When in",
+    "doubt, the lens: a figure under the wrong question implies the page's",
+    "answer rests on it.",
+    "",
+    "Figures dropped on purpose are listed at the bottom with the reason."
+  ],
+
+  "pwc-ai-skill-wage-premium-by-sector": { "lens": "labour", "sort_order": 10 },
+  "pwc-productivity-growth-by-ai-exposure": { "question": "productivity", "sort_order": 10 },
+  "pwc-headcount-growth-by-ai-exposure": { "question": "jobs", "sort_order": 10 },
+  "pwc-wage-growth-by-ai-exposure": { "lens": "labour", "sort_order": 11 },
+  "pwc-human-intensive-new-tasks-by-exposure-quartile": { "lens": "labour", "sort_order": 12 },
+  "pwc-professionalised-vs-democratised-growth": { "question": "entry-level", "sort_order": 11 },
+  "pwc-job-share-by-expertise-category": { "question": "entry-level", "sort_order": 12 },
+  "pwc-entry-level-postings-seniorised": { "question": "entry-level", "sort_order": 10 },
+
+  "wef-executive-expectations-of-ai-impact": { "lens": "growth", "sort_order": 20 },
+  "wef-jobs-created-vs-displaced-by-2030": { "lens": "labour", "sort_order": 20 },
+  "wef-business-ai-adoption-2022-2025": { "question": "adoption", "sort_order": 20 },
+  "wef-task-automation-age-of-displacement-2030": { "lens": "labour", "sort_order": 21 },
+
+  "hai-private-ai-investment-by-country-2025": { "question": "money", "sort_order": 10 },
+  "hai-ai-funding-events-by-size-2024-2025": { "question": "money", "sort_order": 11 },
+  "hai-organizational-ai-use-by-region": { "question": "adoption", "sort_order": 10 },
+  "hai-ai-use-by-function-technology-sector": { "question": "adoption", "sort_order": 11 },
+  "hai-ai-job-postings-share-by-country-2025": { "question": "vacancies", "sort_order": 10 },
+  "hai-ai-job-postings-share-by-us-sector": { "question": "vacancies", "sort_order": 11 },
+  "hai-workforce-reductions-observed-vs-expected": { "question": "jobs", "sort_order": 11 },
+  "hai-measured-productivity-change-by-study": { "question": "productivity", "sort_order": 11 },
+
+  "imf-skills-ai-exposure-by-income-group": { "lens": "labour", "sort_order": 30 },
+  "imf-skills-us-local-labour-market-effects": { "question": "jobs", "sort_order": 12 },
+  "imf-skills-wage-premium-four-plus-new-skills": { "lens": "labour", "sort_order": 31 },
+  "imf-skills-degree-share-by-new-skill-use": { "question": "entry-level", "sort_order": 13 },
+  "imf-skills-new-skill-rate-by-job-title": { "question": "vacancies", "sort_order": 12 },
+  "imf-skills-ai-exposed-employment-shortfall": { "question": "jobs", "sort_order": 13 },
+
+  "imf-macro-frontier-model-query-price": { "question": "markets", "sort_order": 10 },
+  "imf-macro-inference-cost-decline": { "question": "markets", "sort_order": 11 },
+  "imf-macro-agi-forecast-horizon": { "lens": "growth", "sort_order": 21 },
+
+  "mckinsey-ai-and-gen-ai-adoption-over-time": { "question": "adoption", "sort_order": 12 },
+  "mckinsey-gen-ai-use-by-industry": { "question": "adoption", "sort_order": 13 },
+  "mckinsey-gen-ai-revenue-increase-by-function": { "question": "productivity", "sort_order": 12 },
+  "mckinsey-gen-ai-cost-decrease-by-function": { "question": "productivity", "sort_order": 13 },
+  "mckinsey-expected-headcount-change-from-gen-ai": { "question": "jobs", "sort_order": 14 },
+  "mckinsey-gen-ai-content-types": { "lens": "growth", "sort_order": 22 },
+  "mckinsey-ai-deployment-centralization": { "lens": "growth", "sort_order": 23 },
+
+  "deloitte-agentic-ai-usage-today-vs-two-years": { "question": "adoption", "sort_order": 14 },
+  "deloitte-physical-ai-adoption-by-region": { "question": "building", "sort_order": 10 },
+  "deloitte-ai-benefits-achieved-vs-hoped": { "question": "productivity", "sort_order": 14 },
+  "deloitte-depth-of-ai-transformation": { "question": "adoption", "sort_order": 15 },
+  "deloitte-talent-strategy-adjustments": { "lens": "labour", "sort_order": 40 },
+  "deloitte-ai-risks-most-concerning": { "question": "policy", "sort_order": 10 },
+  "deloitte-highly-prepared-for-ai-by-domain": { "question": "policy", "sort_order": 11 },
+  "deloitte-physical-ai-greatest-expected-impact": { "question": "building", "sort_order": 11 },
+
+  "kpmg-ai-maturity-phase-q1-q2": { "question": "adoption", "sort_order": 16 },
+  "kpmg-ai-confidence-measures-q1-q2": { "lens": "growth", "sort_order": 24 },
+  "kpmg-ai-priorities-q1-q2": { "lens": "growth", "sort_order": 25 },
+  "kpmg-ai-strategy-influences-q1-q2": { "question": "policy", "sort_order": 12 },
+  "kpmg-ai-decision-accountability": { "question": "policy", "sort_order": 13 },
+  "kpmg-outcomes-by-ceo-accountability": { "question": "productivity", "sort_order": 15 },
+  "kpmg-ai-operating-cost-visibility": { "question": "markets", "sort_order": 12 },
+  "kpmg-ai-agent-deployment-rephasing": { "question": "markets", "sort_order": 13 },
+
+  "bis-equity-market-concentration": { "question": "money", "sort_order": 12 },
+  "oecd-software-share-of-us-private-capital": { "question": "money", "sort_order": 13 },
+  "oecd-private-capital-assets-2012-2025": { "question": "money", "sort_order": 14 },
+  "oecd-median-labour-productivity-growth": { "question": "productivity", "sort_order": 16 },
+
+  "_dropped": {
+    "bis-equity-drawdowns-by-shock-episode": "About the 2026 Iran conflict, not AI. The BIS chapter is a general macro assessment and this is its energy-shock material.",
+    "bis-oil-supply-cut-vs-1970s-crises": "Same — a comparison of oil supply shocks, with no AI content.",
+    "bis-gulf-crude-shut-in-volumes": "Same.",
+    "bis-cyclically-adjusted-primary-deficits": "Fiscal policy. Nothing to do with AI.",
+    "oecd-growth-reform-recommendations-by-area": "OECD structural reform advice by policy area. Not about AI, and putting it on the Policy lens would imply these are AI rules."
+  }
+}

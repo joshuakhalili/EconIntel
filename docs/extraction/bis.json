@@ -1,0 +1,96 @@
+{
+  "report": {
+    "publisher": "Bank for International Settlements",
+    "title": "Annual Economic Report 2026, Chapter I: Progress and peril",
+    "url": "https://www.bis.org/publ/arpdf/ar2026e1.htm",
+    "published": "2026-06-01",
+    "pdf": "ar2026e1.pdf"
+  },
+  "figures": [
+    {
+      "id": "bis-equity-drawdowns-by-shock-episode",
+      "title": "Equity market falls during the 2026 Iran conflict against earlier shock episodes",
+      "subtitle": "Peak equity declines during four geopolitical and policy shocks; the 2026 figures cover late February to end-March 2026, the comparison episodes are the 2025 US tariff hike, the 1990 Gulf War and the 1979 Iranian revolution",
+      "page_ref": "p. 15 (PDF p. 9)",
+      "quote": "Global equity markets declined 9% from late February to end-March 2026, with the S&P 500 index down 8% over the same period. However, the sell-off was contained relative to previous episodes, such as the 2025 tariff hike (19%), the 1990 Gulf War (17%) or the 1979 Iranian revolution (17%).",
+      "unit": "% decline in equity prices",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "Declines are peak-to-window falls, not calendar-year returns. The first two bars are two different indices over the same 2026 window; for the three historical episodes the chapter does not state in the text which index or which measurement window was used, so they are not strictly like-for-like. BIS attributes the contained 2026 sell-off partly to continued confidence in growth 'on the back of AI-related spending', which is an interpretation, not a measured quantity.",
+      "points": [
+        { "series": "", "label": "Global equity markets, late Feb–end-March 2026", "value": 9 },
+        { "series": "", "label": "S&P 500, late Feb–end-March 2026", "value": 8 },
+        { "series": "", "label": "2025 tariff hike", "value": 19 },
+        { "series": "", "label": "1990 Gulf War", "value": 17 },
+        { "series": "", "label": "1979 Iranian revolution", "value": 17 }
+      ]
+    },
+    {
+      "id": "bis-equity-market-concentration",
+      "title": "Concentration in equity markets behind the AI trade",
+      "subtitle": "Two concentration measures cited by BIS: the 30 largest S&P 500 stocks as a share of that index's value (26 March 2026) and US stocks as a share of the MSCI Global index (as at the June 2026 report)",
+      "page_ref": "pp. 24 and 36 (PDF pp. 18 and 30)",
+      "quote": "And with US stocks accounting for an outsized share of global equity markets – about 64% of the MSCI Global index – the wealth impact from a US-led repricing could propagate globally. [p. 24] ... The largest 30 stocks in the S&P 500 represent 56% of the index value as of 26 March 2026. [p. 36, additional notes to Graph 12.B]",
+      "unit": "% of index value",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "The two figures come from different pages and measure concentration in different indices — they are nested, not additive, and should not be read as a trend or a like-for-like comparison. Both are point-in-time index weights, not AI-sector shares: BIS does not state what fraction of either is AI-related. The 56% figure is stated only in the report's endnotes to Graph 12.B.",
+      "points": [
+        { "series": "", "label": "30 largest S&P 500 stocks, share of S&P 500 index value", "value": 56 },
+        { "series": "", "label": "US stocks, share of MSCI Global index", "value": 64 }
+      ]
+    },
+    {
+      "id": "bis-oil-supply-cut-vs-1970s-crises",
+      "title": "Crude oil supply lost to the Strait of Hormuz closure against the 1970s energy crises",
+      "subtitle": "Peak loss of crude oil supply as a share of normal global supply, 2026 Iran conflict compared with the 1970s energy crises",
+      "page_ref": "p. 12 (PDF p. 6)",
+      "quote": "The supply disruption was historically large in terms of volumes lost, with a cut in crude oil flow of over 10 million barrels a day, equivalent to 13% of normal supply (Graph 4.B). By comparison, supply losses in the 1970s energy crises were around 8%.",
+      "unit": "% of global crude oil supply",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "The 1970s figure is given as 'around 8%' and covers more than one episode (the 1973 oil embargo and the 1979 Iran revolution are shown separately in the report's own Graph 4.B). These are supply volumes lost, not price effects — BIS notes oil prices rose proportionally less in 2026 than in the earlier crises because of reserve drawdowns and an expectation the crisis would be short-lived.",
+      "points": [
+        { "series": "", "label": "Iran conflict 2026", "value": 13 },
+        { "series": "", "label": "1970s energy crises", "value": 8 }
+      ]
+    },
+    {
+      "id": "bis-gulf-crude-shut-in-volumes",
+      "title": "Share of Persian Gulf crude oil production shut in after the Hormuz closure",
+      "subtitle": "Regional crude oil supply and the volume curtailed by well shut-ins, Persian Gulf producers, as at the June 2026 report",
+      "page_ref": "p. 15 (PDF p. 9)",
+      "quote": "Shut-ins have curtailed about 12 million barrels per day from a total regional crude oil supply of 21 million barrels per day (Graph B1.C).",
+      "unit": "million barrels per day",
+      "unit_symbol": "mb/d",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "The curtailed volume is a subset of the total, not a separate quantity — the two bars should not be summed. The 12 mb/d figure is given as 'about' and BIS cites alternative estimates in a footnote (Fattouh and Mehdi 2026). Shut-in wells can suffer structural damage, so this is not a volume that returns automatically when the Strait reopens.",
+      "points": [
+        { "series": "", "label": "Total regional crude oil supply", "value": 21 },
+        { "series": "", "label": "Curtailed by shut-ins", "value": 12 }
+      ]
+    },
+    {
+      "id": "bis-cyclically-adjusted-primary-deficits",
+      "title": "Cyclically adjusted primary deficits before and after 2022",
+      "subtitle": "Average cyclically adjusted primary deficit as a share of GDP, advanced economies and emerging market economies, 2000–19 against 2022–25",
+      "page_ref": "p. 27 (PDF p. 21)",
+      "quote": "Cyclically adjusted primary deficits in AEs averaged 1.9% of GDP from 2022 onwards (Graph 15.B), nearly double the 1.1% recorded over the two preceding decades. EMEs have seen an even sharper deterioration (1.8% since 2022 versus 0.1% between 2000 and 2019).",
+      "unit": "% of GDP",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "Cyclically adjusted balances are model estimates, not raw outturns, and depend on the output-gap assumptions of the source (IMF and OECD). These are group averages across AEs and EMEs that hide wide country dispersion. The earlier AE period is described in the text as 'the two preceding decades'; the report's Graph 15.B labels the two periods 2000–19 and 2022–25. A deficit is shown as a positive number here, following the report's wording.",
+      "points": [
+        { "series": "2000–19", "label": "Advanced economies", "value": 1.1 },
+        { "series": "2000–19", "label": "Emerging market economies", "value": 0.1 },
+        { "series": "2022–25", "label": "Advanced economies", "value": 1.9 },
+        { "series": "2022–25", "label": "Emerging market economies", "value": 1.8 }
+      ]
+    }
+  ]
+}

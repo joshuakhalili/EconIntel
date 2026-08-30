@@ -8,6 +8,7 @@
  */
 
 import { query } from '../db/pool.js';
+import { figuresForLens } from './figures.js';
 
 /** All active lenses, for navigation. */
 export async function listLenses() {
@@ -143,7 +144,12 @@ export async function getLens(slug) {
     [lenses[0].id]
   );
 
-  return { ...lenses[0], questions, reading };
+  /* Figures placed on the lens as a whole rather than on one of its
+     questions — a BIS chart about AI capex is about Investment & Capital, not
+     about either question under it. */
+  const figures = await figuresForLens(lenses[0].id);
+
+  return { ...lenses[0], questions, reading, figures };
 }
 
 /**

@@ -7,6 +7,7 @@ import { usePageTitle } from '@/components/chrome/AppShell';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock, EmptyBlock } from '@/components/Page';
 import ChartGroup from '@/components/charts/ChartGroup';
+import FigureChart from '@/components/charts/FigureChart';
 import StrengthBadge, { STRENGTH } from '@/components/StrengthBadge';
 import Reading from '@/components/Reading';
 import { groupIndicators } from '@/lib/groupIndicators';
@@ -201,6 +202,25 @@ export default function QuestionPage() {
               <ChartGroup key={group.key} members={group.members} height={220} onPick={open} />
             ))}
           </div>
+        </Band>
+      )}
+
+      {/* ── What the literature measured ──────────────────────────────────
+          Kept apart from the evidence bands above, because these are not this
+          site's own measurements. They are numbers printed in someone else's
+          report — mostly surveys of executives and model results — and each
+          one says on its face which it is, what page it came from, and that
+          no person here has checked it yet. */}
+      {question.figures?.length > 0 && (
+        <Band
+          accent={accent}
+          eyebrow="From the reports"
+          title="What the literature measured"
+          note="Read off a named page of a named report and shown with the line they came from. Not this site's own data — mostly surveys and model results, and each chart says which."
+        >
+          {question.figures.map((figure) => (
+            <FigureChart key={figure.id} figure={figure} />
+          ))}
         </Band>
       )}
 

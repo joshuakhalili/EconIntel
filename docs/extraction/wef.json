@@ -1,0 +1,81 @@
+{
+  "report": {
+    "publisher": "World Economic Forum",
+    "title": "Four Futures for Jobs in the New Economy: AI and Talent in 2030",
+    "url": "https://www.weforum.org/publications/four-futures-for-jobs-in-the-new-economy-ai-and-talent-in-2030/",
+    "published": "2026-01-01",
+    "pdf": "WEF_Four_Futures_for_Jobs_in_the_New_Economy_AI_and_Talent_in_2030_2025.pdf"
+  },
+  "figures": [
+    {
+      "id": "wef-executive-expectations-of-ai-impact",
+      "title": "What executives expect AI to do",
+      "subtitle": "Share of respondents selecting each expected impact, over 10,000 executives worldwide, Executive Opinion Survey 2024",
+      "page_ref": "p. 5",
+      "quote": "Perception of the business community about the impact of AI",
+      "unit": "% of executives surveyed",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "Opinion, not measurement — these are executives' expectations about AI, collected in the Forum's 2024 Executive Opinion Survey, and they carry the optimism and the blind spots of the people running the firms. Respondents could select more than one impact, so the shares do not sum to 100%. The survey samples business leaders, not workers, and is weighted towards larger and more formal firms.",
+      "points": [
+        { "series": "", "label": "...displace a large number of existing jobs", "value": 54.3 },
+        { "series": "", "label": "...increase profit margins of businesses across a number of sectors", "value": 44.6 },
+        { "series": "", "label": "...increase accessibility of goods and services", "value": 37.0 },
+        { "series": "", "label": "...increase affordability of goods and services", "value": 30.0 },
+        { "series": "", "label": "...exacerbate industry concentration across a number of sectors", "value": 23.6 },
+        { "series": "", "label": "...create a large number of new jobs", "value": 23.5 },
+        { "series": "", "label": "...exacerbate discrimination against specific demographic groups", "value": 21.4 },
+        { "series": "", "label": "...lead to higher wages", "value": 12.1 }
+      ]
+    },
+    {
+      "id": "wef-jobs-created-vs-displaced-by-2030",
+      "title": "Jobs projected to be created and displaced by 2030",
+      "subtitle": "Global macrotrend projection to 2030, drawn from the Forum's Future of Jobs Report 2025",
+      "page_ref": "p. 5",
+      "quote": "Global macrotrends – such as geoeconomic fragmentation, technological change, the green transition and others – are projected to create around 170 million new jobs by 2030, while displacing about 92 million existing jobs.",
+      "unit": "million jobs by 2030",
+      "unit_symbol": "m",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A projection, not a count of anything that has happened. It is attributed to all global macrotrends together — geoeconomic fragmentation, the green transition and demographics as well as technology — so it is not an estimate of AI's effect alone. The report itself describes the figures as 'around' and 'about'. The two numbers are gross flows, not the same jobs moving; the implied net is the report's own framing, not a measured outcome.",
+      "points": [
+        { "series": "", "label": "New jobs created", "value": 170 },
+        { "series": "", "label": "Existing jobs displaced", "value": 92 }
+      ]
+    },
+    {
+      "id": "wef-business-ai-adoption-2022-2025",
+      "title": "Share of businesses using AI in at least one function",
+      "subtitle": "Global firms, 2022 compared with the latest available estimate cited in the paper (McKinsey, 2025)",
+      "page_ref": "p. 5",
+      "quote": "Over the last few years, AI has moved from experimentation to workflow integration, with the share of businesses using AI in at least one function increasing from 55% in 2022 to 88% in the latest estimates.",
+      "unit": "% of businesses",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "year",
+      "note": "Self-reported survey data from McKinsey's state-of-AI survey, not administrative or transaction data. 'Using AI in at least one function' is a very low bar — a firm clears it with one team trialling a chatbot, so this measures reach, not depth or scale of use. The respondent panel is not a random sample of the world's firms and skews towards larger organisations, and the two years are not necessarily the same set of respondents.",
+      "points": [
+        { "series": "", "label": "2022", "value": 55 },
+        { "series": "", "label": "2025", "value": 88 }
+      ]
+    },
+    {
+      "id": "wef-task-automation-age-of-displacement-2030",
+      "title": "Share of tasks absorbed by technology by 2030 under the Age of Displacement scenario",
+      "subtitle": "Scenario 2 of four, exponential AI advancement with limited workforce readiness, global position in 2030",
+      "page_ref": "p. 10",
+      "quote": "The share of tasks absorbed by technology has surpassed 50%, approaching 90% in high-exposure sectors.",
+      "unit": "% of tasks performed by technology",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "This is a scenario, not a forecast or a measurement. The Forum states the four futures are stylized narratives built from workshops with chief strategy officers, with directionality 'illustrative and for scenario-building purposes only'. The two values are also thresholds in the original wording — the paper says tasks have 'surpassed 50%' and are 'approaching 90%' in high-exposure sectors, so treat them as boundaries the scenario crosses rather than point estimates. Nothing here describes the world as it is.",
+      "points": [
+        { "series": "", "label": "All sectors", "value": 50 },
+        { "series": "", "label": "High-exposure sectors", "value": 90 }
+      ]
+    }
+  ]
+}

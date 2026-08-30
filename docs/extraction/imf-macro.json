@@ -1,0 +1,64 @@
+{
+  "report": {
+    "publisher": "International Monetary Fund",
+    "title": "Global Economic and Financial Implications of Artificial Intelligence",
+    "url": "https://www.imf.org/en/publications/imf-notes/issues/2026/04/03/global-economic-and-financial-implications-of-artificial-intelligence-lessons-from-a-574924",
+    "published": "2026-04-03",
+    "pdf": "insea2026002.pdf"
+  },
+  "figures": [
+    {
+      "id": "imf-macro-frontier-model-query-price",
+      "title": "Advertised price of querying a frontier AI model",
+      "subtitle": "List price per million tokens for the four models the chart labels with a price, March 2023 to September 2025",
+      "page_ref": "p. 6",
+      "quote": "Shifting frontier of AI model performance and cost. Cost of querying a trained model (price per 1M tokens). GPT-4, Mar '23 ($37.50); GPT-5 (High), Aug '25 ($3.63); Grok 4, Sep '25 ($0.28); GPT-5 Nano, Aug '25 ($0.14)",
+      "unit": "US dollars per million tokens",
+      "unit_symbol": "$",
+      "decimals": 2,
+      "axis_kind": "category",
+      "note": "Not a constant-quality price series and not IMF data. The chart is reproduced from Ethan Mollick's 'One Useful Thing' via a Google DeepMind presentation to the workshop. The four models sit at different points on a capability-cost trade-off measured by GPQA Diamond score: GPT-5 Nano at $0.14 is the cheap end of the cost-efficiency frontier, not a like-for-like replacement for GPT-4. Five other models are plotted with no price shown, so those are omitted here. List prices are what a provider advertises, not what buyers pay at volume or what serving actually costs.",
+      "points": [
+        { "series": "", "label": "GPT-4, Mar '23", "value": 37.50 },
+        { "series": "", "label": "GPT-5 (High), Aug '25", "value": 3.63 },
+        { "series": "", "label": "Grok 4, Sep '25", "value": 0.28 },
+        { "series": "", "label": "GPT-5 Nano, Aug '25", "value": 0.14 }
+      ]
+    },
+    {
+      "id": "imf-macro-inference-cost-decline",
+      "title": "Fall in the cost of querying an AI model along three frontiers, March 2023 to Aug-Sep 2025",
+      "subtitle": "Percentage change in price per million tokens between the March 2023 starting model and the latest model on each of the chart's three frontiers",
+      "page_ref": "p. 6",
+      "quote": "-93% cost; -99.4% cost; -99.7% cost",
+      "unit": "% change in price per million tokens",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "category",
+      "note": "These three figures are annotations printed on the three dashed and solid frontier lines of Figure 2, not values from a table. Each frontier ends at a different model, so the three declines are not comparable measures of the same thing: the capability frontier holds performance highest and falls least, the cost-efficiency frontier trades performance away and falls most. The running text on the same page summarises this as inference prices for certain frontier models 'dropping by over 99 percent'. Source is a chart by Ethan Mollick reproduced in the IMF note, not IMF calculation, and it covers advertised list prices only.",
+      "points": [
+        { "series": "", "label": "Capability frontier", "value": -93 },
+        { "series": "", "label": "Balanced frontier (optimal capability/cost)", "value": -99.4 },
+        { "series": "", "label": "Cost efficiency frontier", "value": -99.7 }
+      ]
+    },
+    {
+      "id": "imf-macro-agi-forecast-horizon",
+      "title": "Forecast years until artificial general intelligence arrives",
+      "subtitle": "Metaculus community forecast on when the first general AI system will be devised, tested and publicly announced; labelled points from mid-2020 to end-2024",
+      "page_ref": "p. 5",
+      "quote": "Pre-GPT average 80 years; ~50 years; ~18 years; Latest data point 5 years",
+      "unit": "years until AGI",
+      "unit_symbol": "yr",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A crowd forecast, not a measurement and not an IMF projection. These are the four points the chart annotates on a Metaculus community forecast series, plotted on a log scale and reproduced in the note from a Google DeepMind presentation; two of them ('~50 years', '~18 years') are printed as approximations. Forecasters are self-selected volunteers, the horizon depends entirely on how the question defines a 'general AI system', and a shortening forecast is evidence about what forecasters believe, not about what AI can do. The note's own text puts the current tech-community view at 8-10 years, which does not match the chart's latest point of 5.",
+      "points": [
+        { "series": "", "label": "Pre-GPT average", "value": 80 },
+        { "series": "", "label": "Mid-2020 (GPT-3 announced)", "value": 50 },
+        { "series": "", "label": "Late 2022 (around ChatGPT launch)", "value": 18 },
+        { "series": "", "label": "Latest data point (end-2024)", "value": 5 }
+      ]
+    }
+  ]
+}

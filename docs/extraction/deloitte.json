@@ -1,0 +1,181 @@
+{
+  "report": {
+    "publisher": "Deloitte AI Institute",
+    "title": "The State of AI in the Enterprise: The untapped edge",
+    "url": "https://www.deloitte.com/global/en/issues/generative-ai/state-of-ai-in-enterprise.html",
+    "published": "2026-01-01",
+    "pdf": "state-of-ai-2026-global.pdf"
+  },
+  "figures": [
+    {
+      "id": "deloitte-agentic-ai-usage-today-vs-two-years",
+      "title": "Extent to which organizations use agentic AI, today and expected in two years",
+      "subtitle": "3,235 director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 17",
+      "quote": "Figure 7: Extent of agentic AI usage (percent) ... Question: To what extent is your organization utilizing agentic AI in its operations?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "Survey of executives about their own organizations (N=3,235), not an observed count of deployments - an executive saying the company uses agentic AI 'moderately' is a self-assessment with no agreed definition behind it. The 'In two years' series is a stated expectation, i.e. a projection, and expectations of this kind in prior waves of this same survey ran ahead of what materialised. All participating organizations already had at least one working AI implementation in daily use, so the sample is AI-adopting firms rather than firms in general.",
+      "points": [
+        { "series": "Today", "label": "Not at all", "value": 25 },
+        { "series": "Today", "label": "Minimal usage", "value": 52 },
+        { "series": "Today", "label": "Moderate usage", "value": 20 },
+        { "series": "Today", "label": "Extensive usage", "value": 2 },
+        { "series": "Today", "label": "Fully integrated", "value": 1 },
+        { "series": "In two years", "label": "Not at all", "value": 5 },
+        { "series": "In two years", "label": "Minimal usage", "value": 21 },
+        { "series": "In two years", "label": "Moderate usage", "value": 46 },
+        { "series": "In two years", "label": "Extensive usage", "value": 23 },
+        { "series": "In two years", "label": "Fully integrated", "value": 5 }
+      ]
+    },
+    {
+      "id": "deloitte-physical-ai-adoption-by-region",
+      "title": "Share of organizations using physical AI at least minimally, by region, today and expected in two years",
+      "subtitle": "Director-level to C-suite leaders surveyed August-September 2025, split by Americas, EMEA and Asia Pacific",
+      "page_ref": "p. 23",
+      "quote": "Figure 10: Extent of physical AI usage (percent) ... Question: To what extent is your organization currently utilizing physical AI (e.g., robotics, automated machinery) in its operations?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "Self-reported by executives (N=3,235 overall); 'at least minimal use' is a low bar that a single pilot robot would clear, so this is not a measure of robotics intensity. The 'in 2 years' series is a stated expectation, i.e. a projection. Regional bases as printed in the report are 'Americas N=3,235, EMEA N=1,170, AP N=475' - the Americas figure is the full-sample N and appears to be a labelling error in the source, so treat the Americas base as uncertain and the AP base (475) as small.",
+      "points": [
+        { "series": "Today", "label": "Americas", "value": 56 },
+        { "series": "Today", "label": "EMEA", "value": 56 },
+        { "series": "Today", "label": "AP", "value": 71 },
+        { "series": "In 2 years", "label": "Americas", "value": 77 },
+        { "series": "In 2 years", "label": "EMEA", "value": 81 },
+        { "series": "In 2 years", "label": "AP", "value": 90 }
+      ]
+    },
+    {
+      "id": "deloitte-ai-benefits-achieved-vs-hoped",
+      "title": "AI benefits organizations say they are achieving today versus benefits they hope to achieve",
+      "subtitle": "3,235 director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 10",
+      "quote": "Figure 2: AI benefits achieving today vs. hope to achieve (percent) ... Question: With regards to benefits from your AI efforts: Which benefits are you achieving today? Which benefits do you hope to achieve?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "Executives grading their own organizations (N=3,235); 'achieving today' is a claim, not a measured gain - no revenue, cost or productivity figure is attached to any of it. Multiple-select, so shares do not sum to 100. The two series are answers to two different questions, so a benefit can score lower on 'hope to achieve' simply because respondents already counted it as achieved. An 'Other' category (1% on both series) is omitted here.",
+      "points": [
+        { "series": "Achieving today", "label": "Improve efficiency and productivity", "value": 66 },
+        { "series": "Achieving today", "label": "Enhance decision-making and data-driven insights", "value": 53 },
+        { "series": "Achieving today", "label": "Reduce costs", "value": 40 },
+        { "series": "Achieving today", "label": "Enhance client/customer relationships", "value": 38 },
+        { "series": "Achieving today", "label": "Improve products/services and foster innovation", "value": 38 },
+        { "series": "Achieving today", "label": "Increase revenue", "value": 20 },
+        { "series": "Hope to achieve", "label": "Improve efficiency and productivity", "value": 60 },
+        { "series": "Hope to achieve", "label": "Enhance decision-making and data-driven insights", "value": 61 },
+        { "series": "Hope to achieve", "label": "Reduce costs", "value": 65 },
+        { "series": "Hope to achieve", "label": "Enhance client/customer relationships", "value": 60 },
+        { "series": "Hope to achieve", "label": "Improve products/services and foster innovation", "value": 60 },
+        { "series": "Hope to achieve", "label": "Increase revenue", "value": 74 }
+      ]
+    },
+    {
+      "id": "deloitte-depth-of-ai-transformation",
+      "title": "How deeply organizations say AI has changed their processes and business models",
+      "subtitle": "Director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 11",
+      "quote": "Figure 3: Current approach to transformation with AI ... Question: Which best describes your organization's current approach to process transformation during AI implementation?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A single-choice self-assessment: an executive placing their own company in the 'deep transformation' bucket is not evidence that products, processes or business models actually changed. Figures may not sum to 100% because of rounding (34+30+37 = 101). The base printed on this figure is N=3,325, which differs from the N=3,235 printed on every other figure and in the methodology - one of the two is a typo in the source.",
+      "points": [
+        { "series": "", "label": "Deep transformation of products, processes, and business models", "value": 34 },
+        { "series": "", "label": "Redesigning key processes around AI", "value": 30 },
+        { "series": "", "label": "Little or no change to existing processes", "value": 37 }
+      ]
+    },
+    {
+      "id": "deloitte-talent-strategy-adjustments",
+      "title": "How organizations are adjusting talent strategies because of AI",
+      "subtitle": "3,235 director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 14",
+      "quote": "Figure 4: Talent strategy adjustments due to AI (percent) ... Question: How is your organization adjusting its talent strategies because of the adoption of AI tools/capabilities?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "Multiple-select self-report (N=3,235); shares do not sum to 100 and a company can appear under several answers. It records what leaders say their organization is doing, not what has been funded, delivered, or reached any worker - the report itself notes that 'fewer than half of companies are making significant adjustments to their talent strategies'. Four options tie at 30%, so their rank order in the source is not meaningful.",
+      "points": [
+        { "series": "", "label": "Educating broader workforce to raise overall AI fluency", "value": 53 },
+        { "series": "", "label": "Designing and implementing upskilling and reskilling strategies", "value": 48 },
+        { "series": "", "label": "Assessing target talent acquisition levels and hiring specialized talent to drive AI initiatives", "value": 36 },
+        { "series": "", "label": "Redesigning career paths and career mobility strategies", "value": 33 },
+        { "series": "", "label": "Assessing changes to the anticipated supply and demand of skills", "value": 30 },
+        { "series": "", "label": "Providing performance-based incentives for leveraging AI", "value": 30 },
+        { "series": "", "label": "Combining or reimagining organizations based on new work patterns resulting from AI usage", "value": 30 },
+        { "series": "", "label": "Measuring worker trust and engagement", "value": 30 },
+        { "series": "", "label": "Changing the balance between full-time, contract and gig workers", "value": 19 }
+      ]
+    },
+    {
+      "id": "deloitte-ai-risks-most-concerning",
+      "title": "AI risks organizations say they are most concerned about",
+      "subtitle": "3,199 director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 21",
+      "quote": "Figure 8: AI risks most concerning (percent) ... Question: Which of the following risks related to AI tools / applications is your organization most concerned about?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "Stated concern, not incidence: this measures what worries executives, not which risks have materialised or how often. Multiple-select, so shares do not sum to 100. Base for this question is N=3,199, slightly below the 3,235 full sample. Options are fixed choices set by Deloitte, so anything absent from the list cannot register - 'workforce impact' at 30% ranks last among the named risks partly because the list is weighted towards governance and compliance categories.",
+      "points": [
+        { "series": "", "label": "Data privacy and/or security", "value": 73 },
+        { "series": "", "label": "Legal, IP, or regulatory compliance", "value": 50 },
+        { "series": "", "label": "Governance capabilities and oversight", "value": 46 },
+        { "series": "", "label": "Model quality, consistency, and explainability", "value": 46 },
+        { "series": "", "label": "Workforce impact", "value": 30 },
+        { "series": "", "label": "Other and no concerns", "value": 0 }
+      ]
+    },
+    {
+      "id": "deloitte-highly-prepared-for-ai-by-domain",
+      "title": "Share of organizations rating themselves highly prepared for broad AI adoption, by domain",
+      "subtitle": "3,235 director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 28",
+      "quote": "Figure 12: Level of preparedness for AI adoption (percent) ... Question: For each, rate your organization's level of preparedness with respect to broadly adopting AI tools/applications.",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "This is executives grading their own organization's readiness (N=3,235) - a self-assessment with no external benchmark, and the report itself notes strategy and governance scores rise fastest because they 'depend primarily on executive decision-making and policy development' rather than on anything being built. Only the 'highly prepared' share of each four-point scale is shown here; the remaining shares (moderately, slightly, not prepared) are omitted. Deloitte reports year-on-year changes of +4pp technology infrastructure, +3pp strategy, +3pp data management, +6pp risk and governance and +2pp talent, but the arrows accompanying the falls described in the text are not unambiguous in the source, so no change figures are charted here.",
+      "points": [
+        { "series": "", "label": "Technology infrastructure", "value": 43 },
+        { "series": "", "label": "Strategy", "value": 42 },
+        { "series": "", "label": "Data management", "value": 40 },
+        { "series": "", "label": "Risk and governance", "value": 30 },
+        { "series": "", "label": "Talent", "value": 20 }
+      ]
+    },
+    {
+      "id": "deloitte-physical-ai-greatest-expected-impact",
+      "title": "Types of physical AI expected to have the greatest impact on the respondent's industry",
+      "subtitle": "3,235 director-level to C-suite leaders across six industries and 24 countries, surveyed August-September 2025",
+      "page_ref": "p. 25",
+      "quote": "Figure 11: Types of physical AI expected to have the greatest impact (percent) ... Question: Which area of physical AI do you believe will have the greatest impact on your industry?",
+      "unit": "% of surveyed companies",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A single-choice opinion question (N=3,235) about which technology executives believe will matter most in their industry - it is a forecast of belief, not of deployment or investment, and the options were set by Deloitte. Shares sum to 99% because figures may not sum to 100% due to rounding. Because respondents answer for their own industry, the ranking mixes very different sectors into one total.",
+      "points": [
+        { "series": "", "label": "Intelligent security systems and/or smart monitoring", "value": 21 },
+        { "series": "", "label": "Collaborative robotics", "value": 20 },
+        { "series": "", "label": "Digital twins", "value": 19 },
+        { "series": "", "label": "IoT-driven retail", "value": 16 },
+        { "series": "", "label": "Autonomous logistics", "value": 13 },
+        { "series": "", "label": "Smart materials", "value": 7 },
+        { "series": "", "label": "Other", "value": 3 }
+      ]
+    }
+  ]
+}

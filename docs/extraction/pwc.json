@@ -1,0 +1,168 @@
+{
+  "report": {
+    "publisher": "PwC",
+    "title": "2026 Global AI Jobs Barometer",
+    "url": "https://www.pwc.com/gx/en/issues/artificial-intelligence/job-barometer/2026/2026-global-ai-jobs-barometer-full-report.pdf",
+    "published": null,
+    "pdf": "2026-global-ai-jobs-barometer-full-report.pdf"
+  },
+  "figures": [
+    {
+      "id": "pwc-ai-skill-wage-premium-by-sector",
+      "title": "Wage premium for workers with AI skills, by sector",
+      "subtitle": "Advertised salaries in online job postings, 2025, eight PwC-aligned sectors, global",
+      "page_ref": "p. 23",
+      "quote": "Wage premiums for workers with AI skills have risen to 62% (from 57% in last year’s Barometer’) Wage premium by sector, (%, 2025)",
+      "unit": "% higher advertised salary vs comparable non-AI roles",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A snapshot of one year, not a growth rate. Premiums are the gap between advertised salaries for roles requiring AI skills and comparable roles that do not, within the same sector — so they reflect what employers advertise, not what workers are paid, and they do not control for firm size, seniority or location beyond the sector split. Only eight of the sixteen sectors in PwC's scope are shown; the 62% average is calculated across all sixteen.",
+      "points": [
+        { "series": "", "label": "Consumer Markets", "value": 118 },
+        { "series": "", "label": "Technology, Media and Telecoms", "value": 84 },
+        { "series": "", "label": "Energy, Utilities and Resources", "value": 75 },
+        { "series": "", "label": "Manufacturing", "value": 73 },
+        { "series": "", "label": "Professional Services", "value": 67 },
+        { "series": "", "label": "Financial Services", "value": 53 },
+        { "series": "", "label": "Health Industries", "value": 37 },
+        { "series": "", "label": "Government and Public Sector", "value": 16 }
+      ]
+    },
+    {
+      "id": "pwc-productivity-growth-by-ai-exposure",
+      "title": "Firm productivity growth since 2018, most vs least AI-exposed companies",
+      "subtitle": "Average firm growth in revenue per employee against a 2018 baseline, 2022-2025, companies with turnover of at least $50m USD, global",
+      "page_ref": "p. 19",
+      "quote": "Since 2022 when AI adoption soared, the most AI-exposed companies have seen faster productivity growth. Average firm growth rate in productivity by AI exposure quartile (measured using a 2018 baseline)",
+      "unit": "% growth in revenue per employee vs 2018",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "year",
+      "note": "Company AI exposure is inferred from the NAICS sector a firm is tagged to in ORBIS, not from any measure of what the firm actually does with AI — so this is a sector-level proxy. Productivity is turnover per employee, a topline measure that rises if revenue grows for any reason. 2025 uses 2024 data where 2025 is missing. Firms that exited the market are excluded, creating survivorship bias, and the sample skews to larger, better-reporting firms. The comparison between the two quartiles is more meaningful than either absolute rate.",
+      "points": [
+        { "series": "Least exposed quartile", "label": "2022", "value": 18.7 },
+        { "series": "Least exposed quartile", "label": "2023", "value": 20.4 },
+        { "series": "Least exposed quartile", "label": "2024", "value": 22.9 },
+        { "series": "Least exposed quartile", "label": "2025", "value": 24.0 },
+        { "series": "Most exposed quartile", "label": "2022", "value": 21.8 },
+        { "series": "Most exposed quartile", "label": "2023", "value": 23.7 },
+        { "series": "Most exposed quartile", "label": "2024", "value": 28.8 },
+        { "series": "Most exposed quartile", "label": "2025", "value": 33.5 }
+      ]
+    },
+    {
+      "id": "pwc-headcount-growth-by-ai-exposure",
+      "title": "Firm headcount growth since 2018, most vs least AI-exposed companies",
+      "subtitle": "Average firm growth in employee numbers against a 2018 baseline, 2022-2025, companies with turnover of at least $50m USD, global",
+      "page_ref": "p. 20",
+      "quote": "Perhaps surprisingly, headcount growth at the most AI-exposed companies is outpacing that at the least AI-exposed companies. Average firm growth rate in headcount by AI exposure quartile (measured using a 2018 baseline)",
+      "unit": "% growth in headcount vs 2018",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "year",
+      "note": "PwC states explicitly that this ORBIS company data is not intended to represent economy-wide employment growth. Only larger formal firms with financial and headcount data in both 2018 and 2024/25 are included; firms that exited during the period are dropped, creating survivorship bias, and reporting requirements vary by country. Exposure is a sector-level proxy, not observed AI use. The interpretable result is the gap between the quartiles, not the absolute growth rates.",
+      "points": [
+        { "series": "Least exposed quartile", "label": "2022", "value": 23.3 },
+        { "series": "Least exposed quartile", "label": "2023", "value": 29.5 },
+        { "series": "Least exposed quartile", "label": "2024", "value": 35.5 },
+        { "series": "Least exposed quartile", "label": "2025", "value": 35.7 },
+        { "series": "Most exposed quartile", "label": "2022", "value": 26.7 },
+        { "series": "Most exposed quartile", "label": "2023", "value": 35.2 },
+        { "series": "Most exposed quartile", "label": "2024", "value": 45.6 },
+        { "series": "Most exposed quartile", "label": "2025", "value": 52.2 }
+      ]
+    },
+    {
+      "id": "pwc-wage-growth-by-ai-exposure",
+      "title": "Firm wage growth since 2018, most vs least AI-exposed companies",
+      "subtitle": "Average firm growth in total staffing cost per employee against a 2018 baseline, 2022-2025, companies with turnover of at least $50m USD, global",
+      "page_ref": "p. 21",
+      "quote": "Wage growth at the most AI-exposed companies has accelerated as productivity rises, suggesting gains are shared with workers. Average firm growth rate in wages by AI exposure quartile (measured using a 2018 baseline)",
+      "unit": "% growth in staffing cost per employee vs 2018",
+      "unit_symbol": "%",
+      "decimals": 1,
+      "axis_kind": "year",
+      "note": "Wages here are total staffing cost per employee from company accounts, which moves with benefits, bonuses and workforce mix as well as pay rates. These are nominal figures with no inflation adjustment shown. Exposure is inferred from the firm's sector in ORBIS rather than observed AI use, and 2025 substitutes 2024 data where 2025 is missing. Same survivorship and large-firm bias as the other ORBIS charts.",
+      "points": [
+        { "series": "Least exposed quartile", "label": "2022", "value": 5.6 },
+        { "series": "Least exposed quartile", "label": "2023", "value": 14.1 },
+        { "series": "Least exposed quartile", "label": "2024", "value": 15.8 },
+        { "series": "Least exposed quartile", "label": "2025", "value": 16.6 },
+        { "series": "Most exposed quartile", "label": "2022", "value": 8.5 },
+        { "series": "Most exposed quartile", "label": "2023", "value": 17.7 },
+        { "series": "Most exposed quartile", "label": "2024", "value": 19.1 },
+        { "series": "Most exposed quartile", "label": "2025", "value": 24.4 }
+      ]
+    },
+    {
+      "id": "pwc-human-intensive-new-tasks-by-exposure-quartile",
+      "title": "How human-intensive the new tasks added to jobs are, by AI exposure quartile",
+      "subtitle": "Average EPOCH score of newly added tasks per occupation, 2022-2025, all occupations grouped into AI exposure quartiles, global",
+      "page_ref": "p. 16",
+      "quote": "New tasks added to AI-exposed roles since 2022 are 2.5x more likely to rely on ‘human-intensive’ capabilities such as empathy, creativity, and face to face presence. Average EPOCH score per occupation (new tasks only), by AI exposure quartile, 2022-2025",
+      "unit": "Average EPOCH score (0-1) of new tasks",
+      "unit_symbol": "",
+      "decimals": 2,
+      "axis_kind": "category",
+      "note": "EPOCH is an index built by Loaiza and Rigobon (MIT) that scores how far a task relies on empathy, presence, opinion, creativity and hope. It is a constructed score on an arbitrary scale, not a count of anything observed — the ranking between quartiles is the signal, the absolute values are not units of anything. Tasks are inferred from the wording of job advertisements, so this measures what employers write down, not what workers do.",
+      "points": [
+        { "series": "", "label": "Bottom 25%", "value": 0.19 },
+        { "series": "", "label": "Third 25%", "value": 0.31 },
+        { "series": "", "label": "Second 25%", "value": 0.39 },
+        { "series": "", "label": "Top 25%", "value": 0.47 }
+      ]
+    },
+    {
+      "id": "pwc-professionalised-vs-democratised-growth",
+      "title": "Job postings and advertised salary growth, professionalised vs democratised jobs",
+      "subtitle": "Cumulative growth to 2025 in online job postings (from 2018) and average advertised salary (from 2021), six countries with Lightcast data back to 2012",
+      "page_ref": "p. 8",
+      "quote": "professionalised salaries have grown 37% since 2021 and democratised by 26% - a 42% gap.",
+      "unit": "% cumulative growth to 2025",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "The two series use different baselines — postings are indexed to 2018 and salaries to 2021 — so the bars are comparable within a series but not across them. Everything here is measured from online job advertisements, which describe vacancies rather than filled jobs or actual pay, and cover only six countries with data back to 2012. 'Professionalised' and 'democratised' are PwC's classification of occupations using expertise scores from Teeselink and Carey (2026), mapped from US SOC-2018 codes onto international ISCO-08 codes to make global figures possible.",
+      "points": [
+        { "series": "Job postings (vs 2018)", "label": "Democratised", "value": 17 },
+        { "series": "Job postings (vs 2018)", "label": "Professionalised", "value": 39 },
+        { "series": "Average advertised salary (vs 2021)", "label": "Democratised", "value": 26 },
+        { "series": "Average advertised salary (vs 2021)", "label": "Professionalised", "value": 37 }
+      ]
+    },
+    {
+      "id": "pwc-job-share-by-expertise-category",
+      "title": "Share of advertised jobs by how AI reshapes the expertise they need",
+      "subtitle": "All occupations in PwC's scope, classified as low AI exposure, professionalised or democratised, share of advertised jobs, global",
+      "page_ref": "p. 6",
+      "quote": "About half of advertised jobs globally are democratised, while around a quarter are professionalised and the remaining quarter have low exposure to AI.",
+      "unit": "% of advertised jobs",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "This is a share of advertised jobs, not of employment — occupations that advertise frequently are over-represented relative to their weight in the workforce. The three-way split is PwC's own classification, derived from modelled expertise scores for occupations rather than from anything workers or employers reported. The shares sum to 100%.",
+      "points": [
+        { "series": "", "label": "Low AI exposure jobs", "value": 26 },
+        { "series": "", "label": "Professionalised jobs", "value": 22 },
+        { "series": "", "label": "Democratised jobs", "value": 52 }
+      ]
+    },
+    {
+      "id": "pwc-entry-level-postings-seniorised",
+      "title": "Change in entry-level job postings, seniorised vs non-seniorised roles",
+      "subtitle": "Entry-level postings (0-2 years experience) in the top AI exposure quartile, United States, change between 2019 and 2025",
+      "page_ref": "p. 13",
+      "quote": "Change in entry-level job postings between 2019 and 2025, seniorised vs non-seniorised roles, top AI exposure quartile, US",
+      "unit": "% change in entry-level job postings, 2019 to 2025",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "US only, and only within the most AI-exposed quartile of jobs. 'Seniorised' is a threshold PwC defines: a posting counts if it contains at least ten mentions of a skill that is both new for that occupation and traditionally seen only in experienced roles. Entry level is proxied by the years-of-experience field in Lightcast postings. This counts vacancies advertised, not jobs filled, and shows association, not that AI caused the divergence.",
+      "points": [
+        { "series": "", "label": "Seniorised", "value": 35 },
+        { "series": "", "label": "Non-Seniorised", "value": -10 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "report": {
+    "publisher": "KPMG International",
+    "title": "Global AI Pulse, Q2 2026",
+    "url": "https://kpmg.com/xx/en/our-insights/ai-and-technology/ai-pulse.html",
+    "published": "2026-06-01",
+    "pdf": "global-ai-pulse-q2.pdf"
+  },
+  "figures": [
+    {
+      "id": "kpmg-ai-maturity-phase-q1-q2",
+      "title": "Phase of the AI journey organizations place themselves in",
+      "subtitle": "Senior leaders at organizations with US$50m+ revenue across 20 countries and territories, Q1 2026 (n=2,110) against Q2 2026 (n=2,145)",
+      "page_ref": "p. 10",
+      "quote": "The largest movement this quarter occurred in the driving-adoption phase ... Which of the following best describes the phase your organization is in its AI journey? Q1 (n=2110), Q2 (n=2145)",
+      "unit": "% of organizations",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey: 2,145 senior leaders self-selecting a phase for their own organization, fielded online 28 April to 25 May 2026. Self-placement on a six-point maturity ladder is a judgement, not an audited measure — a leader claiming 'driving adoption' is not evidence AI is embedded at scale. The Q1 and Q2 waves are separate samples of respondents, not the same organizations tracked over time, so quarter-on-quarter shifts partly reflect sample composition. Percentages are rounded and sum to 100 within rounding.",
+      "points": [
+        { "series": "Q1 2026", "label": "Research and development", "value": 11 },
+        { "series": "Q1 2026", "label": "Experimentation", "value": 22 },
+        { "series": "Q1 2026", "label": "Strategic planning", "value": 21 },
+        { "series": "Q1 2026", "label": "Scaling the technology", "value": 26 },
+        { "series": "Q1 2026", "label": "Driving adoption", "value": 13 },
+        { "series": "Q1 2026", "label": "Established ROI", "value": 8 },
+        { "series": "Q2 2026", "label": "Research and development", "value": 9 },
+        { "series": "Q2 2026", "label": "Experimentation", "value": 19 },
+        { "series": "Q2 2026", "label": "Strategic planning", "value": 21 },
+        { "series": "Q2 2026", "label": "Scaling the technology", "value": 22 },
+        { "series": "Q2 2026", "label": "Driving adoption", "value": 22 },
+        { "series": "Q2 2026", "label": "Established ROI", "value": 7 }
+      ]
+    },
+    {
+      "id": "kpmg-ai-confidence-measures-q1-q2",
+      "title": "Senior leaders' confidence in AI, quarter on quarter",
+      "subtitle": "Share agreeing or strongly agreeing with three statements about AI, senior leaders across 20 countries and territories, Q1 2026 (n=2,110) against Q2 2026 (n=2,145)",
+      "page_ref": "p. 9",
+      "quote": "Organizations are becoming more confident in AI's strategic value ... To what extent do you agree or disagree with the following statements? Percentage who agree/strongly agree Q1 (n=2110), Q2 (n=2145)",
+      "unit": "% of senior leaders who agree or strongly agree",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. These are attitudes, not outcomes: 'AI is delivering meaningful business value' is a leader's own assessment, and KPMG defines it loosely as productivity gains, cost savings, revenue growth or better decision-making — the report separately shows only 7% claim established ROI. The two waves are separate samples, so the point changes are between-sample differences, not tracked change within the same firms.",
+      "points": [
+        { "series": "Q1 2026", "label": "AI is currently delivering meaningful business value for my organization", "value": 64 },
+        { "series": "Q1 2026", "label": "I am confident in my organization's ability to future-proof its AI strategy", "value": 70 },
+        { "series": "Q1 2026", "label": "AI will continue to be a top investment priority even if a recession occurs in the next 12 months", "value": 74 },
+        { "series": "Q2 2026", "label": "AI is currently delivering meaningful business value for my organization", "value": 76 },
+        { "series": "Q2 2026", "label": "I am confident in my organization's ability to future-proof its AI strategy", "value": 78 },
+        { "series": "Q2 2026", "label": "AI will continue to be a top investment priority even if a recession occurs in the next 12 months", "value": 79 }
+      ]
+    },
+    {
+      "id": "kpmg-ai-priorities-q1-q2",
+      "title": "Key AI priorities cited by organizations",
+      "subtitle": "Share naming each item a key AI priority, senior leaders across 20 countries and territories, Q1 2026 (n=2,110) against Q2 2026 (n=2,145)",
+      "page_ref": "p. 11",
+      "quote": "AI priorities are expanding beyond productivity and efficiency ... Which of the following are key AI priorities for your organization? Q1 (n=2110), Q2 (n=2145)",
+      "unit": "% of organizations",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. This is a multi-select question, so shares do not sum to 100 and a decline for one item can reflect crowding-out by newly salient items rather than any real fall in importance. Stated priorities are intentions reported by leaders, not budget allocations or observed activity. Q1 and Q2 are separate samples, not the same firms tracked.",
+      "points": [
+        { "series": "Q1 2026", "label": "Faster, better decisions", "value": 41 },
+        { "series": "Q1 2026", "label": "Productivity gains", "value": 42 },
+        { "series": "Q1 2026", "label": "Cost reduction", "value": 31 },
+        { "series": "Q1 2026", "label": "Human-AI collaboration and fluency", "value": 28 },
+        { "series": "Q1 2026", "label": "Responsible AI and governance", "value": 26 },
+        { "series": "Q1 2026", "label": "Adaptability and resilience", "value": 18 },
+        { "series": "Q1 2026", "label": "Ecosystem and partnerships", "value": 12 },
+        { "series": "Q2 2026", "label": "Faster, better decisions", "value": 36 },
+        { "series": "Q2 2026", "label": "Productivity gains", "value": 35 },
+        { "series": "Q2 2026", "label": "Cost reduction", "value": 29 },
+        { "series": "Q2 2026", "label": "Human-AI collaboration and fluency", "value": 30 },
+        { "series": "Q2 2026", "label": "Responsible AI and governance", "value": 28 },
+        { "series": "Q2 2026", "label": "Adaptability and resilience", "value": 20 },
+        { "series": "Q2 2026", "label": "Ecosystem and partnerships", "value": 16 }
+      ]
+    },
+    {
+      "id": "kpmg-ai-strategy-influences-q1-q2",
+      "title": "Factors influencing AI strategy over the next six months",
+      "subtitle": "Share citing each factor as a 'great concern' influencing AI strategy in the next six months, senior leaders across 20 countries and territories, Q1 2026 (n=2,110) against Q2 2026 (n=2,145)",
+      "page_ref": "p. 12",
+      "quote": "Security remains the main concern, but economic factors are rising fast ... To what extent are the following factors influencing your AI strategy within the next 6 months? Percentage saying 'Great concern' Q1 (n=2110), Q2 (n=2145)",
+      "unit": "% saying 'great concern'",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. Only the top 'great concern' band is shown, so a low figure means few leaders rate the factor at the extreme, not that they ignore it. Multi-item ratings do not sum to 100. Stated concerns are not spending decisions. Q1 and Q2 are separate samples of respondents rather than the same organizations tracked over time.",
+      "points": [
+        { "series": "Q1 2026", "label": "Data security/privacy/risk concerns", "value": 33 },
+        { "series": "Q1 2026", "label": "Pressures to demonstrate value to investors or our board", "value": 19 },
+        { "series": "Q1 2026", "label": "Macroeconomic factors (GDP growth, inflation, tariffs, etc.)", "value": 18 },
+        { "series": "Q1 2026", "label": "Limitations on hiring, upskilling initiatives", "value": 18 },
+        { "series": "Q1 2026", "label": "Need to manage an increased workload or volume of tasks", "value": 17 },
+        { "series": "Q1 2026", "label": "Access to lower-cost, high-fidelity technology/LLMs", "value": 15 },
+        { "series": "Q1 2026", "label": "Increased energy use by my organization and its impact on the environment", "value": 16 },
+        { "series": "Q1 2026", "label": "Balancing AI scaling and carbon emissions/sustainability impact", "value": 16 },
+        { "series": "Q2 2026", "label": "Data security/privacy/risk concerns", "value": 33 },
+        { "series": "Q2 2026", "label": "Pressures to demonstrate value to investors or our board", "value": 24 },
+        { "series": "Q2 2026", "label": "Macroeconomic factors (GDP growth, inflation, tariffs, etc.)", "value": 24 },
+        { "series": "Q2 2026", "label": "Limitations on hiring, upskilling initiatives", "value": 22 },
+        { "series": "Q2 2026", "label": "Need to manage an increased workload or volume of tasks", "value": 22 },
+        { "series": "Q2 2026", "label": "Access to lower-cost, high-fidelity technology/LLMs", "value": 22 },
+        { "series": "Q2 2026", "label": "Increased energy use by my organization and its impact on the environment", "value": 22 },
+        { "series": "Q2 2026", "label": "Balancing AI scaling and carbon emissions/sustainability impact", "value": 22 }
+      ]
+    },
+    {
+      "id": "kpmg-ai-decision-accountability",
+      "title": "Who is ultimately accountable for business decisions informed by AI",
+      "subtitle": "Single answer given by senior leaders across 20 countries and territories, Q2 2026 (n=2,145)",
+      "page_ref": "p. 14",
+      "quote": "Who is ultimately accountable for business decisions informed or executed using AI outputs? Q2 (n=2145)",
+      "unit": "% of organizations",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. Answers describe who respondents believe is accountable — not a documented governance structure, and the report itself stresses that stated ownership and real accountability differ. Single-select, so shares sum to 100. Respondents are self-reporting on their own organization's governance, which invites flattering answers.",
+      "points": [
+        { "series": "", "label": "The CEO or executive committee", "value": 24 },
+        { "series": "", "label": "A named C-suite executive accountable for AI outcomes (e.g. COO, CAIO, CIO)", "value": 29 },
+        { "series": "", "label": "The business unit or function leader using the AI", "value": 15 },
+        { "series": "", "label": "A centralized AI governance or risk committee", "value": 13 },
+        { "series": "", "label": "Shared accountability across multiple roles or teams", "value": 13 },
+        { "series": "", "label": "Accountability is unclear or not formally defined", "value": 3 },
+        { "series": "", "label": "Not sure", "value": 2 },
+        { "series": "", "label": "AI systems operate autonomously within approved limits", "value": 1 }
+      ]
+    },
+    {
+      "id": "kpmg-outcomes-by-ceo-accountability",
+      "title": "Reported AI outcomes where the CEO is accountable against where they are not",
+      "subtitle": "Share strongly agreeing with each statement, split by whether the CEO is accountable for AI outcomes; senior leaders across 20 countries and territories, Q2 2026 (n=2,145)",
+      "page_ref": "p. 16",
+      "quote": "The strongest outcomes are reported where accountability is clearly defined ... To what extent do you agree or disagree with the following statements? Percentage that strongly agree. Q2 (n=2145)",
+      "unit": "% strongly agreeing",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. This is a cross-sectional association, not evidence that clear accountability causes better outcomes — organizations further along with AI are plausibly both more likely to have assigned accountability and more likely to report returns. Both the split and the outcomes are self-reported by the same respondent, which inflates consistency. KPMG does not publish the sub-group sizes behind each split.",
+      "points": [
+        { "series": "CEO accountable", "label": "Confidence in organization's ability to future-proof its AI strategy", "value": 60 },
+        { "series": "CEO accountable", "label": "AI is currently delivering meaningful business value for my organization", "value": 57 },
+        { "series": "CEO accountable", "label": "Established ROI", "value": 14 },
+        { "series": "CEO less or not accountable", "label": "Confidence in organization's ability to future-proof its AI strategy", "value": 22 },
+        { "series": "CEO less or not accountable", "label": "AI is currently delivering meaningful business value for my organization", "value": 21 },
+        { "series": "CEO less or not accountable", "label": "Established ROI", "value": 4 }
+      ]
+    },
+    {
+      "id": "kpmg-ai-operating-cost-visibility",
+      "title": "How visible the operating costs of AI systems are",
+      "subtitle": "Single answer given by senior leaders across 20 countries and territories, Q2 2026 (n=2,145)",
+      "page_ref": "p. 19",
+      "quote": "How visible are the operating costs of your AI systems today? Q2 (n=2145)",
+      "unit": "% of organizations",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. Cost visibility is self-assessed — a leader saying costs are 'fully visible and actively monitored' is not the same as an audited cost-tracking capability, and the survey does not test the claim. Published percentages sum to 101 because of rounding. KPMG defines AI costs narrowly as the operating costs of AI systems today, which excludes build and capital costs.",
+      "points": [
+        { "series": "", "label": "Fully visible and actively monitored", "value": 35 },
+        { "series": "", "label": "Somewhat visible", "value": 42 },
+        { "series": "", "label": "Visible only after billing", "value": 13 },
+        { "series": "", "label": "Largely invisible", "value": 8 },
+        { "series": "", "label": "Not sure", "value": 3 }
+      ]
+    },
+    {
+      "id": "kpmg-ai-agent-deployment-rephasing",
+      "title": "Whether organizations pulled back on AI agent deployment when costs outweighed value",
+      "subtitle": "Single answer given by senior leaders across 20 countries and territories, Q2 2026 (n=2,145)",
+      "page_ref": "p. 18",
+      "quote": "Has your organization questioned, delayed, or scaled back the deployment of AI agents because the expected costs began to outweigh the value generated? Q2 (n=2145)",
+      "unit": "% of organizations",
+      "unit_symbol": "%",
+      "decimals": 0,
+      "axis_kind": "category",
+      "note": "A quarterly executive survey of 2,145 senior leaders, fielded online 28 April to 25 May 2026. Covers AI agents specifically, not AI spending overall, and the 5% who have not deployed agents are included in the base. The two 'yes' options sum to the 49% headline KPMG reports as having rephased deployments. Costs 'outweighing value' is the respondent's own judgement — no cost or return figures are collected — and only 35% of the same sample report full visibility into what AI costs them.",
+      "points": [
+        { "series": "", "label": "Yes — we have scaled back or narrowed deployment", "value": 24 },
+        { "series": "", "label": "Yes — we have delayed or paused further rollout", "value": 25 },
+        { "series": "", "label": "We have questioned the decision but not made changes", "value": 22 },
+        { "series": "", "label": "No — costs and value remain aligned", "value": 24 },
+        { "series": "", "label": "Not applicable — AI agents not yet deployed", "value": 5 }
+      ]
+    }
+  ]
+}
