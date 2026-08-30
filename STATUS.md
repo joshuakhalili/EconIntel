@@ -3,7 +3,7 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-30.
+Last updated: 2026-08-30 (second pass — figures, legal pages, sign-in polish).
 
 ## The project is now called Diffusion (was EconIntel)
 
@@ -97,12 +97,25 @@ it as active until a call site exists and this note is updated.
 ## The site is now two halves, served as one
 
 **`landing/` is a cloned static site.** A hardened mirror of a Framer template
-(`atmos-system.framer.website`), committed as source. It owns `/`, `/login`'s
-CTAs, `/waitlist`, `/thanks` and `/legal/*`. Its build pipeline lives in
-`landing/docs/`: edit `content_diffusion.py`, then
+(`atmos-system.framer.website`), committed as source. It owns `/` and
+`/legal/*`. Its build pipeline lives in `landing/docs/`: edit
+`content_diffusion.py`, then
 `bash docs/reset.sh && python3 docs/build-diffusion.py`. **Never hand-edit the
 built HTML** — the build refuses to run twice and resets from the
 `pristine-mirror` tag in `~/Projects/diffusion-landing`.
+
+Every primary CTA reads **"Sign in to read"** and lands on `/login`, which shows
+"Signed in as …" to anyone who already is. `/waitlist` and `/thanks` are
+retired: nothing links to them and Express redirects both to `/login`, because
+the waitlist page still rendered the template's invented "1,200+ people on the
+waitlist".
+
+**The two legal pages were the template's**, verbatim, describing environmental
+sensors and paid subscriptions and making false claims about reader data — under
+a form that asks for a name and an email. Both are rewritten, through the
+content map like everything else. The `.framercms` blobs hold a second copy and
+are never touched; they are also never fetched, which is why string replacement
+is sufficient here.
 
 **`src/client/` is the React app.** Everything else: lenses, questions, `/data`,
 `/explore`, `/news`, `/pipeline`.
@@ -132,13 +145,24 @@ re-points BoardUI's neutral ramp, which is what every one of its ~60 surface
 tokens resolves through. `index.html` hardcodes `class="dark"`.
 
 Type matches the landing page: Inter Display (self-hosted from the same woff2
-that page serves), Trispace for eyebrows, Fragment Mono for figures.
+that page serves), Trispace for eyebrows, Fragment Mono for figures. **Trispace
+and Fragment Mono are loaded by a `<link>` in `index.html`, not by an `@import`
+in the CSS** — an `@import` is only valid at the top of a stylesheet, `atmos.css`
+is imported third, and the minifier silently dropped it, so neither face was
+ever requested in a production build for weeks. Nothing warned; the eyebrows
+just rendered in the system mono.
 
 Five lens pages, each with its own signature module in
 `components/lens/LensSignature.jsx` — Prices shows the divergence, Investment a
 materials board, Labour the disagreement, Growth adoption ranked, Policy the
 rule counts. Per-lens accent in `lib/lensAccent.js` is **chrome only** and must
 never draw a data series.
+
+Question pages are built from the same pieces: hero band, eyebrows, the parent
+lens's accent, prev/next through the lens. **The caveat sits in a full-width
+band directly under the answer and above every chart** — an earlier version had
+it last, after four charts, on a recessed surface, which is first-class in the
+markup and a footnote to anyone reading.
 
 ## On GitHub, public, `main` is current
 
@@ -195,19 +219,36 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
     support. *(This changes when more data lands.)*
   - **11 questions across 5 lenses** (was 7). `jobs` had 24 indicators and
     `policy` 4; the split is in `016_question_split.sql`.
-  - Identity: warm neutrals, vermilion accent used only for interactive state,
-    Instrument Serif headings. The chrome stays quiet because nine colours
-    already carry meaning (six chart hues + the direction trio) and every
-    vivid brand hue collided with one of them.
-- **Mobile:** rail becomes a bottom tab bar below the `lg` breakpoint (1024px),
-  with a "More" sheet rendering the same nav data. 44px touch targets.
-  `manifest.json` + PWA icons so "Add to Home Screen" works.
+  - Identity: the landing page's, exactly — near-black surfaces, one blue
+    accent, Inter Display headings. The chrome stays quiet because nine
+    colours already carry meaning (six chart hues + the direction trio) and
+    every vivid brand hue collided with one of them.
+    *(The warm-neutral, vermilion, Instrument Serif identity this file used to
+    describe was replaced when the app went dark. `app.css` still carries that
+    `@theme` block; `atmos.css` overrides all of it at runtime.)*
+- **Mobile:** no rail and no bottom tab bar — `TopNav` is a floating pill with
+  a sheet below `md`. 44px touch targets. `manifest.json` + PWA icons so
+  "Add to Home Screen" works.
 - **Security:** audited 2026-08-28, before the first public push. See the
   dedicated section below.
 - **Chart palette re-validated** against BoardUI's surfaces with the dataviz
   validator. Dark mode needed its own steps because BoardUI's dark card is
   lighter than the old one — see the note in `src/client/styles/charts.css`,
   which records the numbers and the command to re-run.
+- **Report figures, on the pages.** 56 charts and 422 data points read out of
+  ten report PDFs, each with the page and the verbatim line it came from, and
+  each saying on its face that it is a survey, a model result or a scenario
+  rather than a measurement. `FigureChart` draws them as bars **and has no
+  option for a truncated axis** — a bar encodes its length, so cutting the axis
+  rescales the claim itself and no disclosure repairs that.
+  `scripts/load-report-figures.js` is the gate between the extraction JSON in
+  `docs/extraction/` and the database; placement is editorial and is never
+  inferred.
+- **News cards carry the publisher's mark**, stored as a data: URI by
+  `scripts/fetch-source-icons.js` and never linked — an `<img>` pointing at
+  ft.com would tell seven news organisations who reads this site, and the CSP
+  forbids it. Six of eight resolved; the FT 403s everything and the Fed serves
+  only an oversized ICO, so both show the name alone.
 - **62 tests passing.** Mostly backend; `src/client/lib/format.test.js` is the
   only front-end suite, covering the number and unit formatting. There are no
   component or route tests.
@@ -234,18 +275,21 @@ In rough priority order:
    code path and is the obvious route. **No country filter or comparison UI
    exists, deliberately**, and none should be built before the data supports
    the comparison it would imply.
-2. **The twelve reports are cited but not read.** `014_reading.sql` seeds BIS,
-   IMF ×2, OECD, WEF, Stanford HAI, McKinsey, PwC, Deloitte, KPMG, EY and
-   Accenture as citations. **Every `takeaway` is NULL and every `stance` is
-   `background`** — that value is a placeholder meaning "not yet read", not a
-   judgement about what the report argues. Filling either in requires reading
-   the PDFs (on the Desktop, deliberately never committed: link and cite,
-   never redistribute), and is a job to do *with* Joshua rather than infer
-   from a title.
-   The rest of the layer is done: `question_reading` renders on both question
-   and lens pages, and `theory`, `method`, `strength` and `last_reviewed` are
-   populated on all 11 questions. **That prose is Claude-drafted and Joshua has
-   not reviewed the economics yet** — `productivity` most of all.
+2. **The reports are read, and nothing in them has been checked by a person.**
+   Ten of the twelve cited reports have been extracted twice over: prose
+   takeaways with page references (0014), and now **56 chartable figures with
+   422 data points** (0019, seeded by `023_report_figures.sql`), each carrying
+   the verbatim line it came from. Every one lands as `figure_source =
+   'extracted'` and renders saying nobody has verified it.
+   `SELECT * FROM unreviewed_figures` and `SELECT * FROM unreviewed_takeaways`
+   are the two worklists, and working through them is the highest-value thing
+   Joshua can do that nobody else can.
+   **Accenture and EY have no PDF** in `~/Desktop/Consulting reports on ai (for
+   econ intel)/` — ten files, and those two are not among them. They stay
+   citation-only until the PDFs land.
+   `theory`, `method`, `strength` and `last_reviewed` are populated on all 11
+   questions. **That prose is Claude-drafted and Joshua has not reviewed the
+   economics yet** — `productivity` most of all.
    Still to come: the OpenAlex academic corpus. `stale_questions` lists pages
    whose prose has not been reviewed in six months.
 3. **Event extraction** — the `events` table is empty. This is what would power
@@ -262,7 +306,11 @@ In rough priority order:
    function timeout. The `/api/overview` query was 5.9s cold before it was
    restructured around a CTE; it is 0.87s cold now, which is the only reason
    that budget is reachable.
-6. **A LICENSE file** — see the GitHub section above.
+6. **Nine more questions, drafted and switched off.** `024_new_questions.sql`
+   seeds them with `is_active = false` and `last_reviewed` NULL, so they sit in
+   `stale_questions` and reach no reader. The full proposal, with the SQL to
+   re-check every figure in it, is `docs/questions-proposal.md`. Activating one
+   is a single UPDATE — after checking its answer against the series.
 
 ## Security
 
