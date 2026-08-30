@@ -3,7 +3,8 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-30 (third pass — style system, financing events, GDELT fixed).
+Last updated: 2026-08-30 (fourth pass — Vercel prep, CSP fix, scheduled ingestion,
+the last three dashboards, circular financing).
 
 ## The project is now called Diffusion (was EconIntel)
 
@@ -292,6 +293,28 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
   **The diagram must draw from `investment_edges`, never `monthly_investment`:**
   an investment and the cloud commitment tied to it point opposite ways, so
   that view's total is meaningless by construction.
+- **The last three dashboards are pages.** `/pipeline` was four stat tiles and
+  three BoardUI tables answering the wrong question — it listed which
+  INTEGRATIONS were configured, a fact about the server's `.env`. It is now a
+  provenance register ordered by contribution, with each source's share of the
+  data drawn as literal width, and licence on every row. The organising fact:
+  **LBMA and FRED carry 80% of every observation on this site.** Dropping the
+  BoardUI Table took that route's chunk from 195 kB to 7.6 kB. `/data` and
+  `/explore` keep their structure and move onto the site's own surfaces, with
+  a shared `PageHero`.
+- **Circular financing, on the Investment lens.** Five arrangements where money
+  leaves as capital and returns as revenue — Microsoft $13bn into OpenAI
+  against $250bn of Azure commitments back; Amazon $13bn into Anthropic against
+  $104bn; NVIDIA $2.1bn into CoreWeave against $6.3bn buying capacity back.
+  **What counts as circular is not "money went both ways"** — that test misses
+  NVIDIA/CoreWeave entirely, where NVIDIA is the payer on all three edges. The
+  test is on the KIND of leg: a pair joined by both a capital leg and a
+  commercial one. Not a node graph, and **no total is computed anywhere**,
+  because the two sides face in opposite economic directions.
+- **Routes are code-split.** First load went from 994 kB to ~380 kB; the 358 kB
+  chart chunk now only loads on pages that chart. The overview stays statically
+  imported — every landing-page CTA leads there, so splitting it would spend
+  the saving on a round trip before anything rendered.
 - **62 tests passing.** Mostly backend; `src/client/lib/format.test.js` is the
   only front-end suite, covering the number and unit formatting. There are no
   component or route tests.
@@ -462,44 +485,114 @@ run pulled in 73 new articles. If the news feed still looks thin, run:
 npm run ingest -- rss --force
 ```
 
-## Deploy, and the Render emails
+## Deploy — everything is ready except the accounts
 
-**The failing-deploy emails are diagnosed and fixed.** There IS a Render web
-service called EconIntel, configured in their dashboard and invisible to this
-repo, auto-deploying on every push to main. It failed every time because
-Render installs with `NODE_ENV=production`, npm then skips devDependencies,
-and `vite`, `@vitejs/plugin-react`, `@tailwindcss/vite` and `tailwindcss` were
-all devDependencies. Reproduced exactly with `NODE_ENV=production npm ci`, then
-fixed by moving the four into `dependencies` and adding `engines` + `.nvmrc`.
+**The code is done. What is left needs Joshua's hands**, and it is written up
+step by step in `~/Desktop/DIFFUSION-HANDOVER.md`.
 
-**Render still hosts only the database.** Vercel + Neon remains the plan. What
-the move needs, all verified:
+What was built on 2026-08-30:
 
-- `src/server/index.js` splits into `app.js` (everything) and a ~25-line
-  listener, so `api/index.js` can export the app without `app.listen` firing as
-  an import side effect.
-- `pg.Pool({ max: 10 })` → `@neondatabase/serverless`'s Pool with
-  `DB_POOL_MAX=1` against the POOLED connection string; each lambda is its own
-  process, so 10 × instances is the real number today.
-- `statement_timeout: 30_000` outlives any Vercel function. Move it out of
-  `pool.js` and onto the web connection string at 8s, leaving the ingest
-  connection alone — ingestion legitimately runs longer statements.
-- `landing/` becomes static output rather than `express.static`, and the
-  hand-written slash-less resolver is replaced exactly by `cleanUrls: true` +
-  `trailingSlash: false`. The canonicals detach.py wrote are slash-less, so
-  those flags redirect toward them.
-- **`security.js` computes zero CSP hashes today** — both `index.html` files
-  carry only `<script src>`, and the regex excludes those. So `script-src` is
-  already a constant `'self'` and the header set copies into `vercel.json` with
-  no drift risk. The `readFileSync` at boot is dead weight.
-- **Do not split routes into one file per endpoint.** `/api/me` is registered
-  before the auth gate and `/healthz` outside it; one function, one app,
-  preserves that ordering byte for byte.
-- **`landing/docs/**` is currently served publicly** — `GET /docs/mirror.py`
-  returns the clone pipeline. Exclude it in the static assembly step.
-- Nothing schedules ingestion. GitHub Actions, not Vercel Cron: the GDELT job
-  alone runs for minutes. A failed Actions run already emails and puts a red X
-  on the repo with no code written.
+- **`src/server/app.js` holds the application; `src/server/index.js` is a
+  ~45-line listener.** `app.listen` used to run as an import side effect, so
+  anything importing the routes opened a port. `api/index.js` re-exports the
+  app for Vercel — **one function, not one per endpoint**, because the route
+  order is load-bearing: `/api/me` is registered before the auth gate so a
+  signed-out reader can ask whether they are signed in, `/healthz` sits
+  outside it, and `/waitlist` is answered before `express.static`.
+- **`db/pool.js` picks its driver from the connection string.** A
+  `.neon.tech` host gets `@neondatabase/serverless`; anything else keeps `pg`.
+  Parsed, not substring-matched, so a password containing `.neon.tech` does
+  not flip the transport. **The type parsers are applied to the CHOSEN
+  driver** — Neon bundles its own `pg-types`, so setting them on `pg` while
+  running on Neon registers on a registry nothing reads and every NUMERIC
+  arrives as a string. That fails as plausible wrong numbers, not an error.
+- **`DB_STATEMENT_TIMEOUT_MS`** — 30s is right for ingestion and wrong behind
+  a function ceiling. Set 8000 on the web deployment.
+- **`scripts/build-static.js`** assembles `dist/`, because a CDN has no
+  fall-through where Express had ordering. Both halves have an `index.html`;
+  the app shell becomes `app.html` so the landing page keeps `/`. `docs/`,
+  `.mirror-cache/` and the waitlist pages are not deployed.
+- **Two gates, both of which caught something on their first run.**
+  `check:routes` compares `App.jsx` to the rewrite list — on Express an
+  unknown path falls through to the shell, so a missing rewrite 404s only in
+  production and only on a hard load. `check:vercel` regenerates the CSP from
+  the served HTML and fails when `vercel.json` disagrees.
+
+**Render still hosts only the database**, and the failing web service is
+still there. Its build was fixed on 2026-08-29 (the four build tools were
+devDependencies while Render installs with `NODE_ENV=production`), so the
+emails should have stopped.
+
+## Scheduled ingestion — done
+
+`.github/workflows/ingest.yml`, 05:40 UTC daily plus manual dispatch. Actions
+rather than Vercel Cron: the GDELT job runs for minutes against a 15s function
+ceiling, and a failed Actions run emails and puts a red X on the repo with no
+code written.
+
+**It needs repository secrets set — see the Desktop handover.** Until then the
+schedule fires and fails.
+
+`scripts/ingestion-summary.js` writes a job summary reporting what a log
+cannot: rows written per job this run, and what is stale measured against each
+indicator's OWN refresh interval. It found on its first run that FRED and LBMA
+had not ingested since 25 August.
+
+## The CSP was blocking the entire landing page
+
+From 2026-08-28 to 2026-08-30, and nothing reported it.
+
+`securityHeaders` built `script-src` by scanning `public/index.html` only.
+That file is Vite output with one `<script src>`, so the scan returned
+nothing, the header went out as a bare `script-src 'self'` — and it was
+applied to **every** response, including the Framer landing page and its seven
+executable inline scripts. All seven were blocked. One of them is `animator`,
+the entrance-animation engine for the whole front door.
+
+Proven rather than inferred: the scripts were present in the DOM while
+`window.animator` and `window.process`, top-level globals set by two different
+inline scripts, were both `undefined`.
+
+Nothing caught it because a blocked inline script reports to the browser
+console and never to the server, and the page still renders — it just sits in
+its pre-animation state, which looks like a design choice. The old test
+asserted a hash was present OR absent and argued in a comment that absent was
+"the stronger result, not a regression"; it passed green throughout.
+
+**Also fixed:** `/docs/mirror.py` and `/.mirror-cache/pages/index.html` were
+both returning 200 to anyone — the clone pipeline in full, and a working copy
+of the original Framer template still carrying the template's own copy.
+Express's `dotfiles: 'ignore'` does not cover the second; it applies to the
+final path segment only.
+
+## Two data problems the new provenance page surfaced
+
+1. **AMECO is the European Commission's FORECAST database**, and its later
+   years are projections. UK total factor productivity carries 96.77 for 2027
+   — a real number, drawn on a chart, with nothing saying it is a forecast.
+   `db/seeds/029_mark_projections.sql` marks it `value_status = 'projected'`,
+   a column that has existed since 0003 and been NULL on all 74,041 rows.
+   **That records it; it does not fix it.** `/api/series` does not select
+   `value_status` and `SeriesChart` has no notion of it, so nothing a reader
+   sees has changed. Wiring it through — most likely as the dashed treatment
+   `SeriesChart` already uses for series that could not be rebased — is the
+   next chart-honesty job. The date rule also cannot catch AMECO's 2026
+   forecast, because 2026 is already in the past; doing better needs a vintage
+   column that does not exist.
+2. **The RBA publishes empty future periods.** Rows out to 2027-03-31 with a
+   NULL value. Nothing was ever drawn from them, so the charts were right; the
+   coverage claim was wrong, because `max(period_start)` counted them. Four
+   queries now filter on `value IS NOT NULL`.
+
+## `useReveal` was hiding content silently
+
+Fixed 2026-08-30 and worth knowing about, because the failure mode is
+invisible. It read `ref.current` on its first effect run and returned early
+when null, with `[revealed]` as its only dependency — which does not change
+when a ref attaches. **Any component that returns `null` while its data loads
+never got an observer and stayed at `opacity-0` forever.** No error, no
+warning; the content is in the DOM and screen readers read it. A callback ref
+replaced the `useRef`.
 
 ## How to pick this up
 
