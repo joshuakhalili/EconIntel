@@ -147,10 +147,10 @@ two are kept in sync — there is no longer a "working vanilla version" anywhere
 the React site *is* the site. Repo: `github.com/joshuakhalili/EconIntel`, public,
 0 open Dependabot alerts.
 
-**There is no LICENSE file.** The README says "cite, don't redistribute", but
-with no licence declared, nobody can legally reuse the code at all. MIT is the
-usual answer for a portfolio project; it is a decision, not an oversight, and
-it is still open.
+**MIT licensed.** `LICENSE` at the repo root covers the code. The data is not
+covered and cannot be — each source carries its own licence in the `sources`
+table and it is shown on every series page. Cite and link; take the data from
+the publisher.
 
 Two remote branches are not local work: a Dependabot branch (`undici-7.29.0`)
 and `claude/capabilities-workflow-questions-76ss3l`. Neither is merged.
