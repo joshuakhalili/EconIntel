@@ -13,6 +13,24 @@ a[href*="lunaui.co"] {
   display: none !important;
 }
 
+/* The Legal column's third link is "404", pointing at the 404 page. That is
+   the template designer listing every page they made, not a document anyone
+   needs. The 404 page itself stays — it is what a mistyped URL lands on.
+
+   Matched on the ENDING, not the exact value: the markup ships href="/404" and
+   Framer rewrites it to "./404" on hydration, so an exact selector hides it
+   until the page finishes loading and then stops. */
+a[data-framer-name="Footer"][href$="/404"] {
+  display: none !important;
+}
+
+/* The avatar beside "Built by Joshua Khalili" was the template author's
+   headshot. Hiding the image alone left its container's ring — an empty circle
+   next to the name, which reads as a broken image rather than as no image. */
+figure:has(img[src*="DFzG1yXny0N4VBIJify9JjzxUVE"]) {
+  display: none !important;
+}
+
 /* Stock portraits: a fabricated colleague and three fabricated signups. */
 img[src*="VQmBGVY3RVR2vigsT6z5YPHg"],
 img[src*="nZdCFW8odfx2dC37xGKQgC7dE"],

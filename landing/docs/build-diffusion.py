@@ -194,6 +194,27 @@ def main():
             encoding="utf-8",
         )
 
+    # The sitemap the mirror inherited advertises four pages that should not be
+    # indexed: /404, and the template's waitlist and thanks pages. Diffusion has
+    # no waitlist — every call to action was repointed at /login — so those two
+    # are orphans, and one of them still renders the template's invented
+    # "1,200+ people on the waitlist". Express redirects both to /login; this
+    # stops a search engine advertising them in the meantime.
+    #
+    # Written here rather than committed for the same reason as legal/index.html:
+    # reset.sh restores the tag, and a hand-edit would vanish on every rebuild.
+    sitemap = ROOT / "sitemap.xml"
+    if sitemap.exists():
+        sitemap.write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            "  <url><loc>https://diffusion.observer/</loc></url>\n"
+            "  <url><loc>https://diffusion.observer/legal/privacy-policy</loc></url>\n"
+            "  <url><loc>https://diffusion.observer/legal/terms-of-service</loc></url>\n"
+            "</urlset>\n",
+            encoding="utf-8",
+        )
+
     applied = {k: n for k, n in counts.items() if n}
     missed = [k for k, n in counts.items() if not n]
 

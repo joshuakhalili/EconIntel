@@ -13,9 +13,12 @@ corrupt it. The skill's own record of this going wrong: "Studio Owner" became
 
 FOUR SURFACES. The same string lives in index.html, in nine JS chunks, in
 assets/data/searchIndex-*.json, and in the CMS blobs. The build covers the
-first three; the blobs hold only the two legal documents and are handled
-separately, because they are addressed by byte offset and rewriting them
-shifts every later offset.
+first three. The blobs hold a second copy of the two legal documents and are
+never touched — they are addressed by byte offset, and rewriting one shifts
+every later offset. They are also never requested: a cold load of
+/legal/privacy-policy makes 36 network requests and none is for a .framercms
+file, so the copy that reaches a reader is the one in the markup and the
+chunks. Both are rewritten below.
 
 WHAT IS DELIBERATELY REMOVED RATHER THAN REPLACED
 -------------------------------------------------
@@ -336,6 +339,233 @@ FOOTER = {
 }
 
 # ---------------------------------------------------------------------------
+# The two legal documents
+# ---------------------------------------------------------------------------
+#
+# WHY THESE HAD TO BE REWRITTEN RATHER THAN LEFT
+#
+# The template ships a real-looking Privacy Policy and Terms of Service for
+# Atmos, and the mirror published them verbatim under Diffusion's wordmark.
+# They described a different product — environmental sensors, connected
+# infrastructure, paid subscriptions — and, worse, they made false statements
+# about how a reader's data is handled: usage analytics, device information,
+# sharing with "analytics partners". None of that is true here, and it was
+# sitting under a sign-in form that asks real people for their name and email.
+#
+# A privacy policy is a representation to a reader. Publishing someone else's
+# is worse than publishing none. So every sentence below is a true statement
+# about what this site actually does, checked against src/server/lib/auth.js
+# and db/migrations/0016_readers.sql.
+#
+# The headings and the section numbering are the template's and are kept, so
+# the page structure is unchanged and only the claims move.
+#
+# WHY THIS IS SAFE TO DO AS STRING REPLACEMENT
+#
+# The docstring at the top of this file warns that the legal documents also
+# live in the two .framercms blobs, which are addressed by byte offset and
+# cannot be rewritten in place. They are also never fetched: a network trace of
+# a cold load of /legal/privacy-policy makes 36 requests and not one of them is
+# for a .framercms file. The text is in the SSR markup and in the chunks, both
+# of which this build already covers.
+
+LEGAL = {
+    # ---- Both documents ----
+    "Version 2.8": "Version 1.0",
+    "Version 2.6": "Version 1.0",
+    "Mar 28, 2026": "Aug 30, 2026",
+
+    # ---- Privacy Policy ----
+    "Privacy Policy - Atmos": "Privacy Policy — Diffusion",
+
+    "Atmos (“we”, “our”, or “us”) respects your privacy and is committed to "
+    "protecting your information. This Privacy Policy explains how data is "
+    "collected, used, and securely safeguarded when using the Atmos platform, "
+    "website, and related services, including any interactions with our tools "
+    "and features and technologies.":
+        "Diffusion is run by one person and holds two pieces of information "
+        "about you: a name and an email address, typed into a sign-in form. "
+        "This page says what happens to them. It is short because very little "
+        "happens to them.",
+
+    "We may collect the following types of information:":
+        "This is the complete list, not a summary of it:",
+    "Information you provide directly, such as your name, email address, and "
+    "account details.":
+        "The name and the email address you type into the sign-in form.",
+    "Environmental and system data processed through integrations, sensors, "
+    "and connected infrastructure.":
+        "Nothing else. No analytics, no tracking pixels, no advertising "
+        "identifiers, no third-party scripts.",
+    "Usage data, including interactions with the platform, device "
+    "information, and analytics.":
+        "No record of what you read, no device fingerprint, and no IP address "
+        "log kept against your account.",
+    "Communications with our team, including support requests and feedback.":
+        "Anything you choose to send by email, which is read by one person.",
+
+    "Your information is used to:":
+        "The address is used for exactly one thing, and here is the honest "
+        "version of it:",
+    "Provide and improve environmental monitoring and analytics.":
+        "To know roughly who the work reaches. That is the entire reason an "
+        "account exists.",
+    "Deliver insights, dashboards, and system performance data.":
+        "To reply, if you write in with a correction.",
+    "Operate, maintain, and optimize the Atmos platform.":
+        "You will not be emailed otherwise. There is no mailing list, no "
+        "newsletter and no product announcement.",
+    "Communicate updates, support responses, and important notifications.":
+        "The address is never verified, so it is a visitor record rather than "
+        "a credential, and it protects nothing.",
+    "Ensure security, stability, and compliance with applicable laws.":
+        "Nothing behind the sign-in is private — it is public statistics from "
+        "public sources — so there is nothing here for an account to guard.",
+
+    "Our processing principles:": "In full:",
+    "Data is processed to provide accurate environmental insights and system "
+    "analysis.":
+        "The row is stored in a Postgres database and read by nobody but the "
+        "person who runs the site.",
+    "We do not sell identifiable personal data to third parties.":
+        "Nothing is sold, rented, traded or shared. Not in aggregate either.",
+    "Data processing is limited to what is necessary to operate and improve "
+    "the platform.":
+        "Nothing is inferred, scored, enriched or joined against any other "
+        "source.",
+
+    "We may share data only with:":
+        "Nobody. Named individually, so this cannot be read generously:",
+    "Trusted service providers, including hosting, analytics, and "
+    "infrastructure partners.":
+        "The database host stores the row, because it stores every row. There "
+        "is no analytics provider, because there are no analytics.",
+    "Legal authorities, if required by law or regulation.":
+        "A lawful order would be complied with. There would be very little to "
+        "hand over.",
+    "All partners are required to protect your data and use it only for the "
+    "services they provide.":
+        "Google Fonts serves two typefaces to your browser, which means Google "
+        "sees that request. That is the only external service any page here "
+        "loads, and it is told nothing about you.",
+
+    "We implement industry-standard security measures to protect your "
+    "information. However, no system can guarantee complete security, and we "
+    "cannot ensure absolute protection of transmitted data.":
+        "No password is set, sent, hashed or stored by either sign-in route, "
+        "so there is nothing here that could be stolen and replayed against "
+        "another site. A session is a signed cookie rather than a stored "
+        "token. What is held is a name and an unverified email address, and no "
+        "system can promise perfect security of even that.",
+
+    "Depending on your location, you may have the right to:":
+        "Wherever you are, and without having to cite a regulation:",
+    "Access, update, or delete your personal data.":
+        "Email and ask what is stored under your address, or ask for it to be "
+        "deleted. It will be, and you will get a reply saying so.",
+    "Request restriction or portability of your data.":
+        "There is no processing to restrict, and the portable version of your "
+        "record is a name and an email address.",
+    "Withdraw consent for certain data processing activities.":
+        "Signing out and not coming back also works.",
+
+    "If you have questions about this Privacy Policy or your data, contact us "
+    "at: ":
+        "Questions about any of this, or about what is stored under your "
+        "address: ",
+
+    # ---- Terms of Service ----
+    # The tab title only. The page's own <h1> lives in a CMS field the build
+    # does not reach, and it says "Terms of Service" — so the title matches it
+    # rather than improving on it.
+    "Terms of Service - Atmos": "Terms of Service — Diffusion",
+
+    "These Terms of Service (“Terms”) govern your access to and use of the "
+    "Atmos platform, website, and related services. By using Atmos, you agree "
+    "to these Terms and fully accept responsibility for your use of the "
+    "platform and services.":
+        "Diffusion is a free, public, open-source dashboard run by one person. "
+        "There is nothing to buy and nothing to subscribe to, so these terms "
+        "are mostly a description of what the site is rather than a contract "
+        "you are being held to.",
+
+    "You agree to use Atmos only for lawful purposes and in accordance with "
+    "these Terms.":
+        "Read it, quote it, disagree with it in public. No permission needed.",
+    "You may not misuse, disrupt, or attempt to gain unauthorized access to "
+    "the platform.":
+        "Do not attack the server or try to reach other readers' accounts. "
+        "There is nothing in them, but still.",
+    "You are responsible for maintaining the confidentiality of your account.":
+        "There is no password to keep confidential.",
+    "You agree to provide accurate information when creating an account.":
+        "A real name and a real address are appreciated. Neither is checked.",
+
+    "We may update, modify, or discontinue parts of the platform at any time:":
+        "This is one person's project, and it may change or stop:",
+    "Access to certain features may require a subscription.":
+        "Nothing here costs money, and no part of it is held back for a paid "
+        "tier.",
+    "We reserve the right to suspend or terminate access if these Terms are "
+    "violated.":
+        "An account used to attack the site will be removed.",
+
+    "Data and content": "3. Data and content",
+    "You retain ownership of the data you provide to Atmos.":
+        "The economic data on this site belongs to the statistical agencies "
+        "that publish it, not to Diffusion. Each source carries its own "
+        "licence, and that licence is shown on every series page.",
+    "By using the platform, you grant us the right to process your data to "
+    "provide and improve the service.":
+        "Cite and link the publisher. For anything that matters, take the "
+        "numbers from them rather than from here.",
+    "You are responsible for ensuring that you have the right to use and "
+    "share any data submitted.":
+        "The code is MIT licensed and on GitHub. Do what you like with it.",
+
+    "All platform content, design, and functionality are the property of "
+    "Atmos.":
+        "The written analysis is its author's. The page design is adapted from "
+        "a commercial template under that template's own licence.",
+    "You may not copy, reproduce, or distribute any part of the platform "
+    "without permission.":
+        "The institutional reports cited in the literature sections belong to "
+        "their publishers. They are linked and quoted, never redistributed.",
+
+    "5. Subscriptions and billing": "5. Money",
+    "Some features may require a paid subscription.":
+        "There is no subscription, no paid tier and no trial.",
+    "Subscription fees are billed according to your selected plan.":
+        "No card is asked for and no payment is processed anywhere on this "
+        "site.",
+    "We may change pricing with reasonable notice.":
+        "If that ever changes it will be said plainly and in advance, not by "
+        "quietly editing this page.",
+    "Payments are non-refundable unless required by law.":
+        "There is nothing to refund.",
+
+    "Atmos is provided “as is” without warranties of any kind.":
+        "Diffusion is provided as is, with no warranty.",
+    "We do not guarantee that the platform will be uninterrupted or "
+    "error-free.":
+        "Data is ingested from public sources automatically and can be wrong, "
+        "stale or misattributed. Where a page knows its evidence is weak, it "
+        "says so on the page.",
+    "Insights and analytics are provided for informational purposes only.":
+        "Nothing here is investment, financial or policy advice. It is a "
+        "reading of published statistics.",
+
+    "We may update these Terms from time to time.":
+        "These may change. The version and date at the top say when they last "
+        "did.",
+    "Continued use of the platform means you accept the updated Terms.":
+        "Nothing is being agreed to that costs you anything.",
+
+    "If you have questions about these Terms, contact us at: ":
+        "Corrections, questions, or a series this should be using and is not: ",
+}
+
+# ---------------------------------------------------------------------------
 # Page titles and meta
 # ---------------------------------------------------------------------------
 
@@ -350,6 +580,40 @@ META = {
     "The page you’re looking for doesn’t exist or may have been moved.":
         "This page does not exist, or it moved when the site was reorganised.",
     "Go back home": "Back to the start",
+
+    # ---- Meta descriptions -------------------------------------------------
+    #
+    # Every one of these was still the template's, on every page, including the
+    # home page — so the one sentence a search engine would print under this
+    # site described a real-time climate and energy platform with a waitlist.
+    # They are invisible on the page, which is exactly why they survived four
+    # passes of checking the visible copy.
+    "Atmos is a real-time climate and energy data platform. Early access "
+    "available via waitlist.":
+        "Artificial intelligence's measurable effect on the world economy, "
+        "read through five lenses and built only from official statistics. "
+        "Every number links back to the agency that published it.",
+    "Privacy policy and terms for Atmos.":
+        "What Diffusion stores about a reader — a name and an email address, "
+        "nothing else — and the terms of using the site.",
+    "Request early access to Atmos. Enter your email to join the waitlist.":
+        "Diffusion is free and public. There is no waitlist.",
+    # The retired waitlist page's own title. It is redirected to /login and
+    # nobody can reach it, but leaving one "Atmos" in the mirror means the next
+    # person to grep for it finds a hit and has to work out whether it matters.
+    "Join Atmos — Early Access": "Sign in — Diffusion",
+    "Your request was received. We’ll notify you when Atmos becomes "
+    "available.":
+        "Diffusion is free and public, and already open to read.",
+
+    # The runtime page title on the two legal pages, composed in a template
+    # literal: `${cmsTitle} - Atmos`. Because "Atmos" sits inside an
+    # interpolation rather than as a whole quoted string, the delimited
+    # short-key rule correctly refuses to touch it, and the SSR <title> this
+    # map does fix gets overwritten on hydration. Replaced with enough
+    # surrounding syntax to be unambiguous.
+    "} - Atmos`,viewport:`width=device-width`":
+        "} — Diffusion`,viewport:`width=device-width`",
 }
 
 # ---------------------------------------------------------------------------
@@ -359,7 +623,7 @@ META = {
 REPLACEMENTS = {}
 for _group in (
     HERO, HOW_IT_WORKS, DEMO, FEATURES, CAPABILITIES,
-    GLOBAL_STATS, FAQ, CTA, FOOTER, META, BRAND,
+    GLOBAL_STATS, FAQ, CTA, FOOTER, LEGAL, META, BRAND,
 ):
     for _k, _v in _group.items():
         # First writer wins: BRAND is applied last and must not overwrite a
@@ -445,6 +709,24 @@ a[href*="threads.com/@liana"],
 a[href*="linkedin.com/in/liana"],
 a[href*="x.com/liana_tme"],
 a[href*="lunaui.co"] {
+  display: none !important;
+}
+
+/* The Legal column's third link is "404", pointing at the 404 page. That is
+   the template designer listing every page they made, not a document anyone
+   needs. The 404 page itself stays — it is what a mistyped URL lands on.
+
+   Matched on the ENDING, not the exact value: the markup ships href="/404" and
+   Framer rewrites it to "./404" on hydration, so an exact selector hides it
+   until the page finishes loading and then stops. */
+a[data-framer-name="Footer"][href$="/404"] {
+  display: none !important;
+}
+
+/* The avatar beside "Built by Joshua Khalili" was the template author's
+   headshot. Hiding the image alone left its container's ring — an empty circle
+   next to the name, which reads as a broken image rather than as no image. */
+figure:has(img[src*="DFzG1yXny0N4VBIJify9JjzxUVE"]) {
   display: none !important;
 }
 

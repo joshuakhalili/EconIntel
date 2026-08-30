@@ -597,6 +597,24 @@ app.get('/api/status', route(async (_req, res) => {
  * `index: 'index.html'` is what makes `/` the landing page and what resolves
  * `/legal/privacy-policy` and `/waitlist` to their directories' index files.
  */
+/*
+ * The template's waitlist flow, retired.
+ *
+ * Diffusion has no waitlist — every call to action was repointed at /login when
+ * the mirror was built — but the two pages behind it are still in the mirror
+ * and still served, and one of them renders the template's invented
+ * "1,200+ people on the waitlist". That is a fabricated number on a site whose
+ * first rule is to invent nothing, so the pages are redirected rather than left
+ * reachable by anyone who guesses the URL.
+ *
+ * Before the static handlers, because express.static would otherwise answer
+ * first. 302 rather than 301: this is a decision about content, not a permanent
+ * move, and a cached 301 is very hard to take back.
+ */
+app.get(['/waitlist', '/waitlist/', '/thanks', '/thanks/'], (_req, res) =>
+  res.redirect(302, '/login')
+);
+
 app.use(
   express.static(landingDir, {
     index: 'index.html',
