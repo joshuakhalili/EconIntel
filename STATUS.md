@@ -75,8 +75,16 @@ Data Table, Sidebar, Settings Modal, Notification Center) — run
 
 A public dashboard measuring AI's economic effect worldwide. Not a database
 browser — organised as **lenses**, each containing questions, contextual price
-tickers, and news. Two reading modes (Plain / Technical) show different registers
-of the same stored answer, not the same text with jargon added.
+tickers, and news.
+
+Every answer is stored in two registers, plain and technical. **Only the plain
+one is ever shown.** The Plain/Technical toggle was deleted on 2026-08-30: it
+had never worked — `AppShell` read `{ register, setRegister }` from a provider
+exposing `{ mode, setMode, isTechnical }`, and the segmented control was passed
+react-aria's props under the wrong names, so no segment ever rendered selected
+and clicking never touched state. The `*_expert` columns are still written and
+still populated; nothing reads them. Every `*_expert` has a `*_plain` twin, so
+the fallback is total rather than partial.
 
 The five lenses are classical economics subfields, ordered the way the causation
 is supposed to run: **Investment & Capital → Growth & Productivity → Labour
@@ -189,10 +197,17 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
 
 ## What's built and working
 
-- **Data:** 76,788 observations. 115 indicators declared, **111 of which have
-  any observations** — the other four are the declared-but-uncomputed ones
-  listed under "Known broken things". 50 countries, but see the country note
-  below before quoting that number. 24 sources:
+- **Data:** 74,022 observations, counted from the live database on 2026-08-30.
+  131 indicators declared, **128 of which have any observations** — the other
+  three are the declared-but-uncomputed ones listed under "Known broken things".
+  50 countries, but see the country note below before quoting that number.
+  By source: LBMA 29,480 · FRED 29,177 · World Bank 7,488 · DBnomics 7,017 ·
+  Federal Register 411 · Epoch AI 321 · GDELT 116 · SEC EDGAR 12.
+  **This file previously claimed 76,788, and that number is 2,766 too high with
+  no explanation found** — the per-source breakdown above sums exactly to
+  74,022, so nothing is orphaned; the old figure was either never accurate or a
+  re-ingest shortened a series. Count from the database, not from here.
+  24 sources:
   FRED, World Bank, DBnomics (93 agencies via one adapter), SEC EDGAR, Epoch AI,
   Federal Register, LBMA (gold/silver), GDELT (broken — see below), 7 RSS feeds.
 - **Lens layer:** 5 lenses, each with a thesis (plain + technical), a ticker
@@ -320,12 +335,15 @@ In rough priority order:
    economics yet** — `productivity` most of all.
    Still to come: the OpenAlex academic corpus. `stale_questions` lists pages
    whose prose has not been reviewed in six months.
-3. **Event extraction** — the `events` table is empty. This is what would power
-   the circular-financing diagram (Nvidia → OpenAI → Oracle → Nvidia) the user
-   asked for. `entities` already holds 35 real rows and the
-   `investment_edges` / `monthly_investment` views are built on top, so the
-   feature needs rows, not schema.
-4. **News images and source logos** — asked for, not done.
+3. **The circular-financing diagram.** The data landed on 2026-08-30 — 23 events
+   and 59 entities — so what is missing now is the drawing, not the rows. It is
+   the one feature the events table was built for (Nvidia → OpenAI → Oracle →
+   Nvidia). Read from `investment_edges`; see the warning above about
+   `monthly_investment`.
+4. **News images.** Publisher marks are done (see above); article images are
+   not. Six of the eight feeds carry an `<enclosure>` or an `og:image`, but
+   hotlinking one tells that publisher who reads this site — the same objection
+   that made the logos data: URIs — so this needs storing, not linking.
 5. **Deploy.** Decided: **Vercel + Neon**. The local `.env` points at the live
    Render Postgres, so data is already migrated and seeded — but the app is
    written as a long-lived Express process (`app.listen`, a `pg.Pool`), which
