@@ -63,6 +63,16 @@ export const config = Object.freeze({
     env === 'production' ? undefined : LOCAL_DEV_DATABASE
   ),
   dbPoolMax: numeric('DB_POOL_MAX', 10),
+  /*
+   * How long a single statement may run before Postgres cancels it.
+   *
+   * Must sit BELOW the host's request ceiling wherever one exists. A Vercel
+   * function is killed at 10s; a 30s statement_timeout there means the caller
+   * gets a 504 while the query carries on holding a database connection that
+   * nobody is waiting for. Set 8000 on the web deployment. Ingestion keeps the
+   * default — it legitimately runs long statements and has no such ceiling.
+   */
+  dbStatementTimeoutMs: numeric('DB_STATEMENT_TIMEOUT_MS', 30_000),
   slowQueryMs: numeric('SLOW_QUERY_MS', 500),
 
   /**

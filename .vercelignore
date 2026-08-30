@@ -1,0 +1,34 @@
+# What the serverless function does NOT need.
+#
+# The function answers /api, /auth and /healthz — JSON, from Postgres. Every
+# byte here would otherwise be bundled into it and unpacked on every cold
+# start, and `landing/` alone is 22 MB of fonts and images that the CDN serves
+# directly and the function can never reach.
+#
+# This does not affect the static deploy: `npm run build:vercel` assembles
+# dist/ from these directories BEFORE this file is consulted, and dist/ is what
+# ships to the CDN.
+#
+# One consequence worth stating: with landing/ and public/ absent from the
+# function bundle, `securityHeaders` finds no HTML and emits a CSP with no
+# inline-script hashes. That is correct rather than a degradation — the
+# function returns JSON, which has no inline scripts to permit. The HTML pages
+# get their CSP from the headers block in vercel.json, which is generated from
+# the same scan and gated by `npm run check:vercel`.
+
+landing/
+public/
+legacy/
+docs/
+db/
+scripts/
+.githooks/
+.mirror-cache/
+
+# Committed reference material and screenshots, not runtime code.
+*.md
+!README.md
+
+# Test files never run in production and drag in their fixtures.
+**/*.test.js
+**/fixtures/

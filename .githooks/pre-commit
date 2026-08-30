@@ -44,9 +44,50 @@ done
 #    Matching is case-insensitive. The old rule spelled the generic words in
 #    lowercase, so every SCREAMING_CASE variable — which is to say every line
 #    in a real .env file — was invisible to it.
-patterns='[A-Za-z0-9_]*(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_-]{16,}
-sk-[A-Za-z0-9]{20,}
-sk-ant-[A-Za-z0-9_-]{20,}
+#
+#    THE BARE-WORD PROBLEM, and why the name rule requires a prefix.
+#
+#    The name side used to be `[A-Za-z0-9_]*(KEY|...)` — a STAR, so it matched
+#    the bare word `key` with nothing in front of it. That is not a credential
+#    name, it is one of the most common object properties in existence, and it
+#    blocked a perfectly ordinary config file: Vercel's headers schema is a
+#    list of `{ key: "Content-Security-Policy", value: ... }`, and every header
+#    name is a long enough run of letters and hyphens to satisfy the value
+#    side. Nothing secret was anywhere near it.
+#
+#    That matters more than the nuisance suggests. A hook that blocks a file
+#    with no secret in it teaches exactly one lesson — reach for --no-verify —
+#    and a hook that gets bypassed by reflex protects nothing at all. The
+#    comment above already says this about bare hex strings; it applies with
+#    equal force here.
+#
+#    So a bare keyword now needs corroboration from the VALUE. Two rules:
+#      1. a real variable name — at least one identifier character before the
+#         keyword, which is what `API_KEY`, `sessionSecret`, `FRED_API_KEY` and
+#         `GITHUB_CLIENT_SECRET` all have and `key:` does not — any value.
+#      2. a bare keyword, but only when the value contains a digit somewhere
+#         inside it. Real credentials are high-entropy and effectively always
+#         carry digits; header names, CSS properties and English words do not.
+#
+#    The known gap in rule 2, stated rather than left to be discovered: a bare
+#    `secret = 'somepassphrasewithnodigits'` is not caught. Rule 1 catches it
+#    the moment the variable has a real name, and every provider shape below is
+#    caught regardless. Widening rule 2 to digitless values puts every English
+#    sentence in a string back in scope, which is the bare-word problem again.
+#
+#    `sk-` covers OpenAI's older keys AND the newer `sk-proj-` / `sk-ant-`
+#    project keys, which the previous `sk-[A-Za-z0-9]{20,}` did NOT: it stops
+#    at the first hyphen, so `sk-proj-…` only ever offered it four characters
+#    and a live key would have committed cleanly. Verified against both shapes.
+#
+#    It is anchored to a token boundary, and that is not cosmetic: allowing
+#    hyphens inside the run means an unanchored `sk-` matches in the MIDDLE of
+#    ordinary words — `task-oriented-design-system` contains `sk-oriented-…`,
+#    twenty-odd legal characters, and blocked a commit in testing. `risk-`,
+#    `desk-` and `disk-` do the same.
+patterns='[A-Za-z0-9_]+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_-]{16,}
+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_-]{6,}[0-9][A-Za-z0-9_-]{6,}
+(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}
 ghp_[A-Za-z0-9]{36}
 AKIA[0-9A-Z]{16}
 cfut_[A-Za-z0-9]{20,}

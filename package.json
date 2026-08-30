@@ -9,10 +9,14 @@
   },
   "scripts": {
     "start": "node src/server/index.js",
-    "build": "npm run check:tokens && npm run check:contrast && vite build",
+    "build": "npm run check:tokens && npm run check:contrast && npm run check:routes && vite build && npm run check:vercel",
+    "build:vercel": "npm run build && node scripts/build-static.js",
     "check:tokens": "node scripts/check-tokens.js",
     "check:contrast": "node scripts/check-contrast.js",
+    "check:routes": "node scripts/check-routes.js",
+    "check:vercel": "node scripts/vercel-config.js --check",
     "check:data": "node scripts/check-data.js",
+    "vercel:config": "node scripts/vercel-config.js --write",
     "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "node --watch src/server/index.js",
     "dev:web": "vite",
@@ -27,6 +31,7 @@
   },
   "dependencies": {
     "@internationalized/date": "^3.12.3",
+    "@neondatabase/serverless": "^1.1.0",
     "@remixicon/react": "^4.9.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
