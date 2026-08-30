@@ -397,7 +397,78 @@ app.get('/api/series', route(async (req, res) => {
     return { id, meta: meta[0], country, points: rows };
   }));
 
-  if (!rebase) return res.json({ series, indexed: false });
+  /*
+   * A SERIES SQUASHED FLAT IS A LIE THE CHART TELLS QUIETLY.
+   *
+   * The caller asks for indexing when the units differ, because different
+   * units cannot share an axis. That test misses the case where the units
+   * MATCH and the magnitudes do not. Three live chart groups had it:
+   *
+   *   money / usd-millions      world computer-services exports against US
+   *                             cloud exports — a factor of 161
+   *   materials / precious-metals   gold against silver — a factor of 64
+   *   productivity / us-value-added private services against information — 13
+   *
+   * At 13x the smaller series occupies under 8% of the axis, so its whole
+   * history renders as a flat line along the bottom. On the productivity page
+   * that read as "the information sector has not grown", when it has roughly
+   * quadrupled since 2005. Nothing warned; the chart looked fine.
+   *
+   * WHY quantity_kind DECIDES AND NOT THE RATIO ALONE
+   *
+   * A big spread is only a problem when the axis POSITION is not itself the
+   * finding. For a `rate` it is: the adoption panel runs from Australia at 3%
+   * to Denmark at 27%, a factor of 8, and rebasing those to 100 would destroy
+   * the comparison the page exists to make — Poland at 3% and Denmark at 42%
+   * is the whole point, and indexing both to 100 hides it.
+   *
+   * For a `currency`, a `magnitude` or a `count`, the level is a fact about
+   * the unit rather than about the subject, and the shape is what the reader
+   * is being invited to compare. Those rebase.
+   */
+  const LEVELS_ARE_COMPARABLE = new Set(['rate', 'index', 'change', 'score']);
+
+  /*
+   * The test measures the failure directly rather than proxying it.
+   *
+   * A ratio between the series' peaks was the first attempt and it let
+   * `us-value-added` through: private services peaks around 8x information, a
+   * ratio under the threshold, while information's entire movement still
+   * covers under a tenth of the axis. What makes a line look flat is not how
+   * it compares to its neighbour's peak — it is how much VERTICAL ROOM its own
+   * range takes up on the axis the chart will draw.
+   *
+   * The denominator assumes a zero-based axis, which is what these charts
+   * draw for all-positive data.
+   */
+  const MIN_AXIS_SHARE = 0.1;
+
+  const measurable = series.filter((s) => s.meta && s.points.some((p) => p.value != null));
+  const comparableLevels =
+    measurable.length > 0 &&
+    measurable.every((s) => LEVELS_ARE_COMPARABLE.has(s.meta.quantity_kind));
+
+  const allValues = measurable.flatMap((s) =>
+    s.points.filter((p) => p.value != null).map((p) => Number(p.value))
+  );
+  const axisSpan = allValues.length
+    ? Math.max(...allValues) - Math.min(0, ...allValues)
+    : 0;
+
+  const shares = measurable.map((s) => {
+    const values = s.points.filter((p) => p.value != null).map((p) => Number(p.value));
+    return (Math.max(...values) - Math.min(...values)) / axisSpan;
+  });
+
+  const squashed =
+    measurable.length > 1 &&
+    !comparableLevels &&
+    axisSpan > 0 &&
+    shares.some((share) => share < MIN_AXIS_SHARE);
+
+
+
+  if (!rebase && !squashed) return res.json({ series, indexed: false });
 
   /**
    * Index every series to 100 at the first period they ALL cover.
@@ -434,7 +505,18 @@ app.get('/api/series', route(async (req, res) => {
     };
   });
 
-  res.json({ series: indexedSeries, indexed: true, indexBase: base });
+  res.json({
+    series: indexedSeries,
+    indexed: true,
+    indexBase: base,
+    /* Said out loud when the rebase was this endpoint's decision rather than
+       the caller's. A reader looking at a chart whose caption promised raw
+       dollars deserves to be told why it is showing an index instead — and
+       the ratio is given so they can judge whether they agree. */
+    indexNote: squashed && !rebase
+      ? 'rebased because one series covered under a tenth of the axis in raw units and would have been drawn as a flat line'
+      : undefined,
+  });
 }));
 
 /**
