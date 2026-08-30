@@ -77,6 +77,13 @@
   --color-raised: #141414;
   --color-deep: #0f1a38;
 
+  /* Text on a filled card. White on the electric blue is 5.03:1 — over the
+     4.5 floor and not by much. Declared here rather than in :root because
+     only @theme generates the `text-on-fill` utility; the token gate caught
+     exactly that when it was in the wrong block. See the note in
+     scripts/check-contrast.js before putting anything else on that surface. */
+  --color-on-fill: #ffffff;
+
   /* The accent. --signal is the workhorse: eyebrow labels, links, active nav,
      focus rings. --bright is the light end of the display gradient. */
   --color-signal: #7da0ff;
@@ -150,11 +157,6 @@
 
   /* Light-only leftovers that would otherwise paint white blocks. */
   --color-stat-card-icon-background: #141414;
-
-  /* Text on a filled card. White on the electric blue is 5.03:1 — over the
-     4.5 floor and not by much. See the note in scripts/check-contrast.js
-     before putting anything else on that surface. */
-  --color-on-fill: #ffffff;
 }
 
 html,

@@ -3,12 +3,12 @@ import { RiArrowRightLine, RiArrowLeftLine } from '@remixicon/react';
 import { useLens, useLensTickers, useLensNews, useLenses } from '@/hooks/queries';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
-import StrengthBadge from '@/components/StrengthBadge';
 import TickerStrip from '@/components/TickerStrip';
 import NewsList from '@/components/NewsList';
 import Reading from '@/components/Reading';
 import LensSignature from '@/components/lens/LensSignature';
 import FigureChart from '@/components/charts/FigureChart';
+import QuestionCard from '@/components/QuestionCard';
 import { LENS_ACCENT } from '@/lib/lensAccent';
 
 /**
@@ -119,38 +119,9 @@ export default function LensPage() {
           Each states how far its own evidence goes before you open it.
         </p>
 
-        <div className="mt-6 grid gap-3 lg:grid-cols-2">
-          {(lens.questions ?? []).map((q) => (
-            <Link
-              key={q.id}
-              to={`/q/${q.slug}`}
-              className="group relative flex flex-col overflow-hidden rounded-2xl border border-border-button-default bg-panel p-6 transition-colors hover:border-white/25 hover:bg-raised"
-            >
-              <span
-                className="absolute inset-x-0 top-0 h-px opacity-70"
-                style={{ background: `linear-gradient(90deg, ${accent.hex}, transparent)` }}
-                aria-hidden
-              />
-              <span className="flex items-start justify-between gap-4">
-                <span className="text-title-3-medium text-text-primary">{q.question}</span>
-                <RiArrowRightLine
-                  className="mt-1 size-4 shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5"
-                  aria-hidden
-                />
-              </span>
-              {q.subtitle && (
-                <span className="mt-1 text-caption-1-regular text-text-tertiary">{q.subtitle}</span>
-              )}
-              <span className="mt-3 line-clamp-3 text-body-regular leading-relaxed text-text-secondary">
-                {q.answer_plain}
-              </span>
-              <span className="mt-4 flex items-center gap-3">
-                <StrengthBadge strength={q.strength} />
-                <span className="figure text-caption-1-regular text-text-tertiary">
-                  {q.indicator_count} indicators
-                </span>
-              </span>
-            </Link>
+        <div className="stagger mt-6 grid gap-3 lg:grid-cols-2">
+          {(lens.questions ?? []).map((q, i) => (
+            <QuestionCard key={q.id} question={q} accent={accent} index={i} />
           ))}
         </div>
       </section>

@@ -207,31 +207,31 @@ function Contested({ lens, accent }) {
   const contested = questions.filter((q) => q.strength === 'contested');
   if (contested.length === 0) return null;
 
+  const all = contested.length === questions.length;
+
   return (
     <Band
       accent={accent}
       eyebrow="Where this lens stands"
-      title={`All ${questions.length} questions here are contested.`}
+      title={
+        all
+          ? `All ${questions.length} questions here are contested.`
+          : `${contested.length} of ${questions.length} questions here are contested.`
+      }
       note="Credible sources reach opposite conclusions from the same period. Firm-level panels find employment growing fastest at the most AI-exposed companies; local-labour-market studies find it falling in exposed occupations. Neither settles the other, and the disagreement is reported rather than resolved."
     >
-      <div className="mt-8 grid gap-px overflow-hidden rounded-2xl bg-white/10 sm:grid-cols-3">
-        {contested.map((q) => (
-          <Link
-            key={q.id}
-            to={`/q/${q.slug}`}
-            className="group bg-panel p-6 transition-colors hover:bg-raised"
-          >
-            <p className="text-title-3-medium leading-snug text-text-primary">{q.question}</p>
-            <p className="mt-2 text-caption-1-regular text-text-tertiary">
-              {q.indicator_count} indicators
-            </p>
-            <p className="mt-4 flex items-center gap-2 text-caption-1-medium" style={{ color: accent.hex }}>
-              Read the disagreement
-              <span className="transition-transform group-hover:translate-x-0.5">→</span>
-            </p>
-          </Link>
-        ))}
-      </div>
+      {/* This module used to render a card per contested question, linking to
+          exactly the same places as the questions section further down the
+          page. On this lens all three are contested, so a reader met the same
+          three questions twice, in two different card styles, and reasonably
+          could not tell what the difference was meant to be.
+
+          The module now states the fork and stops. The questions section below
+          is the one place you enter a question. */}
+      <p className="prose-measure mt-8 text-headline-regular leading-relaxed text-text-secondary">
+        Every question below carries which side its own data falls on, and what would have to be
+        true for the other side to be right.
+      </p>
     </Band>
   );
 }
