@@ -142,8 +142,8 @@
 
     "8":  {
       "check": ["Anthropic PBC", "2026-04-20"],
-      "reject": "source domain needs a decision",
-      "why": "The $100bn ten-year AWS commitment rests solely on tech-insider.org, an aggregator this site has not decided it may cite. The claim is probably true — CNBC's row 7 report describes the same deal — but a $100bn figure may not enter on an unvetted domain. Recoverable by finding the Amazon or Anthropic release."
+      "is_primary": false,
+      "why": "Held back in the first pass because its only source is tech-insider.org. Joshua ruled on 2026-08-30 that this project may cite aggregators of this kind. The URL was re-probed and returns 200 with no redirect, so the domain question and the dead-link question both clear. The citation records publisher_class = 'aggregator' and is_checked = FALSE so a $100bn figure cannot render as though it came from a filing."
     },
 
     "9":  { "check": ["Alphabet Google", "2023-10-27"], "is_primary": false },
@@ -168,8 +168,8 @@
 
     "19": {
       "check": ["Blue Owl/Chirisa/PowerHouse JV", "2024-12-12"],
-      "reject": "stated direction contradicts the row's own description",
-      "why": "The row puts $600m on a JV-to-CoreWeave edge, but its own loop_description says the $600m is a Societe Generale-led construction loan TO the JV. Neither party named on the row paid the other $600m. Loading it would fabricate a transfer. The payer (the SocGen syndicate) is on neither side, so this cannot be fixed from the row alone."
+      "reject": "the row conflates two separate transactions",
+      "why": "RECOVERY ATTEMPTED 2026-08-30, FAILED. The Bloomberg source's own headline is 'Blue Owl-Led Group Lands $600 Million Loan for CoreWeave Data Center' — the JV RECEIVED the loan; it did not pay CoreWeave $600m. The row is really two transactions welded into one edge: a Societe Generale-led construction loan TO the JV, and a lease FROM the JV to CoreWeave. Either can be modelled; neither can be modelled without silently dropping the other, and the $600m belongs only to the first. Sponsor-to-vehicle does not rescue it: Blue Owl did not lend the $600m either. Recoverable only by splitting the row in two, which is an editorial decision about the source table rather than a repair of it. Bloomberg's body is paywalled, so the lease terms are unavailable."
     },
 
     "20": {
@@ -199,8 +199,8 @@
 
     "22": {
       "check": ["IREN Limited", "2026-06-01"],
-      "reject": "stated direction contradicts the row's own description",
-      "why": "The row's b_to_a puts $3.65bn flowing from Microsoft to IREN. Part 2 of the report says the $3.65bn is a US private placement plus a delayed-draw term loan; Microsoft is the offtaker whose contract secures it, not the payer. Loading this would state that Microsoft paid IREN $3.65bn, which nobody claims. Highest-value row to recover — the GlobeNewswire release is live."
+      "reject": "the paying side names nobody",
+      "why": "RECOVERY ATTEMPTED 2026-08-30, FAILED. The GlobeNewswire release was fetched and read. It settles that Microsoft is NOT the payer — 'Anchored by Microsoft's offtake' — but does not supply one: the money is '$2.10bn U.S. private placement' plus a '$1.55bn delayed draw term loan', and the release describes the lenders only as 'a broad group of global financial institutions, asset managers and insurance investors'. Goldman Sachs and J.P. Morgan are named, but as 'joint lead managers and arrangers', which is who structured it rather than who paid. So consortium rule (c) applies exactly as it does to row 21's 'term-loan investors': the paying side names nobody, and events.from_entity_id is NOT NULL. Recoverable the moment a source names a lender."
     },
 
     "23": { "check": ["Blue Owl funds", "2026-08-28"], "is_primary": true, "location_iso3": "CAN" },
@@ -230,13 +230,14 @@
     },
     "29": {
       "check": ["HUMAIN (PIF-owned)", "2026-02-18"],
-      "reject": "source domain needs a decision",
-      "why": "Sole source is fwdstart.me, a newsletter this site has not decided it may cite, for a $3bn sovereign investment in xAI. Needs a filing or tier-1 report."
+      "is_primary": false,
+      "why": "Held back in the first pass because its only source is fwdstart.me. Loaded under Joshua's 2026-08-30 ruling; URL re-probed and returns 200 with no redirect. publisher_class = 'newsletter'."
     },
     "30": {
       "check": ["HUMAIN", "2026-01-15"],
-      "reject": "source domain needs a decision",
-      "why": "Same fwdstart.me link as row 29, and the row is flagged 'alleged' by the researcher. Also needs 'credit_facility', not yet in the enum."
+      "is_primary": false,
+      "location_iso3": "SAU",
+      "why": "Same fwdstart.me link as row 29, loaded under the same ruling. The researcher flags it 'alleged' rather than a confirmed loop, and that flag is carried through to loop_status unchanged. Migration 0021 adds the 'credit_facility' event_kind this row needs: 'up to $1.2bn' is a ceiling the borrower may not fully draw, not a loan that was made."
     },
 
     "31": { "check": ["NAVER", "2026-07-25"], "is_primary": false, "location_iso3": "KOR" },

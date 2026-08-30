@@ -8,8 +8,11 @@ export default function NewsPage() {
 
   usePageTitle('News', 'Reporting that bears on the measurements');
 
+  // Full container width. At max-w-3xl the six-column bento never got the room
+  // to become one, so every card rendered at the same size and the layout was a
+  // uniform grid wearing a bento's CSS.
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       {isPending && <LoadingBlock rows={6} />}
       {isError && <ErrorBlock error={error} what="the news feed" />}
       {documents && (

@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { RiExternalLinkLine } from '@remixicon/react';
+import { useCollapse, SeeMore } from '@/components/Collapsible';
 
 /**
  * What other people have found.
@@ -37,10 +39,25 @@ const STANCE = {
   contradicts: { label: 'Disagrees', tone: 'text-neg' },
 };
 
-export default function Reading({ items, scopeNote, accent }) {
+export default function Reading({ items, scopeNote, accent, initial = 4 }) {
+  const headRef = useRef(null);
+  const { visible, hiddenCount, expanded, firstNewIndex, expand, collapse } = useCollapse(
+    items ?? [],
+    { initial, step: 4 }
+  );
+
   if (!items?.length) return null;
 
-  const anyUnreviewed = items.some((i) => i.takeaway_source === 'extracted');
+  /*
+   * Computed over what is ON SCREEN, not over the whole list.
+   *
+   * This note disclaims the cards below it. Computing it over `items` meant a
+   * collapsed list could carry a paragraph about "takeaways marked as not yet
+   * checked" while every marked one was hidden — which makes the site look
+   * like it disclaims reflexively rather than specifically. Expand, an
+   * extracted takeaway appears, and the note appears with it.
+   */
+  const anyUnreviewed = visible.some((i) => i.takeaway_source === 'extracted');
 
   return (
     <section className="mt-14">
@@ -56,16 +73,20 @@ export default function Reading({ items, scopeNote, accent }) {
         differ, and that is the part worth seeing.
       </p>
 
-      <ul className="mt-6 flex flex-col gap-2">
-        {items.map((item) => {
+      <ul className="stagger mt-6 flex flex-col gap-2" ref={headRef}>
+        {visible.map((item, index) => {
           const stance = STANCE[item.stance];
           return (
-            <li key={item.id}>
+            <li
+              key={item.id}
+              className="rise-sm"
+              style={{ '--i': Math.max(0, index - firstNewIndex) }}
+            >
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-start gap-3 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:border-accent-300 hover:bg-background-secondary-hover"
+                className="lift group flex items-start gap-3 rounded-2lg border border-border-button-default bg-background-primary-default p-4 hover:border-accent-300 hover:bg-background-secondary-hover"
               >
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
@@ -129,6 +150,15 @@ export default function Reading({ items, scopeNote, accent }) {
           );
         })}
       </ul>
+
+      <SeeMore
+        hiddenCount={hiddenCount}
+        expanded={expanded}
+        onExpand={expand}
+        onCollapse={collapse}
+        onCollapseScrollTo={headRef}
+        label="more sources"
+      />
 
       {anyUnreviewed && (
         <p className="prose-measure mt-3 text-caption-1-regular text-text-tertiary">
