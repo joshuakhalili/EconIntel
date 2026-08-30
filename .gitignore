@@ -31,3 +31,5 @@ secrets.json
 landing/.mirror-cache/
 landing/docs/verify-shots/
 landing/.content-applied
+.vercel
+.env*
