@@ -102,7 +102,7 @@ export default function DataPage() {
             <li key={indicator.id}>
               <Link
                 to={`/data/${encodeURIComponent(indicator.id)}`}
-                className="group flex items-start gap-4 rounded-2lg border border-border-button-default bg-background-primary-default p-4 transition-colors hover:border-accent-300 hover:bg-background-secondary-hover"
+                className="group flex items-start gap-4 rounded-2lg border border-border-button-default bg-background-primary-default p-4 tint hover:border-accent-300 hover:bg-background-secondary-hover"
               >
                 <span className="min-w-0 flex-1">
                   <span className="block text-body-medium text-text-primary">{indicator.name}</span>

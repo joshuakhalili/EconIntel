@@ -9,6 +9,7 @@ import Reading from '@/components/Reading';
 import LensSignature from '@/components/lens/LensSignature';
 import FigureChart from '@/components/charts/FigureChart';
 import QuestionCard from '@/components/QuestionCard';
+import PriceMarquee from '@/components/PriceMarquee';
 import { LENS_ACCENT } from '@/lib/lensAccent';
 
 /**
@@ -82,6 +83,12 @@ export default function LensPage() {
           )}
         </div>
       </header>
+
+      {/* Prices & Markets only. This is chrome rather than argument — the
+          signature switch in LensSignature is about the middle of the page —
+          and it is the one lens where a live scrolling band of prices is the
+          subject rather than decoration. */}
+      {lens.id === 'prices' && <PriceMarquee tickers={tickers} />}
 
       {thesis && (
         <p className="prose-measure mt-10 text-headline-regular leading-relaxed text-text-secondary">
@@ -182,7 +189,7 @@ export default function LensPage() {
         {prev ? (
           <Link
             to={`/lens/${prev.slug}`}
-            className="group flex flex-col rounded-2xl border border-border-button-default bg-panel p-5 transition-colors hover:bg-raised"
+            className="group flex flex-col rounded-2xl border border-border-button-default bg-panel p-5 tint hover:bg-raised"
           >
             <span className="flex items-center gap-1.5 text-caption-1-regular text-text-tertiary">
               <RiArrowLeftLine
@@ -199,7 +206,7 @@ export default function LensPage() {
         {next && (
           <Link
             to={`/lens/${next.slug}`}
-            className="group flex flex-col items-end rounded-2xl border border-border-button-default bg-panel p-5 text-right transition-colors hover:bg-raised sm:col-start-2"
+            className="group flex flex-col items-end rounded-2xl border border-border-button-default bg-panel p-5 text-right tint hover:bg-raised sm:col-start-2"
           >
             <span className="flex items-center gap-1.5 text-caption-1-regular text-text-tertiary">
               Next

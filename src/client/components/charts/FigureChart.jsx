@@ -154,7 +154,7 @@ export default function FigureChart({ figure }) {
             href={figure.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-text-secondary underline decoration-border-button-default underline-offset-2 transition-colors hover:text-text-primary"
+            className="inline-flex items-center gap-1 text-text-secondary underline decoration-border-button-default underline-offset-2 tint hover:text-text-primary"
           >
             {figure.source_title}
             <RiExternalLinkLine className="size-3.5" aria-hidden />

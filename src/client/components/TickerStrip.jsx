@@ -105,7 +105,7 @@ export default function TickerStrip({ tickers }) {
               type="button"
               onClick={() => nudge(dir)}
               aria-label={`Scroll prices ${side}`}
-              className={`absolute top-1/2 z-20 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-border-button-default bg-background-primary-default text-text-secondary shadow-sm transition-colors hover:bg-background-secondary-hover ${
+              className={`absolute top-1/2 z-20 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-border-button-default bg-background-primary-default text-text-secondary shadow-sm tint hover:bg-background-secondary-hover ${
                 side === 'left' ? 'left-1' : 'right-1'
               }`}
             >
@@ -140,7 +140,7 @@ export default function TickerStrip({ tickers }) {
                 type="button"
                 onClick={() => setOpenId(isOpen ? null : ticker.indicator_id)}
                 aria-expanded={isOpen}
-                className={`flex h-full w-44 shrink-0 flex-col items-start gap-0.5 rounded-2lg border px-3 py-2 text-left transition-colors ${
+                className={`flex h-full w-44 shrink-0 flex-col items-start gap-0.5 rounded-2lg border px-3 py-2 text-left tint ${
                   isOpen
                     ? 'border-accent-500 bg-background-secondary-default'
                     : 'border-border-button-default bg-background-primary-default hover:bg-background-secondary-hover'

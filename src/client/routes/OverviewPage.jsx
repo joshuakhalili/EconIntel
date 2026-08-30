@@ -169,7 +169,7 @@ function LensRow({ lens, step }) {
   return (
     <Link
       to={`/lens/${lens.slug}`}
-      className="group flex gap-4 rounded-2xl border border-border-button-default bg-background-primary-default p-4 transition-colors hover:bg-background-secondary-hover"
+      className="group flex gap-4 rounded-2xl border border-border-button-default bg-background-primary-default p-4 tint hover:bg-background-secondary-hover"
     >
       <span
         className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-background-secondary-default text-caption-1-medium tabular-nums text-text-tertiary"

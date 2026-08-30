@@ -159,7 +159,7 @@ export default function TopNav() {
               {me?.reader ? (
                 <Link
                   to="/overview"
-                  className="hidden items-center gap-2 rounded-full border border-border-button-default px-3 py-1.5 text-caption-1-medium text-text-secondary transition-colors hover:text-text-primary sm:flex"
+                  className="hidden items-center gap-2 rounded-full border border-border-button-default px-3 py-1.5 text-caption-1-medium text-text-secondary tint hover:text-text-primary sm:flex"
                 >
                   {me.reader.avatar_url && (
                     <img
@@ -196,7 +196,7 @@ export default function TopNav() {
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={menuOpen}
-                className="grid size-9 place-items-center rounded-full text-text-secondary transition-colors hover:bg-white/10 md:hidden"
+                className="grid size-9 place-items-center rounded-full text-text-secondary tint hover:bg-white/10 md:hidden"
               >
                 {menuOpen ? (
                   <RiCloseLine className="size-5" aria-hidden />

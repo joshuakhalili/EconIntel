@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { fmt, displayUnit } from '@/lib/format';
+import { useReveal, revealClass } from '@/hooks/useReveal';
 
 /**
  * The instrument each lens gets instead of a shared template.
@@ -44,8 +45,13 @@ function delta(row) {
 }
 
 function Band({ children, accent, eyebrow, title, note }) {
+  const [ref, revealed] = useReveal();
+
   return (
-    <section className="relative mt-14 overflow-hidden rounded-3xl border border-border-button-default">
+    <section
+      ref={ref}
+      className={`relative mt-14 overflow-hidden rounded-3xl border border-border-button-default ${revealClass(revealed)}`}
+    >
       <div
         className="absolute inset-0 opacity-[0.18]"
         style={{ background: `radial-gradient(90% 70% at 12% 0%, ${accent.glow}, transparent 70%)` }}
@@ -71,8 +77,19 @@ function Band({ children, accent, eyebrow, title, note }) {
    price while the services built on them rose. Two figures opposed is a better
    statement of that than seven cards in a row. */
 function Divergence({ rows, accent }) {
-  const chips = rows.find((r) => /semiconductor/i.test(r.name));
-  const hosting = rows.find((r) => /data processing|hosting/i.test(r.name));
+  /*
+   * Selected by indicator id, not by matching the indicator's NAME.
+   *
+   * This used to be `/semiconductor/i` and `/data processing|hosting/i` over
+   * `row.name`. A rename upstream — or the sort of label tidying
+   * `017_unit_hygiene.sql` did — would return undefined, this module would
+   * return null, and the Prices lens would silently lose its entire signature
+   * band with no error anywhere. That is the same silent-blanking this project
+   * keeps rediscovering, and an id cannot drift.
+   */
+  const byId = new Map(rows.map((r) => [r.indicator_id, r]));
+  const chips = byId.get('fred.PCU334413334413');
+  const hosting = byId.get('fred.PCU518210518210');
   if (!chips || !hosting) return null;
 
   return (
@@ -159,8 +176,18 @@ function MaterialsBoard({ rows, accent }) {
    is literally what the data is. Ranked bars read that spread faster than a
    line chart with sixteen series on it. */
 function AdoptionSpread({ rows, accent }) {
+  /*
+   * Filtered on `quantity_kind`, not on a regex over the unit STRING.
+   *
+   * This used to test `/percent|%|enterprise|share/i` against `row.unit`. Unit
+   * strings are editorial text that gets rewritten — `017_unit_hygiene.sql`
+   * exists precisely because they were inconsistent — so a tidy-up could drop
+   * every series out of this filter and blank the Growth lens's signature band
+   * with nothing reporting it. `quantity_kind` is a typed column with a fixed
+   * vocabulary and is the thing actually being asked about: is this a rate.
+   */
   const board = rows
-    .filter((r) => Number.isFinite(r.latest_value) && /percent|%|enterprise|share/i.test(r.unit ?? ''))
+    .filter((r) => Number.isFinite(r.latest_value) && r.quantity_kind === 'rate')
     .sort((a, b) => b.latest_value - a.latest_value);
   if (board.length === 0) return null;
 

@@ -11,6 +11,7 @@ import StrengthBadge, { STRENGTH } from '@/components/StrengthBadge';
 import Reading from '@/components/Reading';
 import { groupIndicators } from '@/lib/groupIndicators';
 import { LENS_ACCENT } from '@/lib/lensAccent';
+import { useReveal, revealClass } from '@/hooks/useReveal';
 
 /**
  * One question, argued.
@@ -284,8 +285,13 @@ function Prose({ accent, title, body }) {
  * surface so a chart is never drawn on a gradient.
  */
 function Band({ accent, eyebrow, title, note, children }) {
+  const [ref, revealed] = useReveal();
+
   return (
-    <section className="relative -mx-4 mt-14 overflow-hidden rounded-3xl border border-border-button-default bg-panel/50 px-4 py-10 sm:-mx-6 sm:px-8 sm:py-12">
+    <section
+      ref={ref}
+      className={`relative -mx-4 mt-14 overflow-hidden rounded-3xl border border-border-button-default bg-panel/50 px-4 py-10 sm:-mx-6 sm:px-8 sm:py-12 ${revealClass(revealed)}`}
+    >
       <p className="eyebrow" style={{ color: accent.hex }}>
         {eyebrow}
       </p>
@@ -316,7 +322,7 @@ function QuestionNav({ prev, next, lens }) {
       {prev ? (
         <Link
           to={`/q/${prev.slug}`}
-          className="group flex flex-col rounded-2xl border border-border-button-default bg-panel p-5 transition-colors hover:bg-raised"
+          className="group flex flex-col rounded-2xl border border-border-button-default bg-panel p-5 tint hover:bg-raised"
         >
           <span className="flex items-center gap-1.5 text-caption-1-regular text-text-tertiary">
             <RiArrowLeftLine
@@ -333,7 +339,7 @@ function QuestionNav({ prev, next, lens }) {
       {next && (
         <Link
           to={`/q/${next.slug}`}
-          className="group flex flex-col items-end rounded-2xl border border-border-button-default bg-panel p-5 text-right transition-colors hover:bg-raised sm:col-start-2"
+          className="group flex flex-col items-end rounded-2xl border border-border-button-default bg-panel p-5 text-right tint hover:bg-raised sm:col-start-2"
         >
           <span className="flex items-center gap-1.5 text-caption-1-regular text-text-tertiary">
             Next

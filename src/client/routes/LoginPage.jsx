@@ -98,7 +98,7 @@ export default function LoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
-                  className="rounded-2xl border border-border-button-default bg-panel px-4 py-3 text-body-regular text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-signal"
+                  className="rounded-2xl border border-border-button-default bg-panel px-4 py-3 text-body-regular text-text-primary outline-none tint placeholder:text-text-tertiary focus:border-signal"
                   placeholder="Jane Okonjo"
                 />
               </label>
@@ -112,7 +112,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   inputMode="email"
-                  className="rounded-2xl border border-border-button-default bg-panel px-4 py-3 text-body-regular text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-signal"
+                  className="rounded-2xl border border-border-button-default bg-panel px-4 py-3 text-body-regular text-text-primary outline-none tint placeholder:text-text-tertiary focus:border-signal"
                   placeholder="jane@university.edu"
                 />
               </label>
@@ -140,7 +140,7 @@ export default function LoginPage() {
                     intercept it. */}
                 <a
                   href="/auth/github"
-                  className="inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-border-button-default px-5 py-3 text-caption-1-medium text-text-primary transition-colors hover:bg-white/5"
+                  className="inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-border-button-default px-5 py-3 text-caption-1-medium text-text-primary tint hover:bg-white/5"
                 >
                   <RiGithubFill className="size-5" aria-hidden />
                   Continue with GitHub
