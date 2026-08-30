@@ -93,15 +93,55 @@ Markets → Prices & Markets → Policy & Regulation**. They replaced an earlier
 mixed set (Money / Work / Infrastructure / Policy / Adoption) that mixed inputs,
 outputs and mechanisms at the same level — see `CONCEPT-GRILL-LOG.md`.
 
-**The rule that will govern the LLM layer, once it exists:** an LLM must never be
-asked to invent a number or a citation — only handed SQL-computed values and
-stored claims and asked to connect them in a sentence. **This is schema, not
-enforcement.** The `narrations` table (`input_hash`, `grounding`, `prompt_version`
-— see `0006_analysis.sql`) exists to key and cache that rule once something calls
-an LLM, but as of this writing nothing in `src/` constructs a prompt, calls
-Cloudflare Workers AI, or validates model output against it. There is no LLM call
-site yet, so there is currently nothing for this rule to protect. Do not describe
-it as active until a call site exists and this note is updated.
+## The LLM layer exists, and the rule is now enforced in code
+
+**Built 2026-08-30.** This section replaces a note that had stood since the
+project began saying the rule below was schema with nothing behind it.
+
+The rule: an LLM is never asked to invent a number or a citation — it is handed
+SQL-computed values and stored claims and asked to connect them in a sentence.
+
+**`src/server/lib/narration.js` is the enforcement, and it works on the OUTPUT,
+not the prompt.** A prompt that says "do not invent numbers" is a request, and
+models honour it most of the time — which is the worst possible reliability
+profile for a site whose whole claim is that its figures are real, because the
+failure is rare, silent and looks like success. So `validate()` decides:
+
+- **Every numeric token in the output must appear in the grounding.** Not
+  rounded from it, not derived from it — in it. A value written to fewer
+  decimals is accepted; a computed difference or percentage is not.
+- **No URL, DOI, quotation, or phrase like "according to".** A citation is the
+  one thing this model may never produce.
+- **Every direction claim is checked against the data.** Added after the first
+  working run wrote *"US graduate unemployment decreased slightly from 3.7% to
+  3.8%"* — both figures real, both in the grounding, the sentence reading its
+  own data backwards.
+
+**It fails closed.** When nothing passes, no row is written and the page
+renders without a paragraph. A missing summary costs a reader nothing; a
+fabricated figure costs this project the only thing it has.
+
+**Measured, not asserted** (`@cf/meta/llama-3.1-8b-instruct`): six generations
+from the real prompt — 6 accepted. Four from a deliberately adversarial prompt
+asking for percentage changes, historical context and source names — 4
+rejected, catching `-3.7%` (arithmetic on two supplied levels), `2021`/`2022`/
+`2023` (invented history) and three figures with no origin. 37 unit tests.
+
+**Nothing in the web tier calls a model.** `scripts/generate-narrations.js`
+writes them ahead of time; `getLens()` only ever SELECTs the cached row. So a
+reader never waits on Workers AI and no request can exceed a function ceiling
+because a model was slow.
+
+**It renders labelled.** `NarrationBlock` sits below the ticker strip under the
+heading "Written by a machine from the figures below", with the exact grounding
+one click away. The guarantee is narrow and the component says so: the
+arithmetic is checked, the sentence is not.
+
+Known cosmetic inconsistency, not yet fixed: the ticker renders 28.99 as `29`
+because `lib/format.js`'s `fmt()` applies its own rounding rule and ignores
+`indicators.decimals`, while the narration uses the stored precision. Same
+number, two appearances. Fixing it changes how every figure on the site
+renders, so it is an editorial decision rather than a bug fix.
 
 ## The site is now two halves, served as one
 

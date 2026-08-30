@@ -8,6 +8,7 @@ import NewsList from '@/components/NewsList';
 import Reading from '@/components/Reading';
 import LensSignature from '@/components/lens/LensSignature';
 import CircularFinancing from '@/components/lens/CircularFinancing';
+import NarrationBlock from '@/components/NarrationBlock';
 import FigureChart from '@/components/charts/FigureChart';
 import QuestionCard from '@/components/QuestionCard';
 import PriceMarquee from '@/components/PriceMarquee';
@@ -120,6 +121,12 @@ export default function LensPage() {
           <div className="mt-5">
             <TickerStrip tickers={tickers} />
           </div>
+
+          {/* Below the strip, not above it. The narration describes these
+              exact figures, so a reader meets the numbers first and the
+              machine's summary of them second — which is the right order for
+              the one paragraph here nobody wrote. */}
+          <NarrationBlock narration={lens.narration} />
         </section>
       )}
 

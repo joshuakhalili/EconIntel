@@ -9,6 +9,9 @@
 
 import { query } from '../db/pool.js';
 import { figuresForLens } from './figures.js';
+/* Only the version constant. Importing the module does NOT bring a model call
+   into the web tier — `narrate()` lives there too but nothing here calls it. */
+import { PROMPT_VERSION } from '../lib/narration.js';
 
 /** All active lenses, for navigation. */
 export async function listLenses() {
@@ -149,7 +152,37 @@ export async function getLens(slug) {
      about either question under it. */
   const figures = await figuresForLens(lenses[0].id);
 
-  return { ...lenses[0], questions, reading, figures };
+  /*
+   * The narration, READ FROM CACHE ONLY.
+   *
+   * This never calls a model. `scripts/generate-narrations.js` writes these
+   * ahead of time and the web tier only ever selects the row — so a reader
+   * never waits ~400 ms on Workers AI, a rejected narration is simply an
+   * absent row rather than a branch every caller has to remember, and nothing
+   * in the request path can exceed a serverless function's ceiling because a
+   * model was slow.
+   *
+   * Absent is a normal state, not an error. `narrate()` fails closed: when
+   * nothing it generated passed the grounding gate, no row exists and the
+   * lens page renders without a summary. See lib/narration.js.
+   */
+  const { rows: narrations } = await query(
+    `SELECT body, grounding, indicator_ids, model, generated_at
+       FROM narrations
+      WHERE scope = $1 AND prompt_version = $2
+        AND (expires_at IS NULL OR expires_at > now())
+      ORDER BY generated_at DESC
+      LIMIT 1`,
+    [`lens:${lenses[0].slug}`, PROMPT_VERSION]
+  );
+
+  return {
+    ...lenses[0],
+    questions,
+    reading,
+    figures,
+    narration: narrations[0] ?? null,
+  };
 }
 
 /**
