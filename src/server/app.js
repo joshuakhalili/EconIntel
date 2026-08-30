@@ -246,8 +246,15 @@ app.get('/api/indicators', route(async (req, res) => {
             i.has_country_dim, i.has_industry_dim, i.default_country_iso3,
             i.index_base_period::text, i.last_ingested_at,
             count(o.*)::int              AS observation_count,
-            max(o.period_start)::text    AS latest_period,
-            min(o.period_start)::text    AS earliest_period
+            /* Latest period with an ACTUAL VALUE.
+               Several upstreams publish empty future periods as placeholders —
+               the RBA's quarterly tables carry rows out to 2027-03-31 with a
+               null value. A bare max() over period_start counts those, so the
+               catalogue claimed coverage to 2027 for a series whose last
+               measurement is 2026 Q1. Nothing is drawn from a null, so the
+               charts were right and the coverage claim was wrong. */
+            max(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period,
+            min(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS earliest_period
        FROM indicators i
        LEFT JOIN observations o ON o.indicator_id = i.id
       WHERE i.is_active
@@ -626,8 +633,9 @@ app.get('/api/indicators/:id', route(async (req, res) => {
        LEFT JOIN sources s ON s.id = i.source_id
        LEFT JOIN LATERAL (
          SELECT count(*)::int           AS n,
-                min(period_start)::text AS first_period,
-                max(period_start)::text AS last_period
+                -- Non-null only; see the note on latest_period above.
+                min(period_start) FILTER (WHERE value IS NOT NULL)::text AS first_period,
+                max(period_start) FILTER (WHERE value IS NOT NULL)::text AS last_period
            FROM observations WHERE indicator_id = i.id
        ) o ON true
        LEFT JOIN question_indicators qi ON qi.indicator_id = i.id
@@ -678,7 +686,7 @@ app.get('/api/documents', route(async (req, res) => {
  * staleness is the normal way a project like this rots.
  */
 app.get('/api/status', route(async (_req, res) => {
-  const [counts, runs, stale] = await Promise.all([
+  const [counts, runs, stale, sources] = await Promise.all([
     query(`SELECT
              (SELECT count(*)::int FROM observations) AS observations,
              (SELECT count(*)::int FROM documents)    AS documents,
@@ -696,12 +704,56 @@ app.get('/api/status', route(async (_req, res) => {
                    OR last_ingested_at < now() - INTERVAL '7 days')
             ORDER BY last_ingested_at NULLS FIRST
             LIMIT 20`),
+    /*
+     * WHO ACTUALLY PROVIDES THE DATA.
+     *
+     * The page this feeds is called "where this comes from", and until now it
+     * could not answer that. It listed which integrations were configured —
+     * a fact about the .env file — while the honest answer is that two
+     * sources carry 79% of every observation on the site and the other six
+     * carry the rest. That imbalance is the most important thing a reader
+     * assessing this project should know, and it was the one thing the
+     * provenance page did not say.
+     *
+     * Licence and attribution come along because they are a condition of use
+     * for several of these and were previously visible only on an individual
+     * series page, one at a time.
+     */
+    query(`SELECT s.id, s.name, s.homepage_url, s.licence, s.attribution_text,
+                  s.credibility,
+                  COALESCE(m.observations, 0)  AS observations,
+                  COALESCE(m.indicators, 0)    AS indicators,
+                  m.latest_period,
+                  COALESCE(d.documents, 0)     AS documents
+             FROM sources s
+             /* Two LATERALs rather than two LEFT JOINs into one GROUP BY.
+                Joining indicators AND documents to the same row multiplies
+                them together — 38 indicators × 25 articles counted as 950 of
+                each — and the totals silently stop summing to the real
+                figure. Aggregating each side independently is the fix. */
+             LEFT JOIN LATERAL (
+               SELECT count(o.*)::int          AS observations,
+                      count(DISTINCT i.id)::int AS indicators,
+                      max(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period
+                 FROM indicators i
+                 LEFT JOIN observations o ON o.indicator_id = i.id
+                WHERE i.source_id = s.id AND i.is_active
+             ) m ON true
+             LEFT JOIN LATERAL (
+               SELECT count(*)::int AS documents
+                 FROM documents WHERE source_id = s.id
+             ) d ON true
+            WHERE COALESCE(m.observations, 0) > 0
+               OR COALESCE(d.documents, 0) > 0
+            ORDER BY COALESCE(m.observations, 0) DESC,
+                     COALESCE(d.documents, 0) DESC, s.name`),
   ]);
 
   res.json({
     counts: counts.rows[0],
     recentRuns: runs.rows,
     staleIndicators: stale.rows,
+    sources: sources.rows,
     integrations: describeIntegrations(),
   });
 }));

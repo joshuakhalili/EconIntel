@@ -4,6 +4,7 @@ import { RiSearchLine, RiArrowRightLine } from '@remixicon/react';
 import { useIndicators } from '@/hooks/queries';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock, EmptyBlock } from '@/components/Page';
+import PageHero from '@/components/PageHero';
 import { fmt, displayUnit } from '@/lib/format';
 
 /**
@@ -61,19 +62,31 @@ export default function DataPage() {
   if (isPending) return <LoadingBlock rows={4} />;
   if (isError) return <ErrorBlock error={error} what="the catalogue" />;
 
+  const total = indicators?.length ?? 0;
+  const populated = (indicators ?? []).filter((i) => (i.observation_count ?? 0) > 0).length;
+
   return (
     <div className="mx-auto max-w-5xl">
-      <header>
-        <h1 className="text-display-4-medium text-text-primary">The data</h1>
-        <p className="prose-measure mt-2 text-headline-regular text-text-tertiary">
-          Every series behind this dashboard, with where it came from and on what terms it can be
-          reused. {fmt(indicators?.length ?? 0, 0)} indicators.
-        </p>
-      </header>
+      <PageHero
+        eyebrow="Catalogue"
+        title="The data"
+        figures={[
+          ['Series', total],
+          ['With observations', populated],
+          ['Sources', sources.length],
+        ]}
+      >
+        Every series behind this site, with where it came from and on what terms
+        it can be reused. Nothing here is filtered by argument — this is the
+        whole catalogue, including the series that turned out to show nothing.
+      </PageHero>
 
-      <div className="mt-6 flex flex-col gap-3">
-        <label className="flex items-center gap-2 rounded-2lg border border-border-button-default bg-background-primary-default px-3 py-2">
-          <RiSearchLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+      {/* The controls sit in the page rather than in a panel. A filter bar
+          boxed in its own surface is a dashboard convention; here it is one
+          line of chrome between the hero and the list it acts on. */}
+      <div className="mt-10 flex flex-col gap-3">
+        <label className="tint flex items-center gap-2 rounded-2xl border border-border-button-default bg-panel px-4 py-3 focus-within:border-signal">
+          <RiSearchLine className="size-4 shrink-0 text-text-tertiary" aria-hidden />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -82,36 +95,35 @@ export default function DataPage() {
           />
         </label>
 
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <Facet label="Subject" value={pillar} onChange={setPillar} options={pillars} />
           <Facet label="Source" value={source} onChange={setSource} options={sources} />
+          <p className="figure ml-auto text-caption-1-regular text-text-tertiary">
+            {rows.length === total
+              ? `all ${total}`
+              : `${rows.length} of ${total}`}
+          </p>
         </div>
       </div>
-
-      <p className="mt-4 text-body-regular text-text-tertiary">
-        {rows.length === (indicators?.length ?? 0)
-          ? `Showing all ${rows.length}`
-          : `${rows.length} of ${indicators?.length ?? 0}`}
-      </p>
 
       {rows.length === 0 ? (
         <EmptyBlock>Nothing matches those filters.</EmptyBlock>
       ) : (
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="mt-5 flex flex-col gap-2">
           {rows.map((indicator) => (
             <li key={indicator.id}>
               <Link
                 to={`/data/${encodeURIComponent(indicator.id)}`}
-                className="group flex items-start gap-4 rounded-2lg border border-border-button-default bg-background-primary-default p-4 tint hover:border-accent-300 hover:bg-background-secondary-hover"
+                className="lift tint group flex items-start gap-4 rounded-2xl border border-border-button-default bg-panel p-5 hover:border-signal"
               >
                 <span className="min-w-0 flex-1">
                   <span className="block text-body-medium text-text-primary">{indicator.name}</span>
                   {indicator.description && (
-                    <span className="mt-0.5 line-clamp-2 block text-body-regular text-text-tertiary">
+                    <span className="mt-1 line-clamp-2 block text-body-regular text-text-tertiary">
                       {indicator.description}
                     </span>
                   )}
-                  <span className="mt-1.5 block text-caption-1-regular text-text-tertiary">
+                  <span className="mt-2 block text-caption-1-regular text-text-tertiary">
                     <span title={indicator.unit ?? undefined}>{displayUnit(indicator.unit)}</span>
                     {' · '}
                     {indicator.cadence}
@@ -121,19 +133,19 @@ export default function DataPage() {
                 </span>
 
                 <span className="flex shrink-0 flex-col items-end text-right">
-                  <span className="text-body-medium tabular-nums text-text-primary">
+                  <span className="figure text-body-medium text-text-primary">
                     {fmt(indicator.observation_count ?? 0, 0)}
                   </span>
                   <span className="text-caption-1-regular text-text-tertiary">observations</span>
                   {indicator.latest_period && (
-                    <span className="mt-0.5 text-caption-1-regular text-text-tertiary">
+                    <span className="figure mt-1 text-caption-1-regular text-text-tertiary">
                       to {indicator.latest_period.slice(0, 7)}
                     </span>
                   )}
                 </span>
 
                 <RiArrowRightLine
-                  className="mt-1 size-4 shrink-0 text-foreground-icon-secondary transition-transform group-hover:translate-x-0.5"
+                  className="mt-1 size-4 shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5"
                   aria-hidden
                 />
               </Link>
@@ -153,7 +165,7 @@ function Facet({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-9 rounded-2lg border border-border-button-default bg-background-primary-default px-2 text-body-regular text-text-primary"
+        className="tint min-h-9 rounded-xl border border-border-button-default bg-panel px-2.5 text-body-regular text-text-primary hover:border-signal"
       >
         <option value="all">All</option>
         {options.map(([option, n]) => (

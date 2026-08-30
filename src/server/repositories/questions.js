@@ -109,7 +109,8 @@ export async function getQuestion(slug) {
        LEFT JOIN LATERAL (
          SELECT count(*)::int          AS n,
                 min(period_start)::text AS first_period,
-                max(period_start)::text AS last_period
+                -- Non-null only: an empty placeholder period is not coverage.
+                max(period_start) FILTER (WHERE value IS NOT NULL)::text AS last_period
            FROM observations
           WHERE indicator_id = i.id
        ) o ON true

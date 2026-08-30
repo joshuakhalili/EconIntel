@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { RiCloseLine, RiSearchLine } from '@remixicon/react';
-import { Chip } from '@/components/base/badges/chip';
 import { useIndicators, useSeries } from '@/hooks/queries';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock, EmptyBlock, Section } from '@/components/Page';
 import ChartCard from '@/components/charts/ChartCard';
+import PageHero from '@/components/PageHero';
 import CountrySelect from '@/components/CountrySelect';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import SeriesChart from '@/components/charts/SeriesChart';
@@ -77,87 +77,102 @@ export default function ExplorePage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Section>
-        <div className="rounded-2xl border border-border-button-default bg-background-primary-default p-4">
-          <label className="flex items-center gap-2 rounded-2lg bg-background-secondary-default px-3 py-2">
-            <RiSearchLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search 110 indicators…"
-              className="min-w-0 flex-1 bg-transparent text-body-regular text-text-primary outline-none placeholder:text-text-tertiary"
-            />
-          </label>
+      <PageHero eyebrow="Workbench" title="Build a chart">
+        Put any indicators on one pair of axes. Where the units differ they are
+        rebased to 100 at a shared period and the chart says so — there is no
+        second y-axis here, because a second scale lets any two lines be made to
+        cross wherever the author chooses.
+      </PageHero>
 
-          {chosen.length > 0 && (
-            <ul className="mt-3 flex flex-col gap-2">
-              {chosenMeta.map((indicator) => (
-                <li key={indicator.id} className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggle(indicator.id)}
-                    className="rounded-md"
-                    aria-label={`Remove ${indicator.name}`}
-                  >
-                    <Chip color="blue" className="gap-1">
-                      {indicator.name}
-                      <RiCloseLine className="size-3.5" aria-hidden />
-                    </Chip>
-                  </button>
-                  <CountrySelect
-                    indicator={indicator}
-                    value={countries[indicator.id]}
-                    onChange={(iso3) =>
-                      setCountries((current) => ({ ...current, [indicator.id]: iso3 }))
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="mt-10 rounded-3xl border border-border-button-default bg-panel p-5 sm:p-6">
+        <label className="tint flex items-center gap-2 rounded-2xl bg-raised px-4 py-3 focus-within:ring-1 focus-within:ring-signal">
+          <RiSearchLine className="size-4 shrink-0 text-text-tertiary" aria-hidden />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            /* Counted, not hardcoded. This said "Search 110 indicators…" while
+               the catalogue held 128 with data — a number frozen at whatever
+               it was the day the placeholder was typed. */
+            placeholder={`Search ${indicators?.length ?? 0} indicators…`}
+            className="min-w-0 flex-1 bg-transparent text-body-regular text-text-primary outline-none placeholder:text-text-tertiary"
+          />
+        </label>
 
-          <ul className="mt-3 max-h-64 overflow-y-auto">
-            {matches.map((indicator) => {
-              const isChosen = chosen.includes(indicator.id);
-              return (
-                <li key={indicator.id}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(indicator.id)}
-                    aria-pressed={isChosen}
-                    className="flex w-full min-h-11 items-center justify-between gap-3 rounded-2lg px-2 py-1.5 text-left hover:bg-background-secondary-hover"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-body-regular text-text-primary">
-                        {indicator.name}
-                      </span>
-                      <span
-                        className="block truncate text-caption-1-regular text-text-tertiary"
-                        title={indicator.unit ?? undefined}
-                      >
-                        {displayUnit(indicator.unit)} · {indicator.cadence} ·{' '}
-                        {indicator.confidence_tier}
-                      </span>
-                    </span>
-                    {isChosen && <Chip variant="caption" color="lime">Added</Chip>}
-                  </button>
-                </li>
-              );
-            })}
-            {matches.length === 0 && (
-              <li className="px-2 py-3 text-body-regular text-text-tertiary">
-                Nothing matches “{search}”.
+        {chosen.length > 0 && (
+          <ul className="mt-4 flex flex-col gap-2">
+            {chosenMeta.map((indicator) => (
+              <li key={indicator.id} className="flex flex-wrap items-center gap-2">
+                {/* The fill, with white on it — the site's one interactive
+                    colour. Not a BoardUI chip: those carry their own palette,
+                    and `color="blue"` there is a different blue from this
+                    site's. */}
+                <button
+                  type="button"
+                  onClick={() => toggle(indicator.id)}
+                  aria-label={`Remove ${indicator.name}`}
+                  className="tint inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-caption-1-medium text-on-fill"
+                  style={{ background: 'var(--color-electric)' }}
+                >
+                  {indicator.name}
+                  <RiCloseLine className="size-3.5 shrink-0" aria-hidden />
+                </button>
+                <CountrySelect
+                  indicator={indicator}
+                  value={countries[indicator.id]}
+                  onChange={(iso3) =>
+                    setCountries((current) => ({ ...current, [indicator.id]: iso3 }))
+                  }
+                />
               </li>
-            )}
+            ))}
           </ul>
+        )}
 
-          {chosen.length >= MAX_SERIES && (
-            <p className="mt-2 text-caption-1-regular text-text-tertiary">
-              {MAX_SERIES} is the most the series endpoint will return at once.
-            </p>
+        <ul className="mt-4 max-h-72 overflow-y-auto">
+          {matches.map((indicator) => {
+            const isChosen = chosen.includes(indicator.id);
+            return (
+              <li key={indicator.id}>
+                <button
+                  type="button"
+                  onClick={() => toggle(indicator.id)}
+                  aria-pressed={isChosen}
+                  className="tint flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left hover:bg-raised"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-body-regular text-text-primary">
+                      {indicator.name}
+                    </span>
+                    <span
+                      className="block truncate text-caption-1-regular text-text-tertiary"
+                      title={indicator.unit ?? undefined}
+                    >
+                      {displayUnit(indicator.unit)} · {indicator.cadence} ·{' '}
+                      {indicator.confidence_tier}
+                    </span>
+                  </span>
+                  {isChosen && (
+                    <span className="shrink-0 text-caption-1-medium" style={{ color: 'var(--color-signal)' }}>
+                      Added
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+          {matches.length === 0 && (
+            <li className="px-3 py-3 text-body-regular text-text-tertiary">
+              Nothing matches “{search}”.
+            </li>
           )}
-        </div>
-      </Section>
+        </ul>
+
+        {chosen.length >= MAX_SERIES && (
+          <p className="mt-3 text-caption-1-regular text-text-tertiary">
+            {MAX_SERIES} is the most the series endpoint will return at once.
+          </p>
+        )}
+      </div>
 
       <Section>
         {chosen.length === 0 ? (
