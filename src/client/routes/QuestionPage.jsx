@@ -148,9 +148,26 @@ export default function QuestionPage() {
               <h2 className="eyebrow" style={{ color: 'var(--color-warn)' }}>
                 What this does not show
               </h2>
-              <p className="prose-measure mt-3 text-headline-regular leading-relaxed text-text-secondary">
-                {question.caveat}
-              </p>
+              {/* Split on blank lines rather than rendering the column raw.
+                  Caveats are stored as prose and several now run to two or
+                  three paragraphs — the external corroboration added in seed
+                  030 is a second paragraph on seven of them. Rendered as one
+                  text node the newlines collapse and the whole thing arrives
+                  as an unbroken wall, which is the least likely part of the
+                  page to be read at the best of times.
+
+                  `whitespace-pre-line` would also preserve them, but it keeps
+                  single newlines too and leaves no spacing between paragraphs;
+                  real <p> elements get the type ramp's own rhythm. */}
+              <div className="prose-measure mt-3 flex flex-col gap-4 text-headline-regular leading-relaxed text-text-secondary">
+                {question.caveat
+                  .split(/\n{2,}/)
+                  .map((paragraph) => paragraph.trim())
+                  .filter(Boolean)
+                  .map((paragraph) => (
+                    <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+                  ))}
+              </div>
             </div>
           </div>
         </section>
