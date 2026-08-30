@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { RiArrowLeftLine, RiArrowRightLine, RiAlertLine } from '@remixicon/react';
 import { useQuestion } from '@/hooks/queries';
-import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock, EmptyBlock } from '@/components/Page';
@@ -44,7 +43,6 @@ import { LENS_ACCENT } from '@/lib/lensAccent';
 export default function QuestionPage() {
   const { slug } = useParams();
   const { data: question, isPending, isError, error } = useQuestion(slug);
-  const register = useRegister();
   const { open } = useContextDrawer();
 
   usePageTitle(question?.question ?? 'Question', question?.subtitle);
@@ -54,7 +52,7 @@ export default function QuestionPage() {
   if (isPending) return <LoadingBlock rows={4} />;
   if (isError) return <ErrorBlock error={error} what="this question" />;
 
-  const answer = register(question.answer_plain, question.answer_expert);
+  const answer = question.answer_plain;
   const accent = LENS_ACCENT[question.lens_id] ?? LENS_ACCENT.default;
 
   const siblings = question.siblings ?? [];

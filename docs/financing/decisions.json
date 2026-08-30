@@ -1,0 +1,254 @@
+{
+  "_about": [
+    "Every editorial judgement applied to the AI-financing research table lives here,",
+    "written by hand and committed, so that scripts/load-financing-deals.js only applies",
+    "and checks rather than guessing. A row with no entry in `rows` is reported and",
+    "skipped, never loaded on a default.",
+    "",
+    "`check` echoes the row's entity_a and event_date. If the source table is re-generated",
+    "and the rows shift, the echo stops matching and the loader refuses rather than",
+    "applying row 12's judgement to row 13's deal."
+  ],
+
+  "_entity_notes": {
+    "one entity, several names": [
+      "Microsoft/Microsoft Azure, Amazon/AWS, Alphabet Google/Google Cloud, OpenAI Global",
+      "LLC/OpenAI PBC, HUMAIN/HUMAIN (PIF-owned) and Lambda/Lambda Compute II LLC are each",
+      "one company under two labels. Splitting them would draw one company as two",
+      "disconnected nodes, which reads as a fact about the market rather than a data defect."
+    ],
+    "TSMC Arizona is NOT TSMC": [
+      "The CHIPS award went to TSMC Arizona Corporation, a US subsidiary. The source's own",
+      "brief says subsidiary versus parent matters, and a $11.6bn US federal grant attached",
+      "to the Taiwanese parent would misdescribe both the money and the policy."
+    ],
+    "US Department of Commerce is NOT us_government": [
+      "The existing `us_government` entity covers export controls and policy generally.",
+      "The CHIPS grantor is a named agency, and the graph is more useful with the actual",
+      "counterparty than with a country."
+    ]
+  },
+
+  "entities": {
+    "Microsoft": "microsoft",
+    "Microsoft Azure": "microsoft",
+    "OpenAI Global LLC": "openai",
+    "OpenAI PBC": "openai",
+    "Amazon": "amazon",
+    "AWS": "amazon",
+    "Anthropic PBC": "anthropic",
+    "Alphabet Google": "alphabet",
+    "Google Cloud": "alphabet",
+    "Mistral AI": "mistral",
+    "xAI": "xai",
+    "Nvidia": "nvidia",
+    "CoreWeave": "coreweave",
+    "Lambda": "lambda",
+    "Lambda Compute II LLC": "lambda",
+    "IREN Limited": "iren",
+    "Equinix": "equinix",
+    "Aligned Data Centers": "aligned",
+    "NAVER": "naver",
+    "TSMC Arizona": "tsmc_arizona",
+    "U.S. Department of Commerce": "us_commerce",
+    "MGX": "mgx",
+    "HUMAIN": "humain",
+    "HUMAIN (PIF-owned)": "humain",
+    "Saudi National Infrastructure Fund": "saudi_nif",
+    "Blue Owl funds": "blue_owl",
+    "Blue Owl Real Estate": "blue_owl",
+    "Blackstone": "blackstone",
+    "Magnetar Capital": "magnetar",
+    "Brookfield": "brookfield",
+    "Apollo": "apollo",
+    "KKR": "kkr",
+    "Goldman Sachs": "goldman_sachs",
+    "BlackRock": "blackrock",
+    "Macquarie Group": "macquarie",
+    "Industrial Development Funding": "idf",
+    "Chirisa Technology Parks": "chirisa",
+    "PowerHouse Data Centers": "powerhouse_dc",
+    "GIC": "gic",
+    "CPP Investments": "cpp_investments",
+    "Bpifrance": "bpifrance"
+  },
+
+  "_kind_notes": {
+    "minority equity investment -> convertible_note": [
+      "Row 11 only. Part 1 of the report says Microsoft's EUR 15m in Mistral converted",
+      "into equity at the next round, so it was a note at the time of the deal.",
+      "Recording it as 'investment' would overstate what Microsoft owned in Feb 2024."
+    ],
+    "cloud commitments -> offtake": [
+      "A commitment to buy compute over years is an offtake agreement, not a chip order.",
+      "'chip_order' in migration 0007 covers hardware; the largest figures in this dataset",
+      "are cloud capacity purchases, and the $250bn Azure order is not an order for chips."
+    ],
+    "AI factory financing agreement -> investment": [
+      "Rows 31 and 32. Brookfield's up-to-$9bn and Nvidia's $1bn are project equity in a",
+      "data-centre expansion, not lending — the report describes both as funding a build,",
+      "with no facility, rate or security named."
+    ],
+    "absent on purpose": [
+      "No mapping exists for 'joint venture formation', 'AI Infrastructure Partnership (AIP)",
+      "formation', 'joint venture for AI campus', 'compute financing platforms MoU',",
+      "'debt financing facility', 'senior secured term loan B', 'construction loan for",
+      "build-to-suit data center', 'investment-grade GPU financing facility',",
+      "'long-term cloud spend commitment', 'Series E equity investment' or 'AI/digital",
+      "infrastructure financing agreement'. Every row using them is rejected below, and",
+      "migration 0020 adds only the four event_kind values the accepted rows need.",
+      "Un-rejecting one of those rows requires a new migration AND a mapping here — which",
+      "is the point: the enum should not fill up with values no row uses."
+    ]
+  },
+
+  "kinds": {
+    "equity investment": "investment",
+    "equity investment + strategic collaboration": "investment",
+    "completion of initial investment": "investment",
+    "additional equity investment": "investment",
+    "equity investment + milestone commitments": "investment",
+    "minority equity investment in Series B": "investment",
+    "AI factory financing agreement": "investment",
+    "AI factory equity/computing partnership": "investment",
+    "minority equity investment": "convertible_note",
+    "cloud services purchase commitment": "offtake",
+    "committed use cloud contract": "offtake",
+    "cloud capacity master services order": "offtake",
+    "multibillion infrastructure and compute deal": "offtake",
+    "preferred cloud provider arrangement": "partnership",
+    "cloud distribution partnership": "partnership",
+    "GPU-backed loan": "debt_facility",
+    "compute equipment financing": "debt_facility",
+    "leveraged acquisition": "acquisition",
+    "CHIPS Act grant and loan package": "government_grant"
+  },
+
+  "rows": {
+    "1":  { "check": ["Microsoft", "2025-09-30"], "is_primary": true },
+    "2":  { "check": ["OpenAI PBC", "2025-10-28"], "is_primary": true },
+    "3":  { "check": ["Amazon", "2023-09-24"], "is_primary": true },
+    "4":  { "check": ["Anthropic PBC", "2023-09-24"], "is_primary": true },
+
+    "5":  {
+      "check": ["Amazon", "2024-03-26"],
+      "completes": 3,
+      "is_primary": true,
+      "why": "Amazon completing the $4bn it announced in September 2023 is the SAME $4bn. Loading it as a second event puts $8bn in the table for $4bn of money, and dedup_hash cannot catch it because the dates genuinely differ."
+    },
+
+    "6":  { "check": ["Amazon", "2024-11-21"], "is_primary": true },
+    "7":  { "check": ["Amazon", "2026-04-20"], "is_primary": false },
+
+    "8":  {
+      "check": ["Anthropic PBC", "2026-04-20"],
+      "reject": "source domain needs a decision",
+      "why": "The $100bn ten-year AWS commitment rests solely on tech-insider.org, an aggregator this site has not decided it may cite. The claim is probably true — CNBC's row 7 report describes the same deal — but a $100bn figure may not enter on an unvetted domain. Recoverable by finding the Amazon or Anthropic release."
+    },
+
+    "9":  { "check": ["Alphabet Google", "2023-10-27"], "is_primary": false },
+    "10": { "check": ["Anthropic PBC", "2023-10-27"], "is_primary": false },
+    "11": { "check": ["Microsoft", "2024-02-26"], "is_primary": false },
+    "12": { "check": ["Mistral AI", "2024-05-17"], "is_primary": true },
+    "13": { "check": ["Microsoft", "2026-07-20"], "is_primary": false },
+    "14": { "check": ["Nvidia", "2023-04-19"], "is_primary": false },
+    "15": { "check": ["Nvidia", "2026-01-25"], "is_primary": true },
+    "16": { "check": ["CoreWeave", "2025-09-09"], "is_primary": false },
+
+    "17": {
+      "check": ["CoreWeave", "2023-08-03"],
+      "reject": "dead source URL",
+      "why": "coreweave.com slug is truncated mid-word ('...-and-blackstone-to-m') and returns 404. Reconstructing the full slug ('...-to-meet-surging-demand-for-generative-ai') also 404s. A $2.3bn facility may not be loaded against a link that does not resolve."
+    },
+    "18": {
+      "check": ["CoreWeave", "2024-05-16"],
+      "reject": "dead source URL",
+      "why": "investors.coreweave.com slug is truncated ('...-led-by-Blackstone-a') and returns 403; the reconstructed Q4 press-release path 404s. Same rule as row 17."
+    },
+
+    "19": {
+      "check": ["Blue Owl/Chirisa/PowerHouse JV", "2024-12-12"],
+      "reject": "stated direction contradicts the row's own description",
+      "why": "The row puts $600m on a JV-to-CoreWeave edge, but its own loop_description says the $600m is a Societe Generale-led construction loan TO the JV. Neither party named on the row paid the other $600m. Loading it would fabricate a transfer. The payer (the SocGen syndicate) is on neither side, so this cannot be fixed from the row alone."
+    },
+
+    "20": {
+      "check": ["Lambda", "2024-04-04"],
+      "is_primary": false,
+      "consortium": {
+        "b": {
+          "rule": "b",
+          "key": "Macquarie Group",
+          "why": "Reuters describes 'lenders including Macquarie Group and Industrial Development Funding', naming Macquarie first; rule (b) gives the named lead the key and records the rest as participants.",
+          "members": [
+            {
+              "name": "Industrial Development Funding",
+              "role": "participant",
+              "note": "Named alongside Macquarie in the Reuters report; share undisclosed."
+            }
+          ]
+        }
+      }
+    },
+
+    "21": {
+      "check": ["Lambda Compute II LLC", "2026-08-11"],
+      "reject": "counterparty names nobody",
+      "why": "'term-loan investors' is not an entity and names no member, so consortium rule (c) applies: a financing edge with an anonymous end is not a fact about anyone. Compounded by the sole source being ccir.io, a domain this site has not decided it may cite."
+    },
+
+    "22": {
+      "check": ["IREN Limited", "2026-06-01"],
+      "reject": "stated direction contradicts the row's own description",
+      "why": "The row's b_to_a puts $3.65bn flowing from Microsoft to IREN. Part 2 of the report says the $3.65bn is a US private placement plus a delayed-draw term loan; Microsoft is the offtaker whose contract secures it, not the payer. Loading this would state that Microsoft paid IREN $3.65bn, which nobody claims. Highest-value row to recover — the GlobeNewswire release is live."
+    },
+
+    "23": { "check": ["Blue Owl funds", "2026-08-28"], "is_primary": true, "location_iso3": "CAN" },
+
+    "24": {
+      "check": ["Equinix", "2024-10-01"],
+      "reject": "dead source URL",
+      "why": "newsroom.equinix.com returns 200 but redirects to newsroom.equinix.com/404. Also needs an event_kind of 'joint_venture', which migration 0020 deliberately does not add until a loadable row requires it."
+    },
+    "25": {
+      "check": ["Nvidia", "2026-08-10"],
+      "reject": "dead source URL",
+      "why": "investor.nvidia.com slug ends in a bare hyphen ('...-Brookfield-Goldman-') and returns 403. The single largest figure in the dataset ($500bn) may not rest on a truncated link. Also needs 'vendor_financing', not yet in the enum."
+    },
+    "26": {
+      "check": ["MGX", "2024-09-01"],
+      "reject": "dead source URL",
+      "why": "ir.blackrock.com press-release path is truncated and returns 403. Also needs 'joint_venture'."
+    },
+
+    "27": { "check": ["MGX", "2025-10-15"], "is_primary": false },
+
+    "28": {
+      "check": ["MGX/Bpifrance/Mistral/Nvidia JV", "2025-05-19"],
+      "reject": "dead source URL",
+      "why": "mgx.ae returns 200 but redirects to the site homepage — the article path is gone. Also needs 'joint_venture'."
+    },
+    "29": {
+      "check": ["HUMAIN (PIF-owned)", "2026-02-18"],
+      "reject": "source domain needs a decision",
+      "why": "Sole source is fwdstart.me, a newsletter this site has not decided it may cite, for a $3bn sovereign investment in xAI. Needs a filing or tier-1 report."
+    },
+    "30": {
+      "check": ["HUMAIN", "2026-01-15"],
+      "reject": "source domain needs a decision",
+      "why": "Same fwdstart.me link as row 29, and the row is flagged 'alleged' by the researcher. Also needs 'credit_facility', not yet in the enum."
+    },
+
+    "31": { "check": ["NAVER", "2026-07-25"], "is_primary": false, "location_iso3": "KOR" },
+
+    "32": {
+      "check": ["NAVER", "2026-07-25"],
+      "is_primary": false,
+      "location_iso3": "KOR",
+      "direction_override": "b_to_a",
+      "why": "The row says a_to_b (NAVER pays Nvidia $1bn) while its own loop_description says 'Nvidia invests $1B and provides DSX platform and GPUs'. The row contradicts itself and the contradiction resolves inside the row, so it is corrected here rather than rejected. Rows 19 and 22 could not be resolved this way and are rejected."
+    },
+
+    "33": { "check": ["TSMC Arizona", "2024-04-07"], "is_primary": true, "location_iso3": "USA" }
+  }
+}

@@ -19,6 +19,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { Agent, fetch as undiciFetch } from 'undici';
 
 import { config } from '../config.js';
 
@@ -168,6 +169,61 @@ function isRetryable(status) {
 }
 
 /**
+ * A dispatcher for hosts that are slow to answer at all.
+ *
+ * WHY THIS EXISTS, AND WHY THE OBVIOUS FIX DID NOT WORK
+ *
+ * `AbortSignal.timeout(120_000)` does not give you two minutes. Node's HTTP
+ * stack applies its OWN connect ceiling of about ten seconds, underneath the
+ * signal and invisible to it, and reports the result as a bare `fetch failed`
+ * — the exact error class the header of this file says it exists to abolish.
+ *
+ * GDELT is the case. Measured against the live API:
+ *
+ *   bare fetch, as the adapter had it   UND_ERR_CONNECT_TIMEOUT at 10.5s
+ *   curl, which has no such ceiling     a real response at 22.6s
+ *   fetch + this dispatcher             HTTP 200 at 64.0s, 3504 points
+ *
+ * So the adapter was never wrong; the transport was. The nine-year news-volume
+ * query genuinely takes about a minute, and nothing in Node's defaults will
+ * wait that long for it.
+ *
+ * ALL THREE TIMEOUTS MOVE TOGETHER. `connect` is only the first ceiling —
+ * raising it alone lands you on `headersTimeout` and then `bodyTimeout`, and a
+ * 64-second request is close enough to those to matter on a bad day.
+ *
+ * IT MUST BE USED WITH UNDICI'S OWN `fetch`, NOT NODE'S GLOBAL ONE.
+ *
+ * Node bundles its own copy of undici, and its global `fetch` validates the
+ * `dispatcher` option against THAT copy. An Agent constructed from the undici
+ * in node_modules is a different class, so the global rejects it with
+ * `UND_ERR_INVALID_ARG` — instantly, before any connection is attempted. That
+ * is worse than the bug it was meant to fix: a 10-second timeout at least
+ * tried. Measured, on this machine:
+ *
+ *   global fetch + this Agent    UND_ERR_INVALID_ARG   at 0.0s
+ *   undici fetch + this Agent    HTTP 200              at 27.0s
+ *   global fetch, no dispatcher  UND_ERR_CONNECT_TIMEOUT at 10.1s
+ *
+ * So `slowConnect` swaps the fetch implementation as well as the dispatcher.
+ * Everything else stays on the global fetch, which is what the other nine
+ * adapters want.
+ *
+ * Passed per request rather than through `setGlobalDispatcher`, so the other
+ * nine adapters keep Node's defaults. A global here would be the same
+ * process-wide mutation that `db/pool.js` already regrets.
+ *
+ * GDELT is genuinely unreliable even with this: a first attempt was reset
+ * after 73.8 seconds and the second succeeded in 27. The retry ladder is not
+ * decoration.
+ */
+export const SLOW_CONNECT = new Agent({
+  connect: { timeout: 60_000 },
+  headersTimeout: 120_000,
+  bodyTimeout: 180_000,
+});
+
+/**
  * Fetch JSON with rate limiting, retries and optional fixture replay.
  *
  * @param {string} url
@@ -176,6 +232,7 @@ function isRetryable(status) {
  * @param {number}  [options.timeoutMs=20000]
  * @param {number}  [options.retries=3]
  * @param {boolean} [options.record]  write the response to a fixture file
+ * @param {boolean} [options.slowConnect]  use the raised-timeout dispatcher
  * @returns {Promise<unknown>}
  */
 export async function fetchJson(url, options = {}) {
@@ -184,6 +241,7 @@ export async function fetchJson(url, options = {}) {
     timeoutMs = 20_000,
     retries = 3,
     record = false,
+    slowConnect = false,
   } = options;
 
   if (config.useFixtures) {
@@ -201,9 +259,11 @@ export async function fetchJson(url, options = {}) {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const request = slowConnect ? undiciFetch : fetch;
+      const response = await request(url, {
         headers: { Accept: 'application/json', ...headers },
         signal: controller.signal,
+        ...(slowConnect ? { dispatcher: SLOW_CONNECT } : {}),
       });
 
       if (!response.ok) {

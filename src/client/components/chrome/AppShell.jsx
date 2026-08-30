@@ -1,10 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import {
-  SegmentedControl,
-  SegmentedControlItem,
-} from '@/components/base/segmented-control/segmented-control';
-import { usePreferences } from '@/lib/preferences';
 import TopNav from './TopNav';
 
 /**
@@ -26,9 +21,11 @@ import TopNav from './TopNav';
  *      pages. Three routes had no <h1> of their own and relied on the header
  *      entirely; those now carry one.
  *
- *   2. The reading-mode control lived only in that header. It moves here, into
- *      a slim strip above the content, because it changes how every page reads
- *      and losing it would leave the two registers unreachable.
+ *   2. The reading-mode control lived only in that header, and moved here into
+ *      a slim strip above the content. It has since been deleted: it was wired
+ *      to nothing in two independent ways and had never once switched a
+ *      register. See the note at the top of lib/preferences.jsx. `<main>`
+ *      carries the padding that strip used to contribute.
  *
  * The theme toggle is not rehomed. There is one theme.
  */
@@ -61,11 +58,10 @@ export default function AppShell() {
         <TopNav />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex justify-end pb-1 pt-2">
-            <ReadingLevel />
-          </div>
-
-          <main id="main" tabIndex={-1} className="pb-24 pt-2">
+          {/* `pt-6` replaces the 12px the reading-mode strip used to contribute
+              above this. Deleting that row without adjusting here pulled every
+              page up against the fixed nav's spacer. */}
+          <main id="main" tabIndex={-1} className="pb-24 pt-6">
             <Outlet />
           </main>
         </div>
@@ -74,28 +70,3 @@ export default function AppShell() {
   );
 }
 
-/**
- * Plain or Technical.
- *
- * Not a display preference. The two registers answer different questions —
- * Plain states the finding, Technical says how it was measured and where it
- * misleads — so this is closer to a table of contents than to a font size, and
- * it stays visible on every page rather than hiding in a settings menu.
- */
-function ReadingLevel() {
-  const { register, setRegister } = usePreferences();
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="eyebrow">Reading</span>
-      <SegmentedControl
-        selectedValue={register}
-        onChange={(key) => setRegister(String(key))}
-        size="sm"
-      >
-        <SegmentedControlItem id="plain">Plain</SegmentedControlItem>
-        <SegmentedControlItem id="expert">Technical</SegmentedControlItem>
-      </SegmentedControl>
-    </div>
-  );
-}

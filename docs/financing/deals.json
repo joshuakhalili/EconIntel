@@ -1,0 +1,872 @@
+{
+  "source": "/Users/100milliongbp/Downloads/ROLE AND OBJECTIVE_You are conducting deep investi.md",
+  "generatedAt": "2026-08-30T02:20:32.135Z",
+  "counts": {
+    "parsed": 33,
+    "accepted": 20,
+    "completions": 1,
+    "rejected": 12,
+    "undeclared": 0
+  },
+  "events": [
+    {
+      "row": 1,
+      "dedupHash": "bc68096e463cc478bb736f6df980d929795e52c92bfb1938bb8493dc06648478",
+      "kind": "investment",
+      "structureLabel": "equity investment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "microsoft",
+      "toEntityId": "openai",
+      "participants": [],
+      "amountUsd": 13000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2025-09-30",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Microsoft commits $13B to OpenAI accounted under equity method while also being exclusive cloud provider",
+      "citation": {
+        "url": "https://microsoft.gcs-web.com/static-files/b0a66351-38cf-4147-a907-191d774531bb",
+        "publisher": "microsoft.gcs-web.com",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:25.729Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "59"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Microsoft | hyperscaler | OpenAI Global LLC | ai_lab | 2025-09-30 | equity investment | 13000000000[web:59] | commitment | a_to_b | yes | Microsoft commits $13B to OpenAI accounted under equity method while also being exclusive cloud provider | confirmed | https://microsoft.gcs-web.com/static-files/b0a66351-38cf-4147-a907-191d774531bb"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 2,
+      "dedupHash": "257c244b3408719cc128a6b7911185cda58522dc0ea3434758d820294f179a34",
+      "kind": "offtake",
+      "structureLabel": "cloud services purchase commitment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "openai",
+      "toEntityId": "microsoft",
+      "participants": [],
+      "amountUsd": 250000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2025-10-28",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "OpenAI contracts to buy $250B of Azure services under new partnership agreement",
+      "citation": {
+        "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm",
+        "publisher": "sec.gov",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:25.801Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "63"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "OpenAI PBC | ai_lab | Microsoft Azure | hyperscaler | 2025-10-28 | cloud services purchase commitment | 250000000000[web:63] | commitment | a_to_b | yes | OpenAI contracts to buy $250B of Azure services under new partnership agreement | confirmed | https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 3,
+      "dedupHash": "9bcaf9610ef47ff056247f6239ee89cd989999af1327c13bc30d02186dfe646c",
+      "kind": "investment",
+      "structureLabel": "equity investment + strategic collaboration",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "amazon",
+      "toEntityId": "anthropic",
+      "participants": [],
+      "amountUsd": 4000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2023-09-24",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Amazon invests up to $4B in Anthropic and Anthropic commits to use AWS as primary cloud and Trainium chips",
+      "citation": {
+        "url": "https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai",
+        "publisher": "press.aboutamazon.com",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:25.922Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "28",
+          "100"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Amazon | hyperscaler | Anthropic PBC | ai_lab | 2023-09-24 | equity investment + strategic collaboration | 4000000000[web:28][web:100] | commitment | a_to_b | yes | Amazon invests up to $4B in Anthropic and Anthropic commits to use AWS as primary cloud and Trainium chips | confirmed | https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 4,
+      "dedupHash": "2e207b18b28e0f85ef671e6675ae63ac85a6673dc959f119d1a229d1e0feb4a6",
+      "kind": "offtake",
+      "structureLabel": "committed use cloud contract",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "anthropic",
+      "toEntityId": "amazon",
+      "participants": [],
+      "amountUsd": 4000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2023-09-24",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Anthropic’s committed use contract requires $4B AWS spend over five years linked to Amazon’s investment",
+      "citation": {
+        "url": "https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf",
+        "publisher": "ftc.gov",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:26.005Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "101"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Anthropic PBC | ai_lab | AWS | hyperscaler | 2023-09-24 | committed use cloud contract | 4000000000[web:101] | commitment | a_to_b | yes | Anthropic’s committed use contract requires $4B AWS spend over five years linked to Amazon’s investment | reported | https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 6,
+      "dedupHash": "6826eb307eb3a0f881b0ae91cb0358f98ce9a1e1e1f89a7620a86d2f00a9e3ba",
+      "kind": "investment",
+      "structureLabel": "additional equity investment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "amazon",
+      "toEntityId": "anthropic",
+      "participants": [],
+      "amountUsd": 4000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2024-11-21",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Amazon announces additional $4B Anthropic investment raising cumulative to $8B",
+      "citation": {
+        "url": "https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai",
+        "publisher": "aboutamazon.com",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:26.129Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "103"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Amazon | hyperscaler | Anthropic PBC | ai_lab | 2024-11-21 | additional equity investment | 4000000000[web:103] | commitment | a_to_b | yes | Amazon announces additional $4B Anthropic investment raising cumulative to $8B | confirmed | https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 7,
+      "dedupHash": "b39d71a13e85b72dab2710b3ac0f9e53ec11dce8128f9504bab8b464d2d5bedf",
+      "kind": "investment",
+      "structureLabel": "equity investment + milestone commitments",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "amazon",
+      "toEntityId": "anthropic",
+      "participants": [],
+      "amountUsd": 5000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2026-04-20",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Amazon injects $5B and commits up to $20B more while Anthropic agrees to $100B AWS spend over 10 years",
+      "citation": {
+        "url": "https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html",
+        "publisher": "cnbc.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:26.929Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "106",
+          "111"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Amazon | hyperscaler | Anthropic PBC | ai_lab | 2026-04-20 | equity investment + milestone commitments | 5000000000[web:106][web:111] | commitment | a_to_b | yes | Amazon injects $5B and commits up to $20B more while Anthropic agrees to $100B AWS spend over 10 years | reported | https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 9,
+      "dedupHash": "eaef95140aeded7c54f02fc2d507c2cb0cd3120d1616174190662b330373f090",
+      "kind": "investment",
+      "structureLabel": "equity investment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "alphabet",
+      "toEntityId": "anthropic",
+      "participants": [],
+      "amountUsd": 2000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2023-10-27",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Google agrees to invest up to $2B in Anthropic (500M upfront, 1.5B over time) with preferred-cloud status",
+      "citation": {
+        "url": "https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/",
+        "publisher": "reuters.com",
+        "isPrimary": false,
+        "httpStatus": 401,
+        "fetchedAt": "2026-08-30T02:20:27.112Z",
+        "note": "unconfirmed: HTTP 401"
+      },
+      "provenance": {
+        "amountMarkers": [
+          "60"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Alphabet Google | hyperscaler | Anthropic PBC | ai_lab | 2023-10-27 | equity investment | 2000000000[web:60] | commitment | a_to_b | yes | Google agrees to invest up to $2B in Anthropic (500M upfront, 1.5B over time) with preferred-cloud status | reported | https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/"
+      },
+      "urlState": "unconfirmed"
+    },
+    {
+      "row": 10,
+      "dedupHash": "0e1e7549b8fd327282819ff86da8931e905316a0eeb67928b70a82a6de02382f",
+      "kind": "partnership",
+      "structureLabel": "preferred cloud provider arrangement",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "anthropic",
+      "toEntityId": "alphabet",
+      "participants": [],
+      "amountUsd": null,
+      "amountBasis": null,
+      "isBidirectional": false,
+      "announcedDate": "2023-10-27",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Anthropic makes Google its preferred cloud provider and co-develops AI computing systems on GCP",
+      "citation": {
+        "url": "https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/",
+        "publisher": "datacenterdynamics.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:27.243Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Anthropic PBC | ai_lab | Google Cloud | hyperscaler | 2023-10-27 | preferred cloud provider arrangement |  |  | a_to_b | yes | Anthropic makes Google its preferred cloud provider and co-develops AI computing systems on GCP | reported | https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 11,
+      "dedupHash": "5db1b18945b4a075a89e9679cdce03c475e9272c8392bb61c4d9467ee0fc508c",
+      "kind": "convertible_note",
+      "structureLabel": "minority equity investment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "microsoft",
+      "toEntityId": "mistral",
+      "participants": [],
+      "amountUsd": 16300000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2024-02-26",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "alleged",
+      "loopDescription": "Microsoft invests €15M (~$16.3M) in Mistral as Series A extension alongside Azure distribution deal",
+      "citation": {
+        "url": "https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/",
+        "publisher": "techcrunch.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:27.288Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "55"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Microsoft | hyperscaler | Mistral AI | ai_lab | 2024-02-26 | minority equity investment | 16300000[web:55] | disclosed-total | a_to_b | alleged | Microsoft invests €15M (~$16.3M) in Mistral as Series A extension alongside Azure distribution deal | reported | https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 12,
+      "dedupHash": "8ad6918efc32bd4b50ce0e86efa9e359ad2714ca4b433fcbc53d69973c4a9732",
+      "kind": "partnership",
+      "structureLabel": "cloud distribution partnership",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "mistral",
+      "toEntityId": "microsoft",
+      "participants": [],
+      "amountUsd": null,
+      "amountBasis": null,
+      "isBidirectional": false,
+      "announcedDate": "2024-05-17",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "alleged",
+      "loopDescription": "Mistral commits to make flagship models available on Azure and distribute via Azure catalog",
+      "citation": {
+        "url": "https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf",
+        "publisher": "assets.publishing.service.gov.uk",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:27.344Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Mistral AI | ai_lab | Microsoft Azure | hyperscaler | 2024-05-17 | cloud distribution partnership |  |  | a_to_b | alleged | Mistral commits to make flagship models available on Azure and distribute via Azure catalog | reported | https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 13,
+      "dedupHash": "336be3c9224cd4ff65fb6b410101452a0490d1036c299dd7a2e0ec29ebd22c77",
+      "kind": "offtake",
+      "structureLabel": "multibillion infrastructure and compute deal",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "microsoft",
+      "toEntityId": "mistral",
+      "participants": [],
+      "amountUsd": null,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2026-07-20",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Microsoft agrees to spend billions on Mistral’s Europe-based GPU capacity and use it for its own cloud/AI services",
+      "citation": {
+        "url": "https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/",
+        "publisher": "reuters.com",
+        "isPrimary": false,
+        "httpStatus": 401,
+        "fetchedAt": "2026-08-30T02:20:27.401Z",
+        "note": "unconfirmed: HTTP 401"
+      },
+      "provenance": {
+        "amountMarkers": [],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Microsoft | hyperscaler | Mistral AI | ai_lab | 2026-07-20 | multibillion infrastructure and compute deal |  | commitment | a_to_b | yes | Microsoft agrees to spend billions on Mistral’s Europe-based GPU capacity and use it for its own cloud/AI services | reported | https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/"
+      },
+      "urlState": "unconfirmed"
+    },
+    {
+      "row": 14,
+      "dedupHash": "799d0dd7d1157650848515dae2053f0feae30c74ba14bb6ab5bab544e055406c",
+      "kind": "investment",
+      "structureLabel": "minority equity investment in Series B",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "nvidia",
+      "toEntityId": "coreweave",
+      "participants": [],
+      "amountUsd": 100000000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2023-04-19",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Nvidia invests about $100M in CoreWeave’s $221M Series B to fund GPU-focused cloud expansion",
+      "citation": {
+        "url": "https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/",
+        "publisher": "techcrunch.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:27.444Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "1",
+          "10"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Nvidia | chipmaker | CoreWeave | neocloud | 2023-04-19 | minority equity investment in Series B | 100000000[web:1][web:10] | disclosed-total | a_to_b | yes | Nvidia invests about $100M in CoreWeave’s $221M Series B to fund GPU-focused cloud expansion | reported | https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 15,
+      "dedupHash": "70f92955b8b3b04c1d5be29c7e475f48bbbb764bfd26176abac1c717be79cf7c",
+      "kind": "investment",
+      "structureLabel": "equity investment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "nvidia",
+      "toEntityId": "coreweave",
+      "participants": [],
+      "amountUsd": 2000000000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2026-01-25",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Nvidia invests $2B in CoreWeave common stock at $87.20 per share becoming second-largest shareholder",
+      "citation": {
+        "url": "https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories",
+        "publisher": "nvidianews.nvidia.com",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:27.606Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "3",
+          "4",
+          "13"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Nvidia | chipmaker | CoreWeave | neocloud | 2026-01-25 | equity investment | 2000000000[web:3][web:4][web:13] | disclosed-total | a_to_b | yes | Nvidia invests $2B in CoreWeave common stock at $87.20 per share becoming second-largest shareholder | confirmed | https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 16,
+      "dedupHash": "e52f440e26fac3c42be7ca2facb935597c03ba9822295551e9b33bb9cb31bfbd",
+      "kind": "offtake",
+      "structureLabel": "cloud capacity master services order",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "nvidia",
+      "toEntityId": "coreweave",
+      "participants": [],
+      "amountUsd": 6300000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2025-09-09",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Nvidia obligated to purchase residual unsold cloud capacity from CoreWeave through 2032 under $6.3B order",
+      "citation": {
+        "url": "https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html",
+        "publisher": "stocktitan.net",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:27.891Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "117",
+          "118",
+          "123"
+        ],
+        "sourceDirection": "b_to_a",
+        "rawRow": "CoreWeave | neocloud | Nvidia | chipmaker | 2025-09-09 | cloud capacity master services order | 6300000000[web:117][web:118][web:123] | commitment | b_to_a | yes | Nvidia obligated to purchase residual unsold cloud capacity from CoreWeave through 2032 under $6.3B order | confirmed | https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 20,
+      "dedupHash": "ae73e13d45fbb38ac64443659e456b5671a9e68c820d41531d6be6f261e4df20",
+      "kind": "debt_facility",
+      "structureLabel": "GPU-backed loan",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "macquarie",
+      "toEntityId": "lambda",
+      "participants": [
+        {
+          "entityId": "idf",
+          "role": "participant",
+          "note": "Named alongside Macquarie in the Reuters report; share undisclosed.",
+          "side": "from"
+        }
+      ],
+      "amountUsd": 500000000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2024-04-04",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Lambda secures $500M loan collateralized by Nvidia GPUs to buy H100/H200/Blackwell chips and scale GPU cloud",
+      "citation": {
+        "url": "https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/",
+        "publisher": "reuters.com",
+        "isPrimary": false,
+        "httpStatus": 401,
+        "fetchedAt": "2026-08-30T02:20:28.582Z",
+        "note": "unconfirmed: HTTP 401"
+      },
+      "provenance": {
+        "amountMarkers": [
+          "113",
+          "115",
+          "8"
+        ],
+        "sourceDirection": "b_to_a",
+        "rawRow": "Lambda | neocloud | Macquarie/IDF lenders | private_credit_fund | 2024-04-04 | GPU-backed loan | 500000000[web:113][web:115][web:8] | disclosed-total | b_to_a | yes | Lambda secures $500M loan collateralized by Nvidia GPUs to buy H100/H200/Blackwell chips and scale GPU cloud | confirmed | https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/"
+      },
+      "urlState": "unconfirmed"
+    },
+    {
+      "row": 23,
+      "dedupHash": "5485cb0e75cd136cc83132f8fe6b53653eaeabd8c93672faed413061c87a59ba",
+      "kind": "debt_facility",
+      "structureLabel": "compute equipment financing",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "blue_owl",
+      "toEntityId": "iren",
+      "participants": [],
+      "amountUsd": 2400000000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2026-08-28",
+      "locationIso3": "CAN",
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "$2.4B term loan + notes at 9% fund IREN’s purchase of Nvidia Blackwell Ultra GPUs for Canadian campus",
+      "citation": {
+        "url": "https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html",
+        "publisher": "prnewswire.com",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:28.808Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "31",
+          "32",
+          "35",
+          "36"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Blue Owl funds | private_credit_fund | IREN Limited | neocloud | 2026-08-28 | compute equipment financing | 2400000000[web:31][web:32][web:35][web:36] | disclosed-total | a_to_b | yes | $2.4B term loan + notes at 9% fund IREN’s purchase of Nvidia Blackwell Ultra GPUs for Canadian campus | confirmed | https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 27,
+      "dedupHash": "8f083f52d9aba75df964c72fdd85af488d2a327230efcf4b1f092cc89eb9b776",
+      "kind": "acquisition",
+      "structureLabel": "leveraged acquisition",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "mgx",
+      "toEntityId": "aligned",
+      "participants": [],
+      "amountUsd": 40000000000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2025-10-15",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "MGX joins Nvidia, Microsoft, BlackRock and xAI to buy Aligned Data Centers for ~$40B",
+      "citation": {
+        "url": "https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html",
+        "publisher": "cnbc.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:30.341Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "160",
+          "162",
+          "164",
+          "165"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "MGX | sovereign_fund | Aligned Data Centers | datacenter_operator | 2025-10-15 | leveraged acquisition | 40000000000[web:160][web:162][web:164][web:165] | disclosed-total | a_to_b | yes | MGX joins Nvidia, Microsoft, BlackRock and xAI to buy Aligned Data Centers for ~$40B | reported | https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 31,
+      "dedupHash": "50f0dc81bb5d3b72bd0db184194a291a1c386d5d8b4c00b1b5c5ee5e4705375d",
+      "kind": "investment",
+      "structureLabel": "AI factory financing agreement",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "brookfield",
+      "toEntityId": "naver",
+      "participants": [],
+      "amountUsd": 9000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2026-07-25",
+      "locationIso3": "KOR",
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Brookfield funds up to $9B to expand NAVER’s GAK Sejong AI factory from 55MW to 200MW; NAVER funds remainder",
+      "citation": {
+        "url": "https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html",
+        "publisher": "finance.yahoo.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:31.461Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "42",
+          "137"
+        ],
+        "sourceDirection": "b_to_a",
+        "rawRow": "NAVER | datacenter_operator | Brookfield | private_credit_fund | 2026-07-25 | AI factory financing agreement | 9000000000[web:42][web:137] | commitment | b_to_a | yes | Brookfield funds up to $9B to expand NAVER’s GAK Sejong AI factory from 55MW to 200MW; NAVER funds remainder | confirmed | https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 32,
+      "dedupHash": "363588fcdf23bdfd169b1d2c7552f47181afd29e98212e90b32c69da5e24cb32",
+      "kind": "investment",
+      "structureLabel": "AI factory equity/computing partnership",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "nvidia",
+      "toEntityId": "naver",
+      "participants": [],
+      "amountUsd": 1000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2026-07-25",
+      "locationIso3": "KOR",
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Nvidia invests $1B and provides DSX platform and GPUs for NAVER’s 200MW sovereign AI factory",
+      "citation": {
+        "url": "https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi",
+        "publisher": "theglobeandmail.com",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:31.824Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "42",
+          "137"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "NAVER | datacenter_operator | Nvidia | chipmaker | 2026-07-25 | AI factory equity/computing partnership | 1000000000[web:42][web:137] | commitment | a_to_b | yes | Nvidia invests $1B and provides DSX platform and GPUs for NAVER’s 200MW sovereign AI factory | confirmed | https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 33,
+      "dedupHash": "6a038f168e8c353586ef285e393cd0dd64a6b2e60c5739b4a5cdd8a2ef4813bb",
+      "kind": "government_grant",
+      "structureLabel": "CHIPS Act grant and loan package",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "us_commerce",
+      "toEntityId": "tsmc_arizona",
+      "participants": [],
+      "amountUsd": 11600000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2024-04-07",
+      "locationIso3": "USA",
+      "headline": null,
+      "confidenceTier": "official",
+      "loopStatus": "alleged",
+      "loopDescription": "TSMC awarded up to $6.6B grants and up to $5B loans to support $65B Arizona fabs serving AI chip customers",
+      "citation": {
+        "url": "https://www.nist.gov/chips/tsmc-arizona-phoenix",
+        "publisher": "nist.gov",
+        "isPrimary": true,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:20:32.127Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "70",
+          "78",
+          "81",
+          "80",
+          "82",
+          "83"
+        ],
+        "sourceDirection": "b_to_a",
+        "rawRow": "TSMC Arizona | chipmaker | U.S. Department of Commerce | sovereign_fund | 2024-04-07 | CHIPS Act grant and loan package | 11600000000[web:70][web:78][web:81][web:80][web:82][web:83] | commitment | b_to_a | alleged | TSMC awarded up to $6.6B grants and up to $5B loans to support $65B Arizona fabs serving AI chip customers | confirmed | https://www.nist.gov/chips/tsmc-arizona-phoenix"
+      },
+      "urlState": "live"
+    }
+  ],
+  "completions": [
+    {
+      "completes": 3,
+      "why": "Amazon completing the $4bn it announced in September 2023 is the SAME $4bn. Loading it as a second event puts $8bn in the table for $4bn of money, and dedup_hash cannot catch it because the dates genuinely differ.",
+      "event": {
+        "row": 5,
+        "dedupHash": "acd67fbabbeaae9d8abed00ef783c1f1d5fba0d8c85ffa498ccb7b873dd0eacd",
+        "kind": "investment",
+        "structureLabel": "completion of initial investment",
+        "status": "announced",
+        "completedDate": null,
+        "fromEntityId": "amazon",
+        "toEntityId": "anthropic",
+        "participants": [],
+        "amountUsd": 4000000000,
+        "amountBasis": "disclosed_total",
+        "isBidirectional": false,
+        "announcedDate": "2024-03-26",
+        "locationIso3": null,
+        "headline": null,
+        "confidenceTier": "official",
+        "loopStatus": "forms_loop",
+        "loopDescription": "Amazon completes $4B Anthropic investment; AWS remains primary training partner",
+        "citation": {
+          "url": "https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment",
+          "publisher": "aboutamazon.com",
+          "isPrimary": true,
+          "httpStatus": 200,
+          "fetchedAt": "2026-08-30T02:20:26.080Z",
+          "note": null
+        },
+        "provenance": {
+          "amountMarkers": [
+            "100"
+          ],
+          "sourceDirection": "a_to_b",
+          "rawRow": "Amazon | hyperscaler | Anthropic PBC | ai_lab | 2024-03-26 | completion of initial investment | 4000000000[web:100] | disclosed-total | a_to_b | yes | Amazon completes $4B Anthropic investment; AWS remains primary training partner | confirmed | https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment"
+        },
+        "urlState": "live"
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "label": "row  8 · Anthropic PBC → AWS",
+      "reason": "source domain needs a decision",
+      "detail": "The $100bn ten-year AWS commitment rests solely on tech-insider.org, an aggregator this site has not decided it may cite. The claim is probably true — CNBC's row 7 report describes the same deal — but a $100bn figure may not enter on an unvetted domain. Recoverable by finding the Amazon or Anthropic release.",
+      "declared": true
+    },
+    {
+      "label": "row 17 · CoreWeave → Magnetar/Blackstone-led lenders",
+      "reason": "dead source URL",
+      "detail": "coreweave.com slug is truncated mid-word ('...-and-blackstone-to-m') and returns 404. Reconstructing the full slug ('...-to-meet-surging-demand-for-generative-ai') also 404s. A $2.3bn facility may not be loaded against a link that does not resolve.",
+      "declared": true
+    },
+    {
+      "label": "row 18 · CoreWeave → Blackstone-led lenders",
+      "reason": "dead source URL",
+      "detail": "investors.coreweave.com slug is truncated ('...-led-by-Blackstone-a') and returns 403; the reconstructed Q4 press-release path 404s. Same rule as row 17.",
+      "declared": true
+    },
+    {
+      "label": "row 19 · Blue Owl/Chirisa/PowerHouse JV → CoreWeave",
+      "reason": "stated direction contradicts the row's own description",
+      "detail": "The row puts $600m on a JV-to-CoreWeave edge, but its own loop_description says the $600m is a Societe Generale-led construction loan TO the JV. Neither party named on the row paid the other $600m. Loading it would fabricate a transfer. The payer (the SocGen syndicate) is on neither side, so this cannot be fixed from the row alone.",
+      "declared": true
+    },
+    {
+      "label": "row 21 · Lambda Compute II LLC → term-loan investors",
+      "reason": "counterparty names nobody",
+      "detail": "'term-loan investors' is not an entity and names no member, so consortium rule (c) applies: a financing edge with an anonymous end is not a fact about anyone. Compounded by the sole source being ccir.io, a domain this site has not decided it may cite.",
+      "declared": true
+    },
+    {
+      "label": "row 22 · IREN Limited → Microsoft",
+      "reason": "stated direction contradicts the row's own description",
+      "detail": "The row's b_to_a puts $3.65bn flowing from Microsoft to IREN. Part 2 of the report says the $3.65bn is a US private placement plus a delayed-draw term loan; Microsoft is the offtaker whose contract secures it, not the payer. Loading this would state that Microsoft paid IREN $3.65bn, which nobody claims. Highest-value row to recover — the GlobeNewswire release is live.",
+      "declared": true
+    },
+    {
+      "label": "row 24 · Equinix → GIC/CPP Investments JV",
+      "reason": "dead source URL",
+      "detail": "newsroom.equinix.com returns 200 but redirects to newsroom.equinix.com/404. Also needs an event_kind of 'joint_venture', which migration 0020 deliberately does not add until a loadable row requires it.",
+      "declared": true
+    },
+    {
+      "label": "row 25 · Nvidia → Apollo/BlackRock/Blackstone/Brookfield/Goldman/KKR",
+      "reason": "dead source URL",
+      "detail": "investor.nvidia.com slug ends in a bare hyphen ('...-Brookfield-Goldman-') and returns 403. The single largest figure in the dataset ($500bn) may not rest on a truncated link. Also needs 'vendor_financing', not yet in the enum.",
+      "declared": true
+    },
+    {
+      "label": "row 26 · MGX → BlackRock GIP & Microsoft",
+      "reason": "dead source URL",
+      "detail": "ir.blackrock.com press-release path is truncated and returns 403. Also needs 'joint_venture'.",
+      "declared": true
+    },
+    {
+      "label": "row 28 · MGX/Bpifrance/Mistral/Nvidia JV → AI Campus (Paris region)",
+      "reason": "dead source URL",
+      "detail": "mgx.ae returns 200 but redirects to the site homepage — the article path is gone. Also needs 'joint_venture'.",
+      "declared": true
+    },
+    {
+      "label": "row 29 · HUMAIN (PIF-owned) → xAI",
+      "reason": "source domain needs a decision",
+      "detail": "Sole source is fwdstart.me, a newsletter this site has not decided it may cite, for a $3bn sovereign investment in xAI. Needs a filing or tier-1 report.",
+      "declared": true
+    },
+    {
+      "label": "row 30 · HUMAIN → Saudi National Infrastructure Fund",
+      "reason": "source domain needs a decision",
+      "detail": "Same fwdstart.me link as row 29, and the row is flagged 'alleged' by the researcher. Also needs 'credit_facility', not yet in the enum.",
+      "declared": true
+    }
+  ]
+}

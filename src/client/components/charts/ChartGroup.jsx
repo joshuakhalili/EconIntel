@@ -1,5 +1,4 @@
 import { useSeries } from '@/hooks/queries';
-import { useRegister } from '@/lib/preferences';
 import { displayUnit } from '@/lib/format';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import ChartCard from './ChartCard';
@@ -17,7 +16,6 @@ import SeriesChart from './SeriesChart';
  * author claims.
  */
 export default function ChartGroup({ members, height = 260, onPick }) {
-  const register = useRegister();
 
   const ids = members.map((m) => m.indicator_id);
   // Positional: the endpoint pairs the nth country with the nth id. These are
@@ -42,7 +40,7 @@ export default function ChartGroup({ members, height = 260, onPick }) {
 
   const lead = members[0];
   const title = members.length === 1 ? lead.name : groupTitle(members);
-  const caption = register(lead.caption_plain, lead.caption_expert);
+  const caption = lead.caption_plain;
 
   const sources = [...new Set(members.map((m) => m.source_name ?? m.source_id).filter(Boolean))];
 

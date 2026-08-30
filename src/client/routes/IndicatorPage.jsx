@@ -1,7 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { RiArrowLeftLine, RiExternalLinkLine } from '@remixicon/react';
 import { useIndicator, useSeries } from '@/hooks/queries';
-import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
@@ -25,7 +24,6 @@ import { fmt, fmtDate, displayUnit } from '@/lib/format';
 export default function IndicatorPage() {
   const { id } = useParams();
   const { data: indicator, isPending, isError, error } = useIndicator(id);
-  const register = useRegister();
   const { open } = useContextDrawer();
 
   const { data: payload, isPending: seriesPending } = useSeries(id ? [id] : [], {}, {
@@ -37,7 +35,7 @@ export default function IndicatorPage() {
   if (isPending) return <LoadingBlock rows={3} />;
   if (isError) return <ErrorBlock error={error} what="this series" />;
 
-  const caption = register(indicator.caption_plain, indicator.caption_expert);
+  const caption = indicator.caption_plain;
 
   return (
     <article className="mx-auto max-w-4xl">

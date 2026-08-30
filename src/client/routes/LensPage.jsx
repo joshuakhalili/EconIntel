@@ -1,7 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { RiArrowRightLine, RiArrowLeftLine } from '@remixicon/react';
 import { useLens, useLensTickers, useLensNews, useLenses } from '@/hooks/queries';
-import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import StrengthBadge from '@/components/StrengthBadge';
@@ -30,7 +29,6 @@ import { LENS_ACCENT } from '@/lib/lensAccent';
  */
 export default function LensPage() {
   const { slug } = useParams();
-  const register = useRegister();
 
   const { data: lens, isPending, isError, error } = useLens(slug);
   const { data: lenses } = useLenses();
@@ -44,7 +42,7 @@ export default function LensPage() {
   if (isPending) return <LoadingBlock rows={4} />;
   if (isError) return <ErrorBlock error={error} what="this lens" />;
 
-  const thesis = register(lens.thesis_plain, lens.thesis_expert);
+  const thesis = lens.thesis_plain;
   const accent = LENS_ACCENT[lens.id] ?? LENS_ACCENT.default;
 
   // Causal order — Investment, Growth, Labour, Prices, Policy — is the order
@@ -144,7 +142,7 @@ export default function LensPage() {
                 <span className="mt-1 text-caption-1-regular text-text-tertiary">{q.subtitle}</span>
               )}
               <span className="mt-3 line-clamp-3 text-body-regular leading-relaxed text-text-secondary">
-                {register(q.answer_plain, q.answer_expert)}
+                {q.answer_plain}
               </span>
               <span className="mt-4 flex items-center gap-3">
                 <StrengthBadge strength={q.strength} />

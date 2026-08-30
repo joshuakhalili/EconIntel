@@ -21,7 +21,8 @@
  */
 
 import { config } from '../../config.js';
-import { HttpError } from '../../lib/http.js';
+import { fetch as undiciFetch } from 'undici';
+import { HttpError, SLOW_CONNECT } from '../../lib/http.js';
 
 const BASE = 'https://api.gdeltproject.org/api/v2/doc/doc';
 
@@ -82,24 +83,52 @@ async function fetchTimeline(url) {
 
   let response;
   try {
-    response = await fetch(url, {
+    response = await undiciFetch(url, {
       headers: {
         'User-Agent':
           'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion; joshuakhalili20@gmail.com)',
       },
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(240_000),
+      // The whole reason this adapter was broken. See SLOW_CONNECT in
+      // lib/http.js: Node applies its own ~10s connect ceiling underneath the
+      // signal above, so every request to this host failed at 10.5s no matter
+      // what the signal said. Note the import above — this is undici's fetch,
+      // not Node's global one, because the global rejects a dispatcher built
+      // from node_modules' undici outright.
+      dispatcher: SLOW_CONNECT,
     });
   } catch (error) {
     /**
-     * Node's HTTP stack applies its own 10-second CONNECT timeout, separate
-     * from the AbortSignal above, and surfaces it as a bare "fetch failed".
-     * GDELT routinely takes longer than that to accept a connection while it
-     * assembles a large timeline, so this fires on healthy requests. Re-raised
-     * as a retryable condition rather than a hard failure.
+     * Kept, but it should now be rare. With the dispatcher above this fires
+     * only after a full 60-second connect attempt, which is a genuine outage
+     * rather than the false alarm it used to be on every single request.
      */
     const cause = error.cause?.code ?? error.code;
-    if (cause === 'UND_ERR_CONNECT_TIMEOUT' || error.name === 'TimeoutError') {
-      throw new HttpError(`GDELT connection timed out (${cause ?? error.name})`, {
+
+    /*
+     * Every one of these is GDELT being GDELT, and every one must come back as
+     * a retryable status or `fetchWithBackoff` rethrows on the first attempt.
+     *
+     * ECONNRESET is the one that mattered and the one that was missing. With
+     * the connect ceiling lifted, the request now runs for over a minute while
+     * GDELT assembles the timeline, and it will sometimes drop the connection
+     * partway through: measured at 73.8s and 76.0s on two separate attempts,
+     * with the very next attempt returning 200 in 27s. Before this list, that
+     * arrived as a bare TypeError with no `status`, fell through the
+     * `[429, 502, 504]` check, and killed the job on the first try — so the
+     * retry ladder that exists precisely for this never once ran.
+     */
+    const TRANSIENT = new Set([
+      'UND_ERR_CONNECT_TIMEOUT',
+      'UND_ERR_SOCKET',
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'EPIPE',
+    ]);
+
+    if (TRANSIENT.has(cause) || error.name === 'TimeoutError') {
+      throw new HttpError(`GDELT connection failed (${cause ?? error.name})`, {
         url,
         status: 504,
       });
@@ -134,7 +163,7 @@ async function fetchTimeline(url) {
 }
 
 /** Retry on throttling with escalating backoff. */
-async function fetchWithBackoff(url, { retries = 4 } = {}) {
+async function fetchWithBackoff(url, { retries = 3 } = {}) {
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
@@ -143,8 +172,15 @@ async function fetchWithBackoff(url, { retries = 4 } = {}) {
       lastError = error;
       // 429 throttle, 502 unparseable, 504 connect timeout — all transient.
       if (![429, 502, 504].includes(error.status)) throw error;
-      // 30s, 60s, 120s, 240s. GDELT's throttle outlasts short waits.
-      const delay = 30_000 * 2 ** attempt;
+      /*
+       * 15s, 30s, 60s, 120s. The ladder used to start at 30s and run to 240s
+       * — 450 seconds of pure sleeping — because it was tuned for a connect
+       * timeout that fired on every attempt. That failure is fixed at the
+       * transport now, so the only transient left is GDELT's real throttle,
+       * which is documented at one request per five seconds and was observed
+       * clearing inside 90 seconds. Halving the worst case.
+       */
+      const delay = 15_000 * 2 ** attempt;
       if (attempt < retries) await new Promise((r) => setTimeout(r, delay));
     }
   }
@@ -173,19 +209,53 @@ export async function fetchDailyVolume({ from, to, query = AI_ECONOMY_QUERY } = 
   const start = from ?? new Date('2017-01-01T00:00:00Z');
   const end = to ?? new Date();
 
-  const url =
-    `${BASE}?query=${encodeURIComponent(query)}` +
-    `&mode=TimelineVolRaw&format=json` +
-    `&STARTDATETIME=${stamp(start)}&ENDDATETIME=${stamp(end)}`;
+  /*
+   * ONE YEAR PER REQUEST, NOT ONE REQUEST.
+   *
+   * Asking for the whole 2017-to-now archive in one call does not work. GDELT
+   * spends over a minute assembling it and then drops the connection —
+   * measured at 73.8s and 76.0s on consecutive attempts, and it failed every
+   * retry in the ladder. Smaller windows are reliable:
+   *
+   *   1 month   27s
+   *   1 year    117s, 367 points
+   *   2 years   255s, 731 points
+   *
+   * So the window is split and the pieces are concatenated. This also makes
+   * the incremental case — the only one that runs after the first backfill —
+   * a single short request, because `ingestNewsVolume` passes a `from` of the
+   * last stored month rather than the archive start.
+   *
+   * `paced()` inside fetchTimeline already spaces the calls, so a nine-chunk
+   * backfill is polite by construction.
+   */
+  const series = [];
 
-  const data = await fetchWithBackoff(url);
+  for (let cursor = new Date(start); cursor < end; ) {
+    const chunkEnd = new Date(
+      Math.min(
+        Date.UTC(cursor.getUTCFullYear() + 1, cursor.getUTCMonth(), cursor.getUTCDate()),
+        end.getTime()
+      )
+    );
 
-  const series = data?.timeline?.[0]?.data;
-  if (!Array.isArray(series)) {
-    throw new HttpError('GDELT returned no timeline', { url });
+    const url =
+      `${BASE}?query=${encodeURIComponent(query)}` +
+      `&mode=TimelineVolRaw&format=json` +
+      `&STARTDATETIME=${stamp(cursor)}&ENDDATETIME=${stamp(chunkEnd)}`;
+
+    const data = await fetchWithBackoff(url);
+    const chunk = data?.timeline?.[0]?.data;
+
+    if (!Array.isArray(chunk)) {
+      throw new HttpError('GDELT returned no timeline', { url });
+    }
+    series.push(...chunk);
+    cursor = chunkEnd;
   }
 
   const points = [];
+  const seen = new Set();
 
   for (const point of series) {
     // Dates arrive as 'YYYYMMDDTHHMMSSZ'.
@@ -196,8 +266,14 @@ export async function fetchDailyVolume({ from, to, query = AI_ECONOMY_QUERY } = 
     const norm = Number(point.norm);
     if (!Number.isFinite(value)) continue;
 
+    // Chunk boundaries overlap by a day at each seam; the same date arriving
+    // twice would double that day inside its month.
+    const date = `${iso.slice(0, 4)}-${iso.slice(4, 6)}-${iso.slice(6, 8)}`;
+    if (seen.has(date)) continue;
+    seen.add(date);
+
     points.push({
-      date: `${iso.slice(0, 4)}-${iso.slice(4, 6)}-${iso.slice(6, 8)}`,
+      date,
       value,
       norm: Number.isFinite(norm) ? norm : 0,
       // Guard the divide: GDELT reports norm 0 for days it indexed nothing,

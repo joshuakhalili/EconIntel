@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { RiArrowRightLine, RiAlertLine } from '@remixicon/react';
 import { useOverview, useStatus } from '@/hooks/queries';
-import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import { fmt, withUnit, fmtDate, deltaDirection, displayUnit } from '@/lib/format';
@@ -20,16 +19,15 @@ import { fmt, withUnit, fmtDate, deltaDirection, displayUnit } from '@/lib/forma
  * stacked rather than gridded, and each arrives carrying a claim and a live
  * number instead of a name and a link.
  *
- * The "how to read this" section is not filler. The honesty rules — two
- * registers, caveats as sections rather than footnotes, never asking a model
- * to invent a figure — are the thing that distinguishes this from a hype
- * dashboard, and they were previously discoverable only by noticing a toggle
- * at the bottom of the sidebar.
+ * The "how to read this" section is not filler. The honesty rules — evidence
+ * strength stated up front, caveats as sections rather than footnotes, never
+ * asking a model to invent a figure — are the thing that distinguishes this
+ * from a hype dashboard, and they were previously discoverable only by
+ * noticing a toggle at the bottom of the sidebar.
  */
 export default function OverviewPage() {
   const { data: lenses, isPending, isError, error } = useOverview();
   const { data: status } = useStatus();
-  const register = useRegister();
 
   usePageTitle('Diffusion', 'Measuring AI’s effect on the economy');
 
@@ -82,7 +80,7 @@ export default function OverviewPage() {
         <ol className="flex flex-col gap-3">
           {lenses.map((lens, index) => (
             <li key={lens.id}>
-              <LensRow lens={lens} step={index + 1} register={register} />
+              <LensRow lens={lens} step={index + 1} />
             </li>
           ))}
         </ol>
@@ -92,15 +90,22 @@ export default function OverviewPage() {
       <section className="rounded-2xl border border-border-button-default bg-background-secondary-default p-5">
         <h2 className="text-title-3-medium text-text-primary">How to read this</h2>
         <dl className="mt-4 flex flex-col gap-4">
+          {/* This slot used to promise two reading registers and tell the
+              reader to "switch register in the header". The control it pointed
+              at was wired to nothing and has been removed, so the promise went
+              with it. Replaced by the one honesty rule that was not already
+              stated in this list — the third entry below already covers
+              model-written prose, and saying it twice would be worse than
+              saying it once. */}
           <div>
             <dt className="text-body-medium text-text-primary">
-              Two registers, not one text with jargon added
+              &ldquo;Not enough evidence&rdquo; is a real answer here
             </dt>
             <dd className="mt-1 text-body-regular text-text-secondary">
-              Every claim is written twice. <span className="text-text-primary">Plain</span>{' '}
-              states the finding; <span className="text-text-primary">Technical</span> answers a
-              different question — how the thing was measured, and where it misleads. Switch
-              register in the header; it applies across the whole site.
+              Every question carries how far its own evidence goes, before you open it, and
+              several of them say the data cannot settle the question yet. Where credible sources
+              measuring the same period disagree, the page reports the disagreement rather than
+              picking a side.
             </dd>
           </div>
           <div>
@@ -144,8 +149,8 @@ export default function OverviewPage() {
  * without a delta badge where there is no previous period to compare, rather
  * than rendering a 0% that implies a measurement.
  */
-function LensRow({ lens, step, register }) {
-  const thesis = register(lens.thesis_plain, lens.thesis_expert);
+function LensRow({ lens, step }) {
+  const thesis = lens.thesis_plain;
   // The first sentence is the claim; the rest is support that belongs on the
   // lens page, not on a card someone is scanning.
   const claim = thesis?.split(/(?<=\.)\s/)[0] ?? '';

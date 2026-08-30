@@ -1,19 +1,31 @@
 /**
- * Reader preferences: colour theme and reading register.
+ * Reader preferences.
  *
- * Both are small, global, rarely-changing and persisted — context rather than
- * any kind of store.
+ * One preference now: the colour theme. It is small, global, rarely-changing
+ * and persisted — context rather than any kind of store.
  *
- * Reading mode is the one that matters editorially. The technical register is
- * not the plain one with jargon added: it answers a different question, usually
- * how a thing was measured and where it misleads. Both texts are stored; this
- * only chooses which is shown.
+ * THE READING REGISTER WAS REMOVED, AND IT HAD NEVER WORKED
+ *
+ * This module used to expose a Plain/Technical mode, and `AppShell` rendered a
+ * control for it. The control was wired to nothing, in two independent ways:
+ * it destructured `{ register, setRegister }` from a context that exposed
+ * `{ mode, setMode, isTechnical }` — both undefined — and it passed
+ * `selectedValue`/`onChange` to a segmented control whose react-aria API is
+ * `selectedKeys`/`onSelectionChange`. So no segment ever rendered selected,
+ * clicking one updated react-aria's internal state and never touched `mode`,
+ * and every reader has been on `plain` since it shipped. Nothing threw.
+ *
+ * Removing it was subtraction, not a decision about the feature.
+ *
+ * The `*_expert` columns stay in the database. There are eighteen passages of
+ * real written prose in them, and the asymmetry against twenty-one `*_plain`
+ * is itself the record of why the register was never finished. Unread is fine;
+ * deleted is not reversible.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const THEME_KEY = 'diffusion:theme';
-const MODE_KEY = 'diffusion:mode';
 
 const PreferencesContext = createContext(null);
 
@@ -33,8 +45,6 @@ export function PreferencesProvider({ children }) {
   const [theme, setTheme] = useState(() =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 
-  const [mode, setMode] = useState(() => readStored(MODE_KEY, 'plain'));
-
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     try {
@@ -42,19 +52,13 @@ export function PreferencesProvider({ children }) {
     } catch { /* nothing to do if storage is unavailable */ }
   }, [theme]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(MODE_KEY, mode);
-    } catch { /* nothing to do if storage is unavailable */ }
-  }, [mode]);
-
   const toggleTheme = useCallback(() => {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   }, []);
 
   const value = useMemo(
-    () => ({ theme, toggleTheme, setTheme, mode, setMode, isTechnical: mode === 'expert' }),
-    [theme, toggleTheme, mode]
+    () => ({ theme, toggleTheme, setTheme }),
+    [theme, toggleTheme]
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
@@ -66,14 +70,4 @@ export function usePreferences() {
   return value;
 }
 
-/**
- * Pick the register-appropriate text. Falls back to the plain text when a
- * technical variant was never written, so a missing field never blanks a page.
- */
-export function useRegister() {
-  const { isTechnical } = usePreferences();
-  return useCallback(
-    (plain, technical) => (isTechnical ? technical || plain : plain),
-    [isTechnical]
-  );
-}
+export { readStored };
