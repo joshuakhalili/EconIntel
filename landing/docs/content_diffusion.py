@@ -65,9 +65,18 @@ HERO = {
     # These two numbers are stable enough for static copy and both are true.
     "System active": "111 series · 24 sources",
 
-    # Every primary CTA. The template points them at a waitlist; there is
-    # nothing to wait for — the site is the product and it is already there.
-    "Join waitlist": "Browse the data",
+    # Every primary CTA — the header button and the ones dotted through the
+    # page. The template points them at a waitlist; there is nothing to wait
+    # for, but reading does need a free account, and a button labelled
+    # "Browse the data" that lands on a sign-in form is a small bait and
+    # switch. This says what happens AND why, in three words, and it points at
+    # /login rather than /overview so a signed-out reader is not bounced
+    # through a 401 to get there.
+    #
+    # A reader who is already signed in is not sent back to a form: /login
+    # renders "Signed in as … → Start reading" for them. One door, correct in
+    # both states.
+    "Join waitlist": "Sign in to read",
     "Join the waitlist to get early access and see how global systems behave in real time.":
         "Every series behind this site, with its source, its licence, and a link back to the publisher.",
     "Get early access to Atmos": "Every series, browsable",
@@ -679,12 +688,34 @@ LINKS = {
     "https://www.linkedin.com/in/liana-tme/": "https://www.linkedin.com/in/joshuakhalili/",
     "https://www.instagram.com/liana.tudakova/": "https://github.com/joshuakhalili/EconIntel",
     "https://lunaui.co": "https://github.com/joshuakhalili/EconIntel",
+
+    # The footer's "Email" link. FOOTER replaces the visible address, but the
+    # mailto: is a separate string and was still addressed to the template's
+    # support desk — so the one link on the site that invites a correction went
+    # nowhere.
+    "mailto:contact@atmos.com": "mailto:joshuakhalili20@gmail.com",
+    "mailto:support@atmos.com": "mailto:joshuakhalili20@gmail.com",
+
+    # "Built in Framer" is fair attribution and stays. Its href was not
+    # attribution: it carried the template author's Google Ads campaign ids and
+    # a gclid, so every click credited someone else's ad spend and handed
+    # Google a referral from this site.
+    "https://www.framer.com/?utm_source=google&amp;utm_medium=adwords"
+    "&amp;utm_campaign=22283959360_172357934061"
+    "&amp;utm_content=746821181196_framer_e_c_g&amp;gad_source=1"
+    "&amp;gad_campaignid=22283959360"
+    "&amp;gbraid=0AAAAAC3AKQU5Xc1UzR3PUe2mHBnm_iGbp"
+    "&amp;gclid=CjwKCAjwrNrQBhBjEiwAoR4VOw9CRaI3zfldSqN_asliID8KFd4DeJWbDvOy3KKKZLqIZCBOrcWv6RoCw-YQAvD_BwE":
+        "https://www.framer.com",
 }
 
 # Anchors in the template's own nav, repointed at real routes. Kept apart from
 # LINKS because these are in-page hashes in the source and become real
 # navigation here.
 NAV_LINKS = {
+    # The header's own nav anchors. `/overview` and not `/login`: these are the
+    # quiet text links, not the call to action, and a reader who is already
+    # signed in should land on the page rather than on a form.
     '"#3356954461"': '"/overview"',
     '"#1175957644"': '"/data"',
 }

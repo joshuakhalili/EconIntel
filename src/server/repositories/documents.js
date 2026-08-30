@@ -155,8 +155,8 @@ export async function insertDocuments(documents) {
  */
 export async function recentDocuments({ limit = 50, minRelevance = 40, kind = null } = {}) {
   const { rows } = await query(
-    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, d.url, d.title,
-            d.summary, d.published_at, d.ai_relevance
+    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, s.icon_data_uri AS source_icon,
+            d.url, d.title, d.summary, d.published_at, d.ai_relevance
        FROM documents d
        JOIN sources s ON s.id = d.source_id
       WHERE d.ai_relevance >= $1
@@ -181,8 +181,8 @@ export async function recentDocuments({ limit = 50, minRelevance = 40, kind = nu
  */
 export async function documentsInWindow({ from, to, limit = 20, minRelevance = 40, kind = null } = {}) {
   const { rows } = await query(
-    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, d.url, d.title,
-            d.summary, d.published_at, d.ai_relevance
+    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, s.icon_data_uri AS source_icon,
+            d.url, d.title, d.summary, d.published_at, d.ai_relevance
        FROM documents d
        JOIN sources s ON s.id = d.source_id
       WHERE d.published_at >= $1::date
@@ -233,8 +233,8 @@ export async function documentsForLens(slug, { limit = 24, minRelevance = 40 } =
   if (!lens.length || !lens[0].news_query) return [];
 
   const { rows } = await query(
-    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, d.url, d.title,
-            d.summary, d.published_at, d.ai_relevance
+    `SELECT d.id, d.kind, d.source_id, s.name AS source_name, s.icon_data_uri AS source_icon,
+            d.url, d.title, d.summary, d.published_at, d.ai_relevance
        FROM documents d
        JOIN sources s ON s.id = d.source_id
       WHERE d.ai_relevance >= $2

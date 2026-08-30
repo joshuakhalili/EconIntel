@@ -45,6 +45,24 @@ export default function NewsList({ documents, emptyMessage = 'No articles yet.' 
             {/* mt-auto pins the provenance to the bottom edge, so the source
                 and date line up across a row whatever the headline did. */}
             <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
+              {/* The publisher's own mark, carried in the API response as a
+                  data: URI rather than linked. Loading it from ft.com would
+                  tell the FT who reads this site — see the note in
+                  0018_source_icons.sql. `alt` is empty because the name is
+                  right beside it; a screen reader announcing "BBC News logo,
+                  BBC News" is worse than silence. Two of eight publishers
+                  serve no icon this can reach, and their cards show the name
+                  alone rather than a placeholder. */}
+              {doc.source_icon && (
+                <img
+                  src={doc.source_icon}
+                  alt=""
+                  width={16}
+                  height={16}
+                  loading="lazy"
+                  className="size-4 shrink-0 rounded-[3px] object-contain"
+                />
+              )}
               <span className="text-caption-1-medium text-text-secondary">{doc.source_name}</span>
               <span className="text-caption-1-regular text-text-tertiary">
                 {formatPublished(doc.published_at)}
