@@ -7,11 +7,11 @@
 --
 -- WHAT THESE ARE
 --
--- 20 dated financing transactions between AI labs, chipmakers, hyperscalers,
+-- 23 dated financing transactions between AI labs, chipmakers, hyperscalers,
 -- GPU clouds, data-centre operators, private credit and sovereign funds, each
 -- with a source URL that resolved when the loader last checked.
 --
--- 33 rows went in. 12 were rejected and 1 was merged into an
+-- 33 rows went in. 9 were rejected and 1 was merged into an
 -- earlier event as a completion rather than loaded as a second deal. Every
 -- rejection and its reason is in docs/financing/deals.json.
 --
@@ -56,13 +56,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://microsoft.gcs-web.com/static-files/b0a66351-38cf-4147-a907-191d774531bb', 'microsoft.gcs-web.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://microsoft.gcs-web.com/static-files/b0a66351-38cf-4147-a907-191d774531bb', 'microsoft.gcs-web.com', 'filing',
        TRUE,
-       200, '2026-08-30T02:20:25.729Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:06.388Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -95,13 +96,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm', 'sec.gov',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm', 'sec.gov', 'filing',
        TRUE,
-       200, '2026-08-30T02:20:25.801Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:06.467Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -134,13 +136,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai', 'press.aboutamazon.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai', 'press.aboutamazon.com', 'company_release',
        TRUE,
-       200, '2026-08-30T02:20:25.922Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:06.547Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -173,13 +176,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf', 'ftc.gov',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf', 'ftc.gov', 'regulator',
        TRUE,
-       200, '2026-08-30T02:20:26.005Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:06.636Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -212,13 +216,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai', 'aboutamazon.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai', 'aboutamazon.com', 'company_release',
        TRUE,
-       200, '2026-08-30T02:20:26.129Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:07.569Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -251,13 +256,54 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html', 'cnbc.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html', 'cnbc.com', 'news',
        FALSE,
-       200, '2026-08-30T02:20:26.929Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:08.316Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
+  http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
+  note = EXCLUDED.note;
+
+-- row  8 · Anthropic PBC → AWS
+-- long-term cloud spend commitment
+WITH upserted AS (
+  INSERT INTO events (
+    kind, status, from_entity_id, to_entity_id,
+    amount_usd, amount_basis, amount_is_estimate,
+    announced_date, completed_date, location_iso3,
+    headline, confidence_tier, is_verified, dedup_hash,
+    loop_status, loop_description, structure_label, is_bidirectional
+  ) VALUES (
+    'offtake', 'announced', 'anthropic', 'amazon',
+    100000000000, 'commitment', FALSE,
+    '2026-04-20', NULL, NULL,
+    'Anthropic → Amazon: long-term cloud spend commitment ($100bn commitment)', 'news_derived', FALSE, '10f9f144ab358b724ceffd126c44bebab23b22ad47a5854fd51ac0afd2084cfe',
+    'forms_loop', 'Anthropic commits to spend $100B on AWS over 10 years tied to expanded Amazon investment', 'long-term cloud spend commitment', FALSE
+  )
+  ON CONFLICT (dedup_hash) DO UPDATE SET
+    kind = EXCLUDED.kind, status = EXCLUDED.status,
+    from_entity_id = EXCLUDED.from_entity_id, to_entity_id = EXCLUDED.to_entity_id,
+    amount_usd = EXCLUDED.amount_usd, amount_basis = EXCLUDED.amount_basis,
+    announced_date = EXCLUDED.announced_date, completed_date = EXCLUDED.completed_date,
+    location_iso3 = EXCLUDED.location_iso3, headline = EXCLUDED.headline,
+    confidence_tier = EXCLUDED.confidence_tier,
+    loop_status = EXCLUDED.loop_status, loop_description = EXCLUDED.loop_description,
+    structure_label = EXCLUDED.structure_label,
+    is_bidirectional = EXCLUDED.is_bidirectional,
+    updated_at = now()
+  RETURNING id
+)
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://tech-insider.org/amazon-anthropic-5-billion-investment-trainium-2026/', 'tech-insider.org', 'aggregator',
+       FALSE,
+       200, '2026-08-30T02:35:08.382Z'::timestamptz, NULL
+  FROM upserted
+ON CONFLICT (event_id, url) DO UPDATE SET
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -290,13 +336,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/', 'reuters.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/', 'reuters.com', 'wire',
        FALSE,
-       401, '2026-08-30T02:20:27.112Z'::timestamptz, 'unconfirmed: HTTP 401'
+       401, '2026-08-30T02:35:08.465Z'::timestamptz, 'unconfirmed: HTTP 401'
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -329,13 +376,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/', 'datacenterdynamics.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/', 'datacenterdynamics.com', 'trade_press',
        FALSE,
-       200, '2026-08-30T02:20:27.243Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:08.606Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -368,13 +416,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/', 'techcrunch.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/', 'techcrunch.com', 'news',
        FALSE,
-       200, '2026-08-30T02:20:27.288Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:08.672Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -407,13 +456,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf', 'assets.publishing.service.gov.uk',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf', 'assets.publishing.service.gov.uk', 'regulator',
        TRUE,
-       200, '2026-08-30T02:20:27.344Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:08.978Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -446,13 +496,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/', 'reuters.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/', 'reuters.com', 'wire',
        FALSE,
-       401, '2026-08-30T02:20:27.401Z'::timestamptz, 'unconfirmed: HTTP 401'
+       401, '2026-08-30T02:35:09.039Z'::timestamptz, 'unconfirmed: HTTP 401'
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -485,13 +536,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/', 'techcrunch.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/', 'techcrunch.com', 'news',
        FALSE,
-       200, '2026-08-30T02:20:27.444Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:09.082Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -524,13 +576,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories', 'nvidianews.nvidia.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories', 'nvidianews.nvidia.com', 'company_release',
        TRUE,
-       200, '2026-08-30T02:20:27.606Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:09.274Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -563,13 +616,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html', 'stocktitan.net',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html', 'stocktitan.net', 'aggregator',
        FALSE,
-       200, '2026-08-30T02:20:27.891Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:09.746Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -602,13 +656,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/', 'reuters.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/', 'reuters.com', 'wire',
        FALSE,
-       401, '2026-08-30T02:20:28.582Z'::timestamptz, 'unconfirmed: HTTP 401'
+       401, '2026-08-30T02:35:11.171Z'::timestamptz, 'unconfirmed: HTTP 401'
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -647,13 +702,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html', 'prnewswire.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html', 'prnewswire.com', 'company_release',
        TRUE,
-       200, '2026-08-30T02:20:28.808Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:11.459Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -686,13 +742,94 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html', 'cnbc.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html', 'cnbc.com', 'news',
        FALSE,
-       200, '2026-08-30T02:20:30.341Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:13.102Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
+  http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
+  note = EXCLUDED.note;
+
+-- row 29 · HUMAIN (PIF-owned) → xAI
+-- Series E equity investment
+WITH upserted AS (
+  INSERT INTO events (
+    kind, status, from_entity_id, to_entity_id,
+    amount_usd, amount_basis, amount_is_estimate,
+    announced_date, completed_date, location_iso3,
+    headline, confidence_tier, is_verified, dedup_hash,
+    loop_status, loop_description, structure_label, is_bidirectional
+  ) VALUES (
+    'investment', 'announced', 'humain', 'xai',
+    3000000000, 'disclosed_total', FALSE,
+    '2026-02-18', NULL, NULL,
+    'HUMAIN → xAI: Series E equity investment ($3bn disclosed)', 'news_derived', FALSE, '3f082e16e0f5973db86e15755be9c754f1c2fedeeed23d5b24cd104bec7f8eab',
+    'forms_loop', 'HUMAIN invests $3B in xAI as part of $20B Series E anchored by QIA and MGX prior to xAI–SpaceX merger', 'Series E equity investment', FALSE
+  )
+  ON CONFLICT (dedup_hash) DO UPDATE SET
+    kind = EXCLUDED.kind, status = EXCLUDED.status,
+    from_entity_id = EXCLUDED.from_entity_id, to_entity_id = EXCLUDED.to_entity_id,
+    amount_usd = EXCLUDED.amount_usd, amount_basis = EXCLUDED.amount_basis,
+    announced_date = EXCLUDED.announced_date, completed_date = EXCLUDED.completed_date,
+    location_iso3 = EXCLUDED.location_iso3, headline = EXCLUDED.headline,
+    confidence_tier = EXCLUDED.confidence_tier,
+    loop_status = EXCLUDED.loop_status, loop_description = EXCLUDED.loop_description,
+    structure_label = EXCLUDED.structure_label,
+    is_bidirectional = EXCLUDED.is_bidirectional,
+    updated_at = now()
+  RETURNING id
+)
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares', 'fwdstart.me', 'newsletter',
+       FALSE,
+       200, '2026-08-30T02:35:13.775Z'::timestamptz, NULL
+  FROM upserted
+ON CONFLICT (event_id, url) DO UPDATE SET
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
+  http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
+  note = EXCLUDED.note;
+
+-- row 30 · HUMAIN → Saudi National Infrastructure Fund
+-- AI/digital infrastructure financing agreement
+WITH upserted AS (
+  INSERT INTO events (
+    kind, status, from_entity_id, to_entity_id,
+    amount_usd, amount_basis, amount_is_estimate,
+    announced_date, completed_date, location_iso3,
+    headline, confidence_tier, is_verified, dedup_hash,
+    loop_status, loop_description, structure_label, is_bidirectional
+  ) VALUES (
+    'credit_facility', 'announced', 'saudi_nif', 'humain',
+    1200000000, 'commitment', FALSE,
+    '2026-01-15', NULL, 'SAU',
+    'Saudi National Infrastructure Fund → HUMAIN: AI/digital infrastructure financing agreement ($1.2bn commitment)', 'news_derived', FALSE, 'f3345f623319a52a21d28de7ea4c876aef6cafd09613776ca58142787a9c8e05',
+    'alleged', 'HUMAIN signs up to $1.2B financing to expand Saudi AI and digital infrastructure', 'AI/digital infrastructure financing agreement', FALSE
+  )
+  ON CONFLICT (dedup_hash) DO UPDATE SET
+    kind = EXCLUDED.kind, status = EXCLUDED.status,
+    from_entity_id = EXCLUDED.from_entity_id, to_entity_id = EXCLUDED.to_entity_id,
+    amount_usd = EXCLUDED.amount_usd, amount_basis = EXCLUDED.amount_basis,
+    announced_date = EXCLUDED.announced_date, completed_date = EXCLUDED.completed_date,
+    location_iso3 = EXCLUDED.location_iso3, headline = EXCLUDED.headline,
+    confidence_tier = EXCLUDED.confidence_tier,
+    loop_status = EXCLUDED.loop_status, loop_description = EXCLUDED.loop_description,
+    structure_label = EXCLUDED.structure_label,
+    is_bidirectional = EXCLUDED.is_bidirectional,
+    updated_at = now()
+  RETURNING id
+)
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares', 'fwdstart.me', 'newsletter',
+       FALSE,
+       200, '2026-08-30T02:35:13.775Z'::timestamptz, NULL
+  FROM upserted
+ON CONFLICT (event_id, url) DO UPDATE SET
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -725,13 +862,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html', 'finance.yahoo.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html', 'finance.yahoo.com', 'aggregator',
        FALSE,
-       200, '2026-08-30T02:20:31.461Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:14.304Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -764,13 +902,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi', 'theglobeandmail.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi', 'theglobeandmail.com', 'news',
        FALSE,
-       200, '2026-08-30T02:20:31.824Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:16.160Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -803,13 +942,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.nist.gov/chips/tsmc-arizona-phoenix', 'nist.gov',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.nist.gov/chips/tsmc-arizona-phoenix', 'nist.gov', 'regulator',
        TRUE,
-       200, '2026-08-30T02:20:32.127Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:16.497Z'::timestamptz, NULL
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;
 
@@ -821,10 +961,11 @@ UPDATE events
        updated_at = now()
  WHERE dedup_hash = '9bcaf9610ef47ff056247f6239ee89cd989999af1327c13bc30d02186dfe646c';
 
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, 'https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment', 'aboutamazon.com',
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, 'https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment', 'aboutamazon.com', 'company_release',
        TRUE,
-       200, '2026-08-30T02:20:26.080Z'::timestamptz, NULL
+       200, '2026-08-30T02:35:07.166Z'::timestamptz, NULL
   FROM events WHERE dedup_hash = '9bcaf9610ef47ff056247f6239ee89cd989999af1327c13bc30d02186dfe646c'
 ON CONFLICT (event_id, url) DO UPDATE SET
+  publisher_class = EXCLUDED.publisher_class,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at, note = EXCLUDED.note;

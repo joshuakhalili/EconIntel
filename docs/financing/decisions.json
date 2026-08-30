@@ -121,7 +121,49 @@
     "GPU-backed loan": "debt_facility",
     "compute equipment financing": "debt_facility",
     "leveraged acquisition": "acquisition",
-    "CHIPS Act grant and loan package": "government_grant"
+    "CHIPS Act grant and loan package": "government_grant",
+    "long-term cloud spend commitment": "offtake",
+    "Series E equity investment": "investment",
+    "AI/digital infrastructure financing agreement": "credit_facility"
+  },
+
+  "_publisher_class_notes": [
+    "What KIND of publisher each host is, independent of how confident anyone is",
+    "in the claim. `confidence_tier` bottoms out at 'news_derived', so a Reuters",
+    "wire story and a newsletter post land on the same value; this is what lets a",
+    "reader tell them apart without opening the link. See migration 0021.",
+    "",
+    "The loader REFUSES a host that is not listed here rather than defaulting to",
+    "something plausible. A silent default would classify the next unvetted",
+    "domain as ordinary news, which is the whole failure this column prevents.",
+    "",
+    "'aggregator' is a site republishing others' filings or reporting; 'newsletter'",
+    "is an individual's or small outlet's write-up. Both are weak publishers, and",
+    "they are weak in different ways worth keeping apart."
+  ],
+
+  "publisher_classes": {
+    "microsoft.gcs-web.com": "filing",
+    "sec.gov": "filing",
+    "ftc.gov": "regulator",
+    "assets.publishing.service.gov.uk": "regulator",
+    "nist.gov": "regulator",
+    "press.aboutamazon.com": "company_release",
+    "aboutamazon.com": "company_release",
+    "nvidianews.nvidia.com": "company_release",
+    "prnewswire.com": "company_release",
+    "globenewswire.com": "company_release",
+    "reuters.com": "wire",
+    "bloomberg.com": "wire",
+    "cnbc.com": "news",
+    "techcrunch.com": "news",
+    "theglobeandmail.com": "news",
+    "datacenterdynamics.com": "trade_press",
+    "finance.yahoo.com": "aggregator",
+    "stocktitan.net": "aggregator",
+    "ccir.io": "aggregator",
+    "tech-insider.org": "aggregator",
+    "fwdstart.me": "newsletter"
   },
 
   "rows": {

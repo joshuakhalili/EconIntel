@@ -244,32 +244,154 @@ function Contested({ lens, accent }) {
    attention look like law. This is also the thinnest lens on the site and the
    module says so rather than padding. */
 function RuleBoard({ rows, accent }) {
-  const board = rows.filter((r) => Number.isFinite(r.latest_value));
+  /*
+   * Selected by id, in enforceability order, not by whatever order the ticker
+   * query returned. Two reasons, and the second is the important one.
+   *
+   * The order IS the argument. A rule that binds and survives an
+   * administration, then one that binds and does not, then one that does not
+   * bind at all. Sorting by count would put proposals first and quietly say
+   * the opposite.
+   *
+   * And selecting by id means a renamed indicator cannot silently blank this
+   * module — which is exactly the failure `Divergence` and `AdoptionSpread`
+   * still carry, since they match on a regex over the indicator's name.
+   */
+  const INSTRUMENTS = [
+    {
+      id: 'derived.ai_binding_rules',
+      stamp: 'RULE',
+      status: 'binds · durable',
+      rule: 'w-[3px]',
+      tone: 'var(--color-signal)',
+      surface: 'bg-raised',
+      size: 'text-[2.5rem]',
+      text: 'text-text-primary',
+      bar: 'bg-white/30',
+    },
+    {
+      id: 'derived.ai_presidential_documents',
+      stamp: 'EXECUTIVE',
+      status: 'binds · reversible',
+      rule: 'w-[2px]',
+      // warn is already this site's colour for the honest edge of a real
+      // result, and "binds now, gone in January" is exactly that. Not an
+      // error state, so it is a rule down the side and never a fill.
+      tone: 'var(--color-warn)',
+      surface: 'bg-panel',
+      size: 'text-[2rem]',
+      text: 'text-text-secondary',
+      bar: 'bg-white/[0.18]',
+    },
+    {
+      id: 'derived.ai_proposed_rules',
+      stamp: 'PROPOSED',
+      status: 'does not bind yet',
+      rule: 'w-px',
+      tone: 'var(--color-border-button-default)',
+      surface: 'bg-transparent',
+      size: 'text-title-1-medium',
+      text: 'text-text-tertiary',
+      bar: 'bg-white/[0.08]',
+    },
+  ];
+
+  const byId = new Map(rows.map((r) => [r.indicator_id, r]));
+  const board = INSTRUMENTS.map((i) => ({ ...i, row: byId.get(i.id) })).filter(
+    (i) => Number.isFinite(i.row?.latest_value)
+  );
   if (board.length === 0) return null;
+
+  /* The fourth indicator is not a peer. `ai_regulation_volume` is the total
+     the three above decompose — the seed says so in its own `why` — and
+     rendering it as a fourth equal card was a category error. It is the
+     denominator. */
+  const total = byId.get('derived.ai_regulation_volume')?.latest_value;
+  const missing = INSTRUMENTS.filter((i) => !byId.has(i.id));
 
   return (
     <Band
       accent={accent}
       eyebrow="What is actually binding"
       title="Mostly proposing, not enacting."
-      note="Counted separately on purpose. A Rule is enforceable; a Proposed Rule carries a comment period and leads a Rule by 12 to 24 months where it converts at all; an Executive Action is unilateral and reversible."
+      note="Counted separately on purpose, and ordered by how hard each is to undo rather than by how many there are."
     >
-      <div className="mt-8 grid gap-px overflow-hidden rounded-2xl bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
-        {board.map((row) => (
-          <div key={row.indicator_id} className="bg-panel p-6">
-            <p className="figure text-[2.5rem] leading-none text-text-primary">
-              {fmt(row.latest_value, 0)}
-            </p>
-            <p className="mt-2 text-caption-1-medium text-text-secondary">
-              {row.label ?? row.name}
-            </p>
-          </div>
+      <div className="stagger mt-8 overflow-hidden rounded-2xl border border-border-button-default">
+        {board.map((item, index) => (
+          <a
+            key={item.id}
+            href={`/data/${item.id}`}
+            className={`tint group flex items-center gap-4 border-b border-border-button-default px-5 py-4 last:border-b-0 ${item.surface} hover:bg-white/[0.04]`}
+            style={{ '--i': index }}
+          >
+            {/* Enforceability as literal weight. The heavier the bar, the
+                harder the instrument is to reverse. */}
+            <span
+              className={`h-10 shrink-0 rounded-full ${item.rule}`}
+              style={{ background: item.tone }}
+              aria-hidden
+            />
+
+            <span
+              className="shrink-0 rounded border px-2 py-0.5 text-[0.625rem] uppercase tracking-[0.14em]"
+              style={{ fontFamily: 'var(--font-label)', borderColor: item.tone, color: item.tone }}
+            >
+              {item.stamp}
+            </span>
+
+            <span className={`figure w-16 shrink-0 text-right leading-none ${item.size} ${item.text}`}>
+              {fmt(item.row.latest_value, 0)}
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className={`block text-body-medium ${item.text}`}>
+                {item.row.label ?? item.row.name}
+              </span>
+              <span className="block text-caption-1-regular text-text-tertiary">{item.status}</span>
+            </span>
+
+            {/* Share of all AI-related federal documents. The one comparison
+                these numbers actually support, and it uses the total rather
+                than discarding it. White at three alphas matching the weight
+                tier — deliberately outside the reserved nine, since none of
+                the chart hues or the direction trio belongs here. */}
+            {Number.isFinite(total) && total > 0 && (
+              <span className="hidden w-40 shrink-0 items-center gap-2 sm:flex">
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                  <span
+                    className={`block h-full rounded-full ${item.bar}`}
+                    style={{
+                      width: `${Math.min(100, (item.row.latest_value / total) * 100)}%`,
+                      transition: 'width var(--motion-base) var(--motion-ease)',
+                    }}
+                  />
+                </span>
+                <span className="figure w-9 text-right text-caption-1-regular text-text-tertiary">
+                  {Math.round((item.row.latest_value / total) * 100)}%
+                </span>
+              </span>
+            )}
+          </a>
         ))}
       </div>
-      <p className="prose-measure mt-6 text-body-regular text-text-tertiary">
-        This is the thinnest lens on the site — four indicators, one question, and two more declared
-        but never computed. It is listed as evidence-insufficient for that reason rather than
-        because governments are inactive.
+
+      {Number.isFinite(total) && (
+        <p className="prose-measure mt-4 text-body-regular text-text-tertiary">
+          {fmt(total, 0)} AI-related federal documents in the latest month. The three above are the
+          ones that are instruments; the rest are notices, meetings and corrections.
+        </p>
+      )}
+
+      {missing.length > 0 && (
+        <p className="prose-measure mt-2 text-caption-1-regular text-warn">
+          {missing.map((m) => m.stamp).join(', ')} unavailable in this period.
+        </p>
+      )}
+
+      <p className="prose-measure mt-4 text-body-regular text-text-tertiary">
+        This is the thinnest lens on the site — four indicators, one question, and two more that
+        were declared and never computed. It is listed as evidence-insufficient for that reason
+        rather than because governments are inactive.
       </p>
     </Band>
   );

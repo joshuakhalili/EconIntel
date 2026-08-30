@@ -146,7 +146,12 @@ console.log(`${DIM}parsed ${rows.length} rows from ${source}${RESET}\n`);
 // ---------------------------------------------------------------------------
 
 const decisions = JSON.parse(readFileSync(DECISIONS, 'utf8'));
-const { entities: entityMap, kinds: kindMap, rows: rowDecisions } = decisions;
+const {
+  entities: entityMap,
+  kinds: kindMap,
+  rows: rowDecisions,
+  publisher_classes: publisherClasses,
+} = decisions;
 
 const CONFIDENCE = { confirmed: 'official', reported: 'news_derived', rumoured: 'news_derived' };
 const LOOP = { yes: 'forms_loop', alleged: 'alleged', no: 'none' };
@@ -381,6 +386,20 @@ for (const row of rows) {
     const publisher = publisherOf(url);
     if (!publisher) throw new Error(`source_url "${url}" is not a URL`);
 
+    /*
+     * An unlisted host REFUSES rather than defaulting.
+     *
+     * The tempting default is 'news', and it is exactly wrong: the next
+     * unvetted domain would be filed alongside Reuters and a reader would have
+     * no way to tell. Classifying a publisher is a judgement, so it lives in
+     * decisions.json with everything else, and an unknown host is work waiting
+     * for a decision.
+     */
+    const publisherClass = publisherClasses[publisher];
+    if (!publisherClass) {
+      throw new Error(`publisher "${publisher}" has no entry in decisions.publisher_classes`);
+    }
+
     const link = classifyUrl(url);
     if (link.state === 'dead') {
       throw new Error(`source URL is dead (${link.reason})`);
@@ -424,6 +443,7 @@ for (const row of rows) {
       citation: {
         url,
         publisher,
+        publisherClass,
         isPrimary: decision.is_primary ?? false,
         httpStatus: link.status ?? null,
         fetchedAt: urlCache[url]?.checkedAt ?? null,
@@ -612,13 +632,14 @@ WITH upserted AS (
     updated_at = now()
   RETURNING id
 )
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, ${sql(e.citation.url)}, ${sql(e.citation.publisher)},
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, ${sql(e.citation.url)}, ${sql(e.citation.publisher)}, ${sql(e.citation.publisherClass)},
        ${e.citation.isPrimary ? 'TRUE' : 'FALSE'},
        ${num(e.citation.httpStatus)}, ${sql(e.citation.fetchedAt)}::timestamptz, ${sql(e.citation.note)}
   FROM upserted
 ON CONFLICT (event_id, url) DO UPDATE SET
-  publisher = EXCLUDED.publisher, is_primary = EXCLUDED.is_primary,
+  publisher = EXCLUDED.publisher, publisher_class = EXCLUDED.publisher_class,
+  is_primary = EXCLUDED.is_primary,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at,
   note = EXCLUDED.note;${participants ? `\n\n${participants}` : ''}`;
 }
@@ -643,12 +664,13 @@ UPDATE events
        updated_at = now()
  WHERE dedup_hash = ${sql(e.dedupHash)};
 
-INSERT INTO event_citations (event_id, url, publisher, is_primary, http_status, fetched_at, note)
-SELECT id, ${sql(e.citation.url)}, ${sql(e.citation.publisher)},
+INSERT INTO event_citations (event_id, url, publisher, publisher_class, is_primary, http_status, fetched_at, note)
+SELECT id, ${sql(e.citation.url)}, ${sql(e.citation.publisher)}, ${sql(e.citation.publisherClass)},
        ${e.citation.isPrimary ? 'TRUE' : 'FALSE'},
        ${num(e.citation.httpStatus)}, ${sql(e.citation.fetchedAt)}::timestamptz, ${sql(e.citation.note)}
   FROM events WHERE dedup_hash = ${sql(e.dedupHash)}
 ON CONFLICT (event_id, url) DO UPDATE SET
+  publisher_class = EXCLUDED.publisher_class,
   http_status = EXCLUDED.http_status, fetched_at = EXCLUDED.fetched_at, note = EXCLUDED.note;`;
 }
 

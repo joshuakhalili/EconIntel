@@ -3,192 +3,192 @@
     "status": 200,
     "final": "https://microsoft.gcs-web.com/static-files/b0a66351-38cf-4147-a907-191d774531bb",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:25.729Z"
+    "checkedAt": "2026-08-30T02:35:06.388Z"
   },
   "https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm": {
     "status": 200,
     "final": "https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:25.801Z"
+    "checkedAt": "2026-08-30T02:35:06.467Z"
   },
   "https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai": {
     "status": 200,
     "final": "https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:25.922Z"
+    "checkedAt": "2026-08-30T02:35:06.547Z"
   },
   "https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf": {
     "status": 200,
     "final": "https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:26.005Z"
+    "checkedAt": "2026-08-30T02:35:06.636Z"
   },
   "https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment": {
     "status": 200,
     "final": "https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:26.080Z"
+    "checkedAt": "2026-08-30T02:35:07.166Z"
   },
   "https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai": {
     "status": 200,
     "final": "https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:26.129Z"
+    "checkedAt": "2026-08-30T02:35:07.569Z"
   },
   "https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html": {
     "status": 200,
     "final": "https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:26.929Z"
+    "checkedAt": "2026-08-30T02:35:08.316Z"
   },
   "https://tech-insider.org/amazon-anthropic-5-billion-investment-trainium-2026/": {
     "status": 200,
     "final": "https://tech-insider.org/amazon-anthropic-5-billion-investment-trainium-2026/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.012Z"
+    "checkedAt": "2026-08-30T02:35:08.382Z"
   },
   "https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/": {
     "status": 401,
     "final": "https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.112Z"
+    "checkedAt": "2026-08-30T02:35:08.465Z"
   },
   "https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/": {
     "status": 200,
     "final": "https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.243Z"
+    "checkedAt": "2026-08-30T02:35:08.606Z"
   },
   "https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/": {
     "status": 200,
     "final": "https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.288Z"
+    "checkedAt": "2026-08-30T02:35:08.672Z"
   },
   "https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf": {
     "status": 200,
     "final": "https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.344Z"
+    "checkedAt": "2026-08-30T02:35:08.978Z"
   },
   "https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/": {
     "status": 401,
     "final": "https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.401Z"
+    "checkedAt": "2026-08-30T02:35:09.039Z"
   },
   "https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/": {
     "status": 200,
     "final": "https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.444Z"
+    "checkedAt": "2026-08-30T02:35:09.082Z"
   },
   "https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories": {
     "status": 200,
     "final": "https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.606Z"
+    "checkedAt": "2026-08-30T02:35:09.274Z"
   },
   "https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html": {
     "status": 200,
     "final": "https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:27.891Z"
+    "checkedAt": "2026-08-30T02:35:09.746Z"
   },
   "https://www.coreweave.com/news/coreweave-secures-2-3-billion-debt-financing-facility-led-by-magnetar-capital-and-blackstone-to-m": {
     "status": 404,
     "final": "https://www.coreweave.com/news/coreweave-secures-2-3-billion-debt-financing-facility-led-by-magnetar-capital-and-blackstone-to-m",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.222Z"
+    "checkedAt": "2026-08-30T02:35:10.618Z"
   },
   "https://investors.coreweave.com/news/news-details/2024/CoreWeave-Secures-7.5-Billion-Debt-Financing-Facility-led-by-Blackstone-a": {
     "status": 403,
     "final": "https://investors.coreweave.com/news/news-details/2024/CoreWeave-Secures-7.5-Billion-Debt-Financing-Facility-led-by-Blackstone-a/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.434Z"
+    "checkedAt": "2026-08-30T02:35:11.015Z"
   },
   "https://www.bloomberg.com/news/articles/2024-12-12/blue-owl-group-lands-600-million-loan-for-coreweave-data-center": {
     "status": 200,
     "final": "https://www.bloomberg.com/news/articles/2024-12-12/blue-owl-group-lands-600-million-loan-for-coreweave-data-center",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.517Z"
+    "checkedAt": "2026-08-30T02:35:11.104Z"
   },
   "https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/": {
     "status": 401,
     "final": "https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.582Z"
+    "checkedAt": "2026-08-30T02:35:11.171Z"
   },
   "https://ccir.io/research/the-rating-case-goes-investment-grade": {
     "status": 200,
     "final": "https://ccir.io/research/the-rating-case-goes-investment-grade",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.670Z"
+    "checkedAt": "2026-08-30T02:35:11.285Z"
   },
   "https://www.globenewswire.com/news-release/2026/06/01/3304211/0/en/iren-closes-3-65bn-investment-grade-gpu-financing.html": {
     "status": 200,
     "final": "https://www.globenewswire.com/news-release/2026/06/01/3304211/0/en/iren-closes-3-65bn-investment-grade-gpu-financing.html",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.740Z"
+    "checkedAt": "2026-08-30T02:35:11.354Z"
   },
   "https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html": {
     "status": 200,
     "final": "https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.808Z"
+    "checkedAt": "2026-08-30T02:35:11.459Z"
   },
   "https://newsroom.equinix.com/2024-10-01-Equinix-Agrees-to-Form-Greater-Than-15B-JV-to-Expand-Hyperscale-Data-Centers-in-the-U-S-": {
     "status": 200,
     "final": "https://newsroom.equinix.com/404",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:28.916Z"
+    "checkedAt": "2026-08-30T02:35:11.956Z"
   },
   "https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Partners-With-Apollo-BlackRock-Blackstone-Brookfield-Goldman-": {
     "status": 403,
     "final": "https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Partners-With-Apollo-BlackRock-Blackstone-Brookfield-Goldman-/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:29.144Z"
+    "checkedAt": "2026-08-30T02:35:12.229Z"
   },
   "https://ir.blackrock.com/news-and-events/press-releases/press-releases-details/2025/MGX-BlackRock-Global-Infrastructure-Partners": {
     "status": 403,
     "final": "https://ir.blackrock.com/news-and-events/press-releases/press-releases-details/2025/MGX-BlackRock-Global-Infrastructure-Partners/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:29.348Z"
+    "checkedAt": "2026-08-30T02:35:12.512Z"
   },
   "https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html": {
     "status": 200,
     "final": "https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:30.341Z"
+    "checkedAt": "2026-08-30T02:35:13.102Z"
   },
   "https://www.mgx.ae/en/news/mgx-bpifrance-mistral-ai-and-nvidia-launch-joint-venture-build-europes-largest-ai-campus": {
     "status": 200,
     "final": "https://www.mgx.ae/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:30.587Z"
+    "checkedAt": "2026-08-30T02:35:13.252Z"
   },
   "https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares": {
     "status": 200,
     "final": "https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:31.016Z"
+    "checkedAt": "2026-08-30T02:35:13.775Z"
   },
   "https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html": {
     "status": 200,
     "final": "https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html",
     "via": "curl",
-    "checkedAt": "2026-08-30T02:20:31.461Z"
+    "checkedAt": "2026-08-30T02:35:14.304Z"
   },
   "https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi": {
     "status": 200,
     "final": "https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi/",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:31.824Z"
+    "checkedAt": "2026-08-30T02:35:16.160Z"
   },
   "https://www.nist.gov/chips/tsmc-arizona-phoenix": {
     "status": 200,
     "final": "https://www.nist.gov/chips/tsmc-arizona-phoenix",
     "via": "fetch",
-    "checkedAt": "2026-08-30T02:20:32.127Z"
+    "checkedAt": "2026-08-30T02:35:16.497Z"
   }
 }

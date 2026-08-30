@@ -1,11 +1,11 @@
 {
   "source": "/Users/100milliongbp/Downloads/ROLE AND OBJECTIVE_You are conducting deep investi.md",
-  "generatedAt": "2026-08-30T02:20:32.135Z",
+  "generatedAt": "2026-08-30T02:35:16.501Z",
   "counts": {
     "parsed": 33,
-    "accepted": 20,
+    "accepted": 23,
     "completions": 1,
-    "rejected": 12,
+    "rejected": 9,
     "undeclared": 0
   },
   "events": [
@@ -31,9 +31,10 @@
       "citation": {
         "url": "https://microsoft.gcs-web.com/static-files/b0a66351-38cf-4147-a907-191d774531bb",
         "publisher": "microsoft.gcs-web.com",
+        "publisherClass": "filing",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:25.729Z",
+        "fetchedAt": "2026-08-30T02:35:06.388Z",
         "note": null
       },
       "provenance": {
@@ -67,9 +68,10 @@
       "citation": {
         "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312525256321/R26.htm",
         "publisher": "sec.gov",
+        "publisherClass": "filing",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:25.801Z",
+        "fetchedAt": "2026-08-30T02:35:06.467Z",
         "note": null
       },
       "provenance": {
@@ -103,9 +105,10 @@
       "citation": {
         "url": "https://press.aboutamazon.com/2023/9/amazon-and-anthropic-announce-strategic-collaboration-to-advance-generative-ai",
         "publisher": "press.aboutamazon.com",
+        "publisherClass": "company_release",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:25.922Z",
+        "fetchedAt": "2026-08-30T02:35:06.547Z",
         "note": null
       },
       "provenance": {
@@ -140,9 +143,10 @@
       "citation": {
         "url": "https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf",
         "publisher": "ftc.gov",
+        "publisherClass": "regulator",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:26.005Z",
+        "fetchedAt": "2026-08-30T02:35:06.636Z",
         "note": null
       },
       "provenance": {
@@ -176,9 +180,10 @@
       "citation": {
         "url": "https://www.aboutamazon.com/news/aws/amazon-invests-additional-4-billion-anthropic-ai",
         "publisher": "aboutamazon.com",
+        "publisherClass": "company_release",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:26.129Z",
+        "fetchedAt": "2026-08-30T02:35:07.569Z",
         "note": null
       },
       "provenance": {
@@ -212,9 +217,10 @@
       "citation": {
         "url": "https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html",
         "publisher": "cnbc.com",
+        "publisherClass": "news",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:26.929Z",
+        "fetchedAt": "2026-08-30T02:35:08.316Z",
         "note": null
       },
       "provenance": {
@@ -224,6 +230,43 @@
         ],
         "sourceDirection": "a_to_b",
         "rawRow": "Amazon | hyperscaler | Anthropic PBC | ai_lab | 2026-04-20 | equity investment + milestone commitments | 5000000000[web:106][web:111] | commitment | a_to_b | yes | Amazon injects $5B and commits up to $20B more while Anthropic agrees to $100B AWS spend over 10 years | reported | https://www.cnbc.com/2026/04/20/amazon-invest-up-to-25-billion-in-anthropic-part-of-ai-infrastructure.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 8,
+      "dedupHash": "10f9f144ab358b724ceffd126c44bebab23b22ad47a5854fd51ac0afd2084cfe",
+      "kind": "offtake",
+      "structureLabel": "long-term cloud spend commitment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "anthropic",
+      "toEntityId": "amazon",
+      "participants": [],
+      "amountUsd": 100000000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2026-04-20",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "Anthropic commits to spend $100B on AWS over 10 years tied to expanded Amazon investment",
+      "citation": {
+        "url": "https://tech-insider.org/amazon-anthropic-5-billion-investment-trainium-2026/",
+        "publisher": "tech-insider.org",
+        "publisherClass": "aggregator",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:35:08.382Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "106"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "Anthropic PBC | ai_lab | AWS | hyperscaler | 2026-04-20 | long-term cloud spend commitment | 100000000000[web:106] | commitment | a_to_b | yes | Anthropic commits to spend $100B on AWS over 10 years tied to expanded Amazon investment | reported | https://tech-insider.org/amazon-anthropic-5-billion-investment-trainium-2026/"
       },
       "urlState": "live"
     },
@@ -249,9 +292,10 @@
       "citation": {
         "url": "https://www.reuters.com/technology/google-agrees-invest-up-2-bln-openai-rival-anthropic-wsj-2023-10-27/",
         "publisher": "reuters.com",
+        "publisherClass": "wire",
         "isPrimary": false,
         "httpStatus": 401,
-        "fetchedAt": "2026-08-30T02:20:27.112Z",
+        "fetchedAt": "2026-08-30T02:35:08.465Z",
         "note": "unconfirmed: HTTP 401"
       },
       "provenance": {
@@ -285,9 +329,10 @@
       "citation": {
         "url": "https://www.datacenterdynamics.com/en/news/uks-cma-launches-investigation-into-googles-investment-in-anthropic/",
         "publisher": "datacenterdynamics.com",
+        "publisherClass": "trade_press",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:27.243Z",
+        "fetchedAt": "2026-08-30T02:35:08.606Z",
         "note": null
       },
       "provenance": {
@@ -319,9 +364,10 @@
       "citation": {
         "url": "https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/",
         "publisher": "techcrunch.com",
+        "publisherClass": "news",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:27.288Z",
+        "fetchedAt": "2026-08-30T02:35:08.672Z",
         "note": null
       },
       "provenance": {
@@ -355,9 +401,10 @@
       "citation": {
         "url": "https://assets.publishing.service.gov.uk/media/664c6cfd993111924d9d389f/Full_text_decision.pdf",
         "publisher": "assets.publishing.service.gov.uk",
+        "publisherClass": "regulator",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:27.344Z",
+        "fetchedAt": "2026-08-30T02:35:08.978Z",
         "note": null
       },
       "provenance": {
@@ -389,9 +436,10 @@
       "citation": {
         "url": "https://www.reuters.com/business/microsoft-fund-mistrals-european-ai-expansion-multibillion-dollar-deal-2026-07-21/",
         "publisher": "reuters.com",
+        "publisherClass": "wire",
         "isPrimary": false,
         "httpStatus": 401,
-        "fetchedAt": "2026-08-30T02:20:27.401Z",
+        "fetchedAt": "2026-08-30T02:35:09.039Z",
         "note": "unconfirmed: HTTP 401"
       },
       "provenance": {
@@ -423,9 +471,10 @@
       "citation": {
         "url": "https://techcrunch.com/2023/04/20/coreweave-a-gpu-focused-cloud-compute-provider-lands-221m-investment/",
         "publisher": "techcrunch.com",
+        "publisherClass": "news",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:27.444Z",
+        "fetchedAt": "2026-08-30T02:35:09.082Z",
         "note": null
       },
       "provenance": {
@@ -460,9 +509,10 @@
       "citation": {
         "url": "https://nvidianews.nvidia.com/news/nvidia-and-coreweave-strengthen-collaboration-to-accelerate-buildout-of-ai-factories",
         "publisher": "nvidianews.nvidia.com",
+        "publisherClass": "company_release",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:27.606Z",
+        "fetchedAt": "2026-08-30T02:35:09.274Z",
         "note": null
       },
       "provenance": {
@@ -498,9 +548,10 @@
       "citation": {
         "url": "https://www.stocktitan.net/sec-filings/CRWV/8-k-core-weave-inc-reports-material-event-634b5d5375de.html",
         "publisher": "stocktitan.net",
+        "publisherClass": "aggregator",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:27.891Z",
+        "fetchedAt": "2026-08-30T02:35:09.746Z",
         "note": null
       },
       "provenance": {
@@ -543,9 +594,10 @@
       "citation": {
         "url": "https://www.reuters.com/technology/lambda-secures-500-mln-loan-with-nvidia-chips-collateral-2024-04-04/",
         "publisher": "reuters.com",
+        "publisherClass": "wire",
         "isPrimary": false,
         "httpStatus": 401,
-        "fetchedAt": "2026-08-30T02:20:28.582Z",
+        "fetchedAt": "2026-08-30T02:35:11.171Z",
         "note": "unconfirmed: HTTP 401"
       },
       "provenance": {
@@ -581,9 +633,10 @@
       "citation": {
         "url": "https://www.prnewswire.com/news-releases/blue-owl-managed-funds-lead-2-4-billion-ai-factory-financing-for-iren-302863057.html",
         "publisher": "prnewswire.com",
+        "publisherClass": "company_release",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:28.808Z",
+        "fetchedAt": "2026-08-30T02:35:11.459Z",
         "note": null
       },
       "provenance": {
@@ -620,9 +673,10 @@
       "citation": {
         "url": "https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html",
         "publisher": "cnbc.com",
+        "publisherClass": "news",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:30.341Z",
+        "fetchedAt": "2026-08-30T02:35:13.102Z",
         "note": null
       },
       "provenance": {
@@ -634,6 +688,80 @@
         ],
         "sourceDirection": "a_to_b",
         "rawRow": "MGX | sovereign_fund | Aligned Data Centers | datacenter_operator | 2025-10-15 | leveraged acquisition | 40000000000[web:160][web:162][web:164][web:165] | disclosed-total | a_to_b | yes | MGX joins Nvidia, Microsoft, BlackRock and xAI to buy Aligned Data Centers for ~$40B | reported | https://www.cnbc.com/2025/10/15/abu-dhabis-mgx-investments-in-trump-crypto-tiktok-openai-.html"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 29,
+      "dedupHash": "3f082e16e0f5973db86e15755be9c754f1c2fedeeed23d5b24cd104bec7f8eab",
+      "kind": "investment",
+      "structureLabel": "Series E equity investment",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "humain",
+      "toEntityId": "xai",
+      "participants": [],
+      "amountUsd": 3000000000,
+      "amountBasis": "disclosed_total",
+      "isBidirectional": false,
+      "announcedDate": "2026-02-18",
+      "locationIso3": null,
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "forms_loop",
+      "loopDescription": "HUMAIN invests $3B in xAI as part of $20B Series E anchored by QIA and MGX prior to xAI–SpaceX merger",
+      "citation": {
+        "url": "https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares",
+        "publisher": "fwdstart.me",
+        "publisherClass": "newsletter",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:35:13.775Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "52"
+        ],
+        "sourceDirection": "a_to_b",
+        "rawRow": "HUMAIN (PIF-owned) | sovereign_fund | xAI | ai_lab | 2026-02-18 | Series E equity investment | 3000000000[web:52] | disclosed-total | a_to_b | yes | HUMAIN invests $3B in xAI as part of $20B Series E anchored by QIA and MGX prior to xAI–SpaceX merger | reported | https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares"
+      },
+      "urlState": "live"
+    },
+    {
+      "row": 30,
+      "dedupHash": "f3345f623319a52a21d28de7ea4c876aef6cafd09613776ca58142787a9c8e05",
+      "kind": "credit_facility",
+      "structureLabel": "AI/digital infrastructure financing agreement",
+      "status": "announced",
+      "completedDate": null,
+      "fromEntityId": "saudi_nif",
+      "toEntityId": "humain",
+      "participants": [],
+      "amountUsd": 1200000000,
+      "amountBasis": "commitment",
+      "isBidirectional": false,
+      "announcedDate": "2026-01-15",
+      "locationIso3": "SAU",
+      "headline": null,
+      "confidenceTier": "news_derived",
+      "loopStatus": "alleged",
+      "loopDescription": "HUMAIN signs up to $1.2B financing to expand Saudi AI and digital infrastructure",
+      "citation": {
+        "url": "https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares",
+        "publisher": "fwdstart.me",
+        "publisherClass": "newsletter",
+        "isPrimary": false,
+        "httpStatus": 200,
+        "fetchedAt": "2026-08-30T02:35:13.775Z",
+        "note": null
+      },
+      "provenance": {
+        "amountMarkers": [
+          "52"
+        ],
+        "sourceDirection": "b_to_a",
+        "rawRow": "HUMAIN | sovereign_fund | Saudi National Infrastructure Fund | sovereign_fund | 2026-01-15 | AI/digital infrastructure financing agreement | 1200000000[web:52] | commitment | b_to_a | alleged | HUMAIN signs up to $1.2B financing to expand Saudi AI and digital infrastructure | reported | https://www.fwdstart.me/p/saudi-arabia-humain-invested-3b-in-musk-s-xai-before-spacex-acquisition-now-holds-spacex-shares"
       },
       "urlState": "live"
     },
@@ -659,9 +787,10 @@
       "citation": {
         "url": "https://finance.yahoo.com/technology/ai/articles/naver-partners-brookfield-nvidia-expand-063200248.html",
         "publisher": "finance.yahoo.com",
+        "publisherClass": "aggregator",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:31.461Z",
+        "fetchedAt": "2026-08-30T02:35:14.304Z",
         "note": null
       },
       "provenance": {
@@ -696,9 +825,10 @@
       "citation": {
         "url": "https://www.theglobeandmail.com/investing/markets/stocks/BAM/pressreleases/3499694/brookfield-boosts-global-ai-infrastructure-wi",
         "publisher": "theglobeandmail.com",
+        "publisherClass": "news",
         "isPrimary": false,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:31.824Z",
+        "fetchedAt": "2026-08-30T02:35:16.160Z",
         "note": null
       },
       "provenance": {
@@ -733,9 +863,10 @@
       "citation": {
         "url": "https://www.nist.gov/chips/tsmc-arizona-phoenix",
         "publisher": "nist.gov",
+        "publisherClass": "regulator",
         "isPrimary": true,
         "httpStatus": 200,
-        "fetchedAt": "2026-08-30T02:20:32.127Z",
+        "fetchedAt": "2026-08-30T02:35:16.497Z",
         "note": null
       },
       "provenance": {
@@ -779,9 +910,10 @@
         "citation": {
           "url": "https://www.aboutamazon.com/news/company-news/amazon-anthropic-ai-investment",
           "publisher": "aboutamazon.com",
+          "publisherClass": "company_release",
           "isPrimary": true,
           "httpStatus": 200,
-          "fetchedAt": "2026-08-30T02:20:26.080Z",
+          "fetchedAt": "2026-08-30T02:35:07.166Z",
           "note": null
         },
         "provenance": {
@@ -797,12 +929,6 @@
   ],
   "rejected": [
     {
-      "label": "row  8 · Anthropic PBC → AWS",
-      "reason": "source domain needs a decision",
-      "detail": "The $100bn ten-year AWS commitment rests solely on tech-insider.org, an aggregator this site has not decided it may cite. The claim is probably true — CNBC's row 7 report describes the same deal — but a $100bn figure may not enter on an unvetted domain. Recoverable by finding the Amazon or Anthropic release.",
-      "declared": true
-    },
-    {
       "label": "row 17 · CoreWeave → Magnetar/Blackstone-led lenders",
       "reason": "dead source URL",
       "detail": "coreweave.com slug is truncated mid-word ('...-and-blackstone-to-m') and returns 404. Reconstructing the full slug ('...-to-meet-surging-demand-for-generative-ai') also 404s. A $2.3bn facility may not be loaded against a link that does not resolve.",
@@ -816,8 +942,8 @@
     },
     {
       "label": "row 19 · Blue Owl/Chirisa/PowerHouse JV → CoreWeave",
-      "reason": "stated direction contradicts the row's own description",
-      "detail": "The row puts $600m on a JV-to-CoreWeave edge, but its own loop_description says the $600m is a Societe Generale-led construction loan TO the JV. Neither party named on the row paid the other $600m. Loading it would fabricate a transfer. The payer (the SocGen syndicate) is on neither side, so this cannot be fixed from the row alone.",
+      "reason": "the row conflates two separate transactions",
+      "detail": "RECOVERY ATTEMPTED 2026-08-30, FAILED. The Bloomberg source's own headline is 'Blue Owl-Led Group Lands $600 Million Loan for CoreWeave Data Center' — the JV RECEIVED the loan; it did not pay CoreWeave $600m. The row is really two transactions welded into one edge: a Societe Generale-led construction loan TO the JV, and a lease FROM the JV to CoreWeave. Either can be modelled; neither can be modelled without silently dropping the other, and the $600m belongs only to the first. Sponsor-to-vehicle does not rescue it: Blue Owl did not lend the $600m either. Recoverable only by splitting the row in two, which is an editorial decision about the source table rather than a repair of it. Bloomberg's body is paywalled, so the lease terms are unavailable.",
       "declared": true
     },
     {
@@ -828,8 +954,8 @@
     },
     {
       "label": "row 22 · IREN Limited → Microsoft",
-      "reason": "stated direction contradicts the row's own description",
-      "detail": "The row's b_to_a puts $3.65bn flowing from Microsoft to IREN. Part 2 of the report says the $3.65bn is a US private placement plus a delayed-draw term loan; Microsoft is the offtaker whose contract secures it, not the payer. Loading this would state that Microsoft paid IREN $3.65bn, which nobody claims. Highest-value row to recover — the GlobeNewswire release is live.",
+      "reason": "the paying side names nobody",
+      "detail": "RECOVERY ATTEMPTED 2026-08-30, FAILED. The GlobeNewswire release was fetched and read. It settles that Microsoft is NOT the payer — 'Anchored by Microsoft's offtake' — but does not supply one: the money is '$2.10bn U.S. private placement' plus a '$1.55bn delayed draw term loan', and the release describes the lenders only as 'a broad group of global financial institutions, asset managers and insurance investors'. Goldman Sachs and J.P. Morgan are named, but as 'joint lead managers and arrangers', which is who structured it rather than who paid. So consortium rule (c) applies exactly as it does to row 21's 'term-loan investors': the paying side names nobody, and events.from_entity_id is NOT NULL. Recoverable the moment a source names a lender.",
       "declared": true
     },
     {
@@ -854,18 +980,6 @@
       "label": "row 28 · MGX/Bpifrance/Mistral/Nvidia JV → AI Campus (Paris region)",
       "reason": "dead source URL",
       "detail": "mgx.ae returns 200 but redirects to the site homepage — the article path is gone. Also needs 'joint_venture'.",
-      "declared": true
-    },
-    {
-      "label": "row 29 · HUMAIN (PIF-owned) → xAI",
-      "reason": "source domain needs a decision",
-      "detail": "Sole source is fwdstart.me, a newsletter this site has not decided it may cite, for a $3bn sovereign investment in xAI. Needs a filing or tier-1 report.",
-      "declared": true
-    },
-    {
-      "label": "row 30 · HUMAIN → Saudi National Infrastructure Fund",
-      "reason": "source domain needs a decision",
-      "detail": "Same fwdstart.me link as row 29, and the row is flagged 'alleged' by the researcher. Also needs 'credit_facility', not yet in the enum.",
       "declared": true
     }
   ]

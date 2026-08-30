@@ -63,8 +63,11 @@
 --
 -- The answers are written so that publishing one unchanged would still leave
 -- it true. Where the series cannot settle the question the answer says so and
--- `strength` is `insufficient` — nine of the twenty are, which is the honest
--- proportion rather than a failure of nerve.
+-- `strength` is `insufficient` — seven of the twenty are, against eight
+-- `suggestive` and five `consistent`. Nothing here is `contested`: data
+-- disagreeing across TIME is not contestation, and none of these twenty has
+-- two sources disagreeing methodologically about the same period. `clerical`
+-- in 024 does, which is what the label is for.
 --
 -- TO ACTIVATE ONE
 --
