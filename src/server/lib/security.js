@@ -20,15 +20,42 @@
  *
  * WHY THE CSP HASH IS COMPUTED, NOT WRITTEN DOWN
  *
- * index.html carries one inline script: the theme is applied before first
- * paint, because reading localStorage from React would flash the wrong theme
- * on every load. An inline script needs either 'unsafe-inline' — which defeats
- * the point of a script CSP — or a hash of its exact bytes.
+ * An inline script needs either 'unsafe-inline' — which defeats the point of a
+ * script CSP — or a hash of its exact bytes. A hash pasted into source drifts
+ * the moment anyone edits that script, and it fails silently: the CSP blocks
+ * the script and nothing reports an error to the server. So the hashes are
+ * computed at boot from the files actually being served, and cannot disagree
+ * with reality.
  *
- * A hash pasted into source drifts the moment anyone edits that script, and it
- * fails silently: the CSP blocks the script, the theme flashes, and nothing
- * reports an error. So the hash is computed at boot from the file actually
- * being served. It cannot disagree with reality.
+ * THIS SCANS THE LANDING PAGE TOO, AND THAT WAS NOT ALWAYS TRUE
+ *
+ * It read only `public/index.html` until 2026-08-30. That file is Vite output
+ * and carries a single `<script src>`, so the scan returned nothing, the CSP
+ * went out as a bare `script-src 'self'` — and it was applied to EVERY
+ * response, including the Framer landing page, which carries seven executable
+ * inline scripts totalling ~20 kB.
+ *
+ * Every one of them was blocked, in every environment, from the day the CSP
+ * shipped. That included `animator`, the entrance-animation engine for the
+ * whole front door. Proven rather than assumed: the scripts were present in
+ * the DOM while `window.animator` and `window.process` — top-level globals set
+ * by two different inline scripts — were both `undefined`.
+ *
+ * Nothing caught it because a blocked inline script reports to the browser
+ * console and never to the server, and the page still renders: it just sits
+ * there in its pre-animation state, which looks like a design choice.
+ *
+ * So the scan takes a LIST of roots and walks each for .html. If a root does
+ * not exist it is skipped, which is what keeps this working before the first
+ * `npm run build`.
+ *
+ * NON-EXECUTABLE SCRIPT TYPES ARE SKIPPED ON PURPOSE
+ *
+ * Framer stores its animation keyframes and CMS handover data in
+ * `<script type="framer/appear">` and `<script type="framer/handover">`. A
+ * browser does not execute an unknown script type, so CSP never evaluates them
+ * and a hash for one is pure header weight — and these are the two biggest
+ * blocks on the page. Only types a browser will actually run are hashed.
  *
  * WHAT IS DELIBERATELY PERMISSIVE
  *
@@ -39,26 +66,76 @@
  */
 
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-/** Hashes of every inline <script> in the served index.html, as CSP sources. */
-function inlineScriptHashes(publicDir) {
-  let html;
+/** Script types a browser will actually execute. Anything else is a data block. */
+const EXECUTABLE_TYPES = new Set([
+  '',
+  'text/javascript',
+  'application/javascript',
+  'module',
+]);
+
+/**
+ * Every .html under `root`, recursively. Missing roots yield nothing.
+ *
+ * Dot-directories are skipped, and that is a security property rather than
+ * tidiness: `landing/.mirror-cache/pages/` holds the ORIGINAL Framer template
+ * as downloaded, before the content map and the hardening pass ran. Its inline
+ * scripts differ slightly from the shipped ones, so scanning it added three
+ * hashes that allowlist bodies no served page uses — a CSP allowlist should
+ * contain exactly what is served and nothing else.
+ */
+function htmlFilesUnder(root) {
+  let entries;
   try {
-    html = readFileSync(path.join(publicDir, 'index.html'), 'utf8');
+    entries = readdirSync(root, { withFileTypes: true });
   } catch {
-    // No build yet. The SPA cannot be served either, so there is nothing to
-    // protect — return empty rather than crashing the process on boot.
     return [];
   }
-
-  return [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
-    .map(([, body]) => `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
+  return entries.flatMap((entry) => {
+    if (entry.name.startsWith('.')) return [];
+    const full = path.join(root, entry.name);
+    if (entry.isDirectory()) return htmlFilesUnder(full);
+    return entry.isFile() && entry.name.endsWith('.html') ? [full] : [];
+  });
 }
 
-export function securityHeaders({ publicDir, isProduction }) {
-  const scriptHashes = inlineScriptHashes(publicDir).join(' ');
+/**
+ * CSP `sha256-` sources for every executable inline script across `roots`.
+ *
+ * Deduplicated: the landing page's eight HTML files share most of their inline
+ * scripts, so the raw list is 38 entries for 7 distinct bodies.
+ */
+export function inlineScriptHashes(roots) {
+  const tag = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g;
+  const typeAttr = /\btype\s*=\s*["']?([^"'\s>]+)/;
+  const hashes = new Set();
+
+  for (const root of roots) {
+    for (const file of htmlFilesUnder(root)) {
+      let html;
+      try {
+        html = readFileSync(file, 'utf8');
+      } catch {
+        continue;
+      }
+      for (const [, attrs, body] of html.matchAll(tag)) {
+        const declared = (typeAttr.exec(attrs)?.[1] ?? '').toLowerCase();
+        if (!EXECUTABLE_TYPES.has(declared)) continue;
+        hashes.add(
+          `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`
+        );
+      }
+    }
+  }
+  return [...hashes];
+}
+
+export function securityHeaders({ publicDir, landingDir, isProduction }) {
+  const roots = [publicDir, landingDir].filter(Boolean);
+  const scriptHashes = inlineScriptHashes(roots).join(' ');
 
   const csp = [
     "default-src 'self'",
