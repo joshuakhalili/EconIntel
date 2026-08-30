@@ -3,7 +3,7 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-30 (second pass — figures, legal pages, sign-in polish).
+Last updated: 2026-08-30 (third pass — style system, financing events, GDELT fixed).
 
 ## The project is now called Diffusion (was EconIntel)
 
@@ -249,6 +249,34 @@ a catch-all so a deep link loads). Cloudflare Workers AI for the LLM layer
   ft.com would tell seven news organisations who reads this site, and the CSP
   forbids it. Six of eight resolved; the FT 403s everything and the Fed serves
   only an oversized ICO, so both show the name alone.
+- **The style system.** A named motion vocabulary in `atmos.css` — `.rise`,
+  `.rise-sm`, `.stagger`, `.lift`, `.tint`, the sheet trio, `.marquee-track` —
+  taken from the landing page's own compiled CSS (400ms,
+  `cubic-bezier(.44, 0, .56, 1)`, 50px travel, 100ms delay) rather than
+  invented. No animation library: `motion` is installed but tree-shaken out,
+  and importing it would add 120-180kB to the largest thing this site ships to
+  do work that is four CSS rules. Reduced motion is a closed list of eight
+  selectors, never a blanket reset.
+- **Filled question cards**, `#2f61f7` with white text, per-lens hue on the
+  ring. The per-lens FILL cannot be built — white on the five accents measures
+  2.52, 1.48, 1.52, 2.30 and 2.85 to one, and darkening them until white works
+  lands two of them within ΔE 0.08 of chart hues. `check-contrast` now tests
+  the fill surfaces, so changing the hex turns the build red.
+- **News as a bento** (six tiles, period six on a six-column grid, so the
+  collapse step and the layout period are the same number by construction) and
+  the literature list collapsed, both through one `Collapsible` primitive.
+- **Prices carries a scrolling marquee**; tapping any ticker opens a blue sheet.
+- **Policy & Regulation is a register of documents** — RULE / EXECUTIVE /
+  PROPOSED as ledger rows ordered by how hard each is to undo, with
+  enforceability as literal visual weight.
+- **23 circular-financing events**, the first rows the `events` table has ever
+  held, from a Perplexity deep-research table of 33 deals. Nine were rejected —
+  six for dead source URLs — and the reasons are recorded in
+  `docs/financing/decisions.json`. `event_citations.publisher_class`
+  distinguishes a filing from a newsletter, which `confidence_tier` could not.
+  **The diagram must draw from `investment_edges`, never `monthly_investment`:**
+  an investment and the cloud commitment tied to it point opposite ways, so
+  that view's total is meaningless by construction.
 - **62 tests passing.** Mostly backend; `src/client/lib/format.test.js` is the
   only front-end suite, covering the number and unit formatting. There are no
   component or route tests.
@@ -306,11 +334,17 @@ In rough priority order:
    function timeout. The `/api/overview` query was 5.9s cold before it was
    restructured around a CTE; it is 0.87s cold now, which is the only reason
    that budget is reachable.
-6. **Nine more questions, drafted and switched off.** `024_new_questions.sql`
-   seeds them with `is_active = false` and `last_reviewed` NULL, so they sit in
-   `stale_questions` and reach no reader. The full proposal, with the SQL to
-   re-check every figure in it, is `docs/questions-proposal.md`. Activating one
-   is a single UPDATE — after checking its answer against the series.
+6. **Twenty-nine more questions, drafted and switched off.** `024_new_questions.sql`
+   `024_new_questions.sql` (9) and `025_more_questions.sql` (20) seed them with
+   `is_active = false` and `last_reviewed` NULL, so they reach no reader. Note
+   `stale_questions` filters on `is_active` and therefore does NOT list them;
+   the worklist is `SELECT id, lens_id, question, strength FROM questions WHERE
+   NOT is_active`. The reasoning is in `docs/questions-proposal.md` and
+   `docs/questions-proposal-2.md`. Activating one is a single UPDATE — after
+   checking its answer against the series.
+
+   Lens totals if all were activated: investment 9, growth 8, labour 8,
+   prices 8, regulation 7.
 
 ## Security
 
@@ -372,12 +406,31 @@ Known gap, deliberately deferred:
 
 ## Known broken things
 
-- **GDELT news-volume series (`derived.ai_news_volume`) — connection timeouts.**
-  The adapter code looks correct; this session self-rate-limited testing it and
-  hasn't gotten back in. Worth just trying again fresh, possibly from a
-  different network/time.
 - **`derived.policy_investment_stance` and `derived.policy_regulation_stance`**
-  — indicators exist, no computation defined yet.
+  — indicators exist, no computation defined yet. The recommendation on the
+  table is to RETIRE them the way `derived.datacentre_investment` was retired
+  in `008_policy_effects.sql`, rather than build a classifier: producing them
+  would be this project's first LLM call site, and the governing rule (never
+  invent a number, only connect stored values) is designed for narration. A
+  stance classifier does the inverse — it PRODUCES `investment_score = -37`
+  with no stored value behind it. Not yet done either way.
+
+**GDELT is fixed.** `derived.ai_news_volume` holds 116 monthly observations,
+the first it has ever had. It was broken three ways, none of them the
+"try again from a different network" this file used to suggest:
+
+1. Node applies its own ~10s connect ceiling underneath
+   `AbortSignal.timeout(120_000)`, invisible to it, reported as bare
+   `fetch failed`. Fixed with an undici Agent — but note the obvious form of
+   that fix is worse than the bug: Node's global `fetch` validates
+   `dispatcher` against its own bundled undici and rejects one from
+   node_modules with `UND_ERR_INVALID_ARG`, instantly. `slowConnect` in
+   `lib/http.js` swaps the fetch implementation as well as the dispatcher.
+2. `ECONNRESET` was not in the retryable set, so it arrived as an untyped
+   TypeError, fell through the `[429, 502, 504]` check, and killed the job on
+   the first attempt — the retry ladder had never once run.
+3. The nine-year window is too large and reset every time. Now fetched in
+   one-year chunks, deduplicated at the seams.
 
 ## Recent finding worth knowing about
 
@@ -390,6 +443,45 @@ run pulled in 73 new articles. If the news feed still looks thin, run:
 ```
 npm run ingest -- rss --force
 ```
+
+## Deploy, and the Render emails
+
+**The failing-deploy emails are diagnosed and fixed.** There IS a Render web
+service called EconIntel, configured in their dashboard and invisible to this
+repo, auto-deploying on every push to main. It failed every time because
+Render installs with `NODE_ENV=production`, npm then skips devDependencies,
+and `vite`, `@vitejs/plugin-react`, `@tailwindcss/vite` and `tailwindcss` were
+all devDependencies. Reproduced exactly with `NODE_ENV=production npm ci`, then
+fixed by moving the four into `dependencies` and adding `engines` + `.nvmrc`.
+
+**Render still hosts only the database.** Vercel + Neon remains the plan. What
+the move needs, all verified:
+
+- `src/server/index.js` splits into `app.js` (everything) and a ~25-line
+  listener, so `api/index.js` can export the app without `app.listen` firing as
+  an import side effect.
+- `pg.Pool({ max: 10 })` → `@neondatabase/serverless`'s Pool with
+  `DB_POOL_MAX=1` against the POOLED connection string; each lambda is its own
+  process, so 10 × instances is the real number today.
+- `statement_timeout: 30_000` outlives any Vercel function. Move it out of
+  `pool.js` and onto the web connection string at 8s, leaving the ingest
+  connection alone — ingestion legitimately runs longer statements.
+- `landing/` becomes static output rather than `express.static`, and the
+  hand-written slash-less resolver is replaced exactly by `cleanUrls: true` +
+  `trailingSlash: false`. The canonicals detach.py wrote are slash-less, so
+  those flags redirect toward them.
+- **`security.js` computes zero CSP hashes today** — both `index.html` files
+  carry only `<script src>`, and the regex excludes those. So `script-src` is
+  already a constant `'self'` and the header set copies into `vercel.json` with
+  no drift risk. The `readFileSync` at boot is dead weight.
+- **Do not split routes into one file per endpoint.** `/api/me` is registered
+  before the auth gate and `/healthz` outside it; one function, one app,
+  preserves that ordering byte for byte.
+- **`landing/docs/**` is currently served publicly** — `GET /docs/mirror.py`
+  returns the clone pipeline. Exclude it in the static assembly step.
+- Nothing schedules ingestion. GitHub Actions, not Vercel Cron: the GDELT job
+  alone runs for minutes. A failed Actions run already emails and puts a red X
+  on the repo with no code written.
 
 ## How to pick this up
 
