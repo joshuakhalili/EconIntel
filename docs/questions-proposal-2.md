@@ -68,9 +68,12 @@ That second clause changes the grouping advice in both directions:
   100) and the semiconductor-machinery PPI (Dec 2003 = 100) on separate
   charts, even though editorially they belong together.
 
-I replayed the rebase decision against the live data for all eleven chart
-groups in this file. None rebases; none has a member under the ten per cent
-threshold. One reads badly anyway — see the known limitation at the end.
+I replayed the rebase decision against the live data for all ten chart groups
+in this file. None of them rebases. Seven are all-index or all-rate groups
+where the threshold is suppressed by design; the other three are currency and
+count groups whose smallest member covers 47%, 69% and 73% of its axis, well
+clear of the threshold. One group reads badly anyway despite passing — see the
+known limitation at the end.
 
 **3. A 48-country series cannot be a cross-country page.**
 `question_indicators` carries one `country_iso3` per (question, indicator), so

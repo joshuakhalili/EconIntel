@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RiArrowLeftSLine, RiArrowRightSLine } from '@remixicon/react';
 import { Chip } from '@/components/base/badges/chip';
-import { withUnit, fmtDate } from '@/lib/format';
+import { withUnit, fmtDate, fmt } from '@/lib/format';
+import Sheet from '@/components/Sheet';
 
 /**
  * The prices a lens depends on, each stating why it is here.
@@ -187,24 +188,62 @@ export default function TickerStrip({ tickers }) {
         </ul>
       </div>
 
-      {/* The rationale is the point, so it gets room to be read rather than
-          being squeezed into the tile as a tooltip. */}
-      {open && (
-        <div className="mt-2 rounded-2lg border border-border-button-default bg-background-secondary-default p-4">
-          <p className="text-body-medium text-text-primary">{open.name}</p>
-          <p className="mt-1 text-body-regular text-text-secondary">{open.why}</p>
-          {open.source_url && (
-            <a
-              href={open.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-caption-1-regular text-accent-600 underline"
-            >
-              Source
-            </a>
-          )}
-        </div>
-      )}
+      {/* The rationale is the point, so it gets a sheet rather than a tooltip.
+          It used to be an inline panel below the whole strip — not beside the
+          tile you clicked, because the strip is inside `overflow-x-auto` and
+          anything anchored to a tile would be clipped by the scroller. The
+          sheet is portalled, so that constraint is gone. */}
+      <Sheet isOpen={Boolean(open)} onClose={() => setOpenId(null)} label={open?.name ?? 'Price'}>
+        {open && (
+          <>
+            <p className="figure text-caption-1-regular uppercase tracking-[0.12em] text-on-fill">
+              {open.label ?? open.name}
+            </p>
+
+            <p className="figure mt-3 text-[clamp(2.5rem,6vw,3.5rem)] leading-none text-on-fill">
+              {withUnit(open.latest_value, open)}
+            </p>
+
+            {open.latest_period && (
+              <p className="figure mt-2 text-caption-1-regular text-on-fill">
+                {fmtDate(open.latest_period.slice(0, 10), open.cadence ?? 'monthly')}
+              </p>
+            )}
+
+            {/* Direction by glyph and word, not by hue. `text-pos` measures
+                2.29:1 on this fill and `text-neg` 1.68:1, so both are
+                unusable — and a chip that carries direction in its wording is
+                the better version anyway, which is the same argument the chart
+                palette notes make about colour-only encoding. */}
+            {change(open) && (
+              <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/50 px-3 py-1 text-caption-1-medium text-on-fill">
+                <span aria-hidden>{change(open).value >= 0 ? '↑' : '↓'}</span>
+                <span className="figure">
+                  {fmt(Math.abs(change(open).value), 1)}
+                  {change(open).unit}
+                </span>
+                <span>since the previous period</span>
+              </p>
+            )}
+
+            {/* The payload: why this price is on this specific lens. */}
+            <p className="prose-measure mt-6 text-headline-regular leading-relaxed text-on-fill">
+              {open.why}
+            </p>
+
+            {open.source_url && (
+              <a
+                href={open.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tint mt-6 inline-block text-caption-1-medium text-on-fill underline underline-offset-4 hover:opacity-80"
+              >
+                {open.source_name ?? 'Source'}
+              </a>
+            )}
+          </>
+        )}
+      </Sheet>
     </div>
   );
 }
