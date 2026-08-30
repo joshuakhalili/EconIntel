@@ -3,7 +3,7 @@
 Read this first in a new session. Say "read STATUS.md and catch me up" and Claude
 will pick up from here without you re-explaining anything.
 
-Last updated: 2026-08-29.
+Last updated: 2026-08-30.
 
 ## The project is now called Diffusion (was EconIntel)
 
@@ -93,6 +93,52 @@ an LLM, but as of this writing nothing in `src/` constructs a prompt, calls
 Cloudflare Workers AI, or validates model output against it. There is no LLM call
 site yet, so there is currently nothing for this rule to protect. Do not describe
 it as active until a call site exists and this note is updated.
+
+## The site is now two halves, served as one
+
+**`landing/` is a cloned static site.** A hardened mirror of a Framer template
+(`atmos-system.framer.website`), committed as source. It owns `/`, `/login`'s
+CTAs, `/waitlist`, `/thanks` and `/legal/*`. Its build pipeline lives in
+`landing/docs/`: edit `content_diffusion.py`, then
+`bash docs/reset.sh && python3 docs/build-diffusion.py`. **Never hand-edit the
+built HTML** — the build refuses to run twice and resets from the
+`pristine-mirror` tag in `~/Projects/diffusion-landing`.
+
+**`src/client/` is the React app.** Everything else: lenses, questions, `/data`,
+`/explore`, `/news`, `/pipeline`.
+
+Express serves both from one origin (`src/server/index.js`). They can share
+`/assets` only because their filenames cannot collide — Framer content-hashes,
+Vite emits `index-<hash>`.
+
+## Sign-in
+
+Reading the data needs a free account; the landing page stays public. Two
+routes, **no password by either**: a name and an email (unverified — a
+readership record, not a security check), or GitHub.
+
+`readers_editor_must_be_verified` in the database refuses `is_editor` on any
+non-GitHub identity. Editing rights are Joshua's alone, granted by hand in SQL,
+and nothing in the app can set them.
+
+Needs `SESSION_SECRET` in `.env` (already set locally). `GITHUB_CLIENT_ID` and
+`GITHUB_CLIENT_SECRET` are optional — without them the GitHub button is hidden
+and email sign-in still works.
+
+## The app is dark only
+
+Light mode is deleted, not fixed. `atmos.css` is the whole token layer and
+re-points BoardUI's neutral ramp, which is what every one of its ~60 surface
+tokens resolves through. `index.html` hardcodes `class="dark"`.
+
+Type matches the landing page: Inter Display (self-hosted from the same woff2
+that page serves), Trispace for eyebrows, Fragment Mono for figures.
+
+Five lens pages, each with its own signature module in
+`components/lens/LensSignature.jsx` — Prices shows the divergence, Investment a
+materials board, Labour the disagreement, Growth adoption ranked, Policy the
+rule counts. Per-lens accent in `lib/lensAccent.js` is **chrome only** and must
+never draw a data series.
 
 ## On GitHub, public, `main` is current
 
