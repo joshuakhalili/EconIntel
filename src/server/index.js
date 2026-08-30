@@ -22,7 +22,9 @@ import { securityHeaders } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 import { listLenses, getLens, getLensTickers, overview } from './repositories/lenses.js';
+import cookieParser from 'cookie-parser';
 import { globe } from './repositories/globe.js';
+import * as auth from './lib/auth.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '../../public');
@@ -49,7 +51,29 @@ const app = express();
  * is ever added, this must become an allowlist and `credentials` must stay off
  * — an open CORS policy plus cookie auth is how a read API becomes a CSRF hole.
  */
-app.use(cors({ credentials: false }));
+/*
+ * CORS was deliberately wide open while the API was anonymous and read-only —
+ * a cross-origin caller could do nothing `curl` could not. A session cookie
+ * changes that completely: open CORS plus credentials is the textbook CSRF
+ * hole, and STATUS.md has carried that warning since before there was auth to
+ * make it real.
+ *
+ * So it is now an allowlist whenever sign-in is configured. Same-origin
+ * requests carry no Origin header and are unaffected; this only governs who
+ * may call the API from another site.
+ */
+app.use(
+  cors({
+    credentials: auth.isConfigured(),
+    origin(origin, callback) {
+      if (!origin) return callback(null, true); // same-origin or curl
+      if (!auth.isConfigured()) return callback(null, true);
+      const allowed = config.auth.allowedOrigins;
+      return callback(null, allowed.length === 0 ? false : allowed.includes(origin));
+    },
+  })
+);
+app.use(cookieParser());
 
 app.use(securityHeaders({ publicDir, isProduction: config.env === 'production' }));
 app.disable('x-powered-by');
@@ -71,6 +95,49 @@ const route = (handler) => (req, res, next) =>
  * touch the database: a process that has booted but cannot reach Postgres is
  * not healthy, and reporting it as healthy means a broken deploy goes live.
  */
+/**
+ * Sign-in. Three routes, all outside the API gate for obvious reasons.
+ *
+ * These live on /auth rather than /api because they are browser navigations,
+ * not fetches — they redirect, and a 401-returning gate in front of them would
+ * make signing in impossible.
+ */
+app.get('/auth/github', (req, res) => {
+  if (!auth.isConfigured()) {
+    return res.status(503).send('Sign-in is not configured on this server.');
+  }
+  return auth.beginLogin(req, res);
+});
+
+app.get('/auth/github/callback', async (req, res) => {
+  try {
+    await auth.completeLogin(req, res);
+    res.redirect('/overview');
+  } catch (error) {
+    // The message is written to be safe to show; nothing here echoes a token
+    // or a code back to the browser.
+    res.redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  }
+});
+
+app.post('/auth/logout', (req, res) => {
+  auth.logout(res);
+  res.json({ ok: true });
+});
+
+/** Who am I. Public, and answers null rather than 401 when signed out. */
+app.get('/api/me', route(async (req, res) => {
+  const reader = auth.isConfigured() ? await auth.currentReader(req) : null;
+  res.json({ reader, authRequired: auth.isConfigured() });
+}));
+
+/*
+ * Everything below /api needs an account. Registered after /api/me so the
+ * client can always ask whether it is signed in, and after the auth routes so
+ * signing in is possible while signed out.
+ */
+app.use('/api', auth.requireReader());
+
 app.get('/healthz', route(async (_req, res) => {
   const started = performance.now();
   await query('SELECT 1');

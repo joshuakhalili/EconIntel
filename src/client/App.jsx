@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { PreferencesProvider } from '@/lib/preferences';
 import { ContextDrawerProvider } from '@/components/chrome/ContextDrawer';
 import AppShell from '@/components/chrome/AppShell';
+import LoginPage from '@/routes/LoginPage';
 import OverviewPage from '@/routes/OverviewPage';
 import LensPage from '@/routes/LensPage';
 import QuestionPage from '@/routes/QuestionPage';
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       // relate, which made five ways of looking at one subject read as five
       // unrelated sections.
       { index: true, element: <OverviewPage /> },
+      { path: 'login', element: <LoginPage /> },
       { path: 'lens/:slug', element: <LensPage /> },
       { path: 'q/:slug', element: <QuestionPage /> },
       { path: 'explore', element: <ExplorePage /> },

@@ -48,6 +48,21 @@ export function useOverview() {
 }
 
 /**
+ * Who is signed in, and whether sign-in is even configured on this server.
+ *
+ * Never unwrapped and never retried: a signed-out reader is a valid answer,
+ * not a failure, and retrying it turns every page load into three requests.
+ */
+export function useMe() {
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: ({ signal }) => fetchJson('/api/me', { signal }),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
  * Every country's position, adoption history and stored depth, for the globe.
  *
  * Not unwrapped: the envelope carries `measured` and `total` alongside the

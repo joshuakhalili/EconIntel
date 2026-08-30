@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { RiArrowDownSLine, RiCloseLine, RiMenuLine } from '@remixicon/react';
-import { useLenses } from '@/hooks/queries';
+import { useLenses, useMe } from '@/hooks/queries';
 
 /**
  * Website navigation, not app navigation.
@@ -31,6 +31,7 @@ const DIRECTION_THRESHOLD = 6;
 
 export default function TopNav() {
   const { data: lenses } = useLenses();
+  const { data: me } = useMe();
   const { pathname } = useLocation();
 
   const [hidden, setHidden] = useState(false);
@@ -154,12 +155,39 @@ export default function TopNav() {
             </nav>
 
             <div className="ml-auto flex items-center gap-2">
-              <Link
-                to="/"
-                className="hidden rounded-full bg-white px-4 py-1.5 text-caption-1-medium text-page transition-opacity hover:opacity-90 sm:block"
-              >
-                Overview
-              </Link>
+              {/* Sign-in state. Only shown once /api/me has answered, so a
+                  signed-in reader never sees "Sign in" flash first. */}
+              {me?.reader ? (
+                <Link
+                  to="/overview"
+                  className="hidden items-center gap-2 rounded-full border border-border-button-default px-3 py-1.5 text-caption-1-medium text-text-secondary transition-colors hover:text-text-primary sm:flex"
+                >
+                  {me.reader.avatar_url && (
+                    <img
+                      src={me.reader.avatar_url}
+                      alt=""
+                      className="size-5 rounded-full"
+                      width={20}
+                      height={20}
+                    />
+                  )}
+                  {me.reader.handle}
+                </Link>
+              ) : me?.authRequired ? (
+                <Link
+                  to="/login"
+                  className="hidden rounded-full bg-white px-4 py-1.5 text-caption-1-medium text-page transition-opacity hover:opacity-90 sm:block"
+                >
+                  Sign in
+                </Link>
+              ) : (
+                <Link
+                  to="/overview"
+                  className="hidden rounded-full bg-white px-4 py-1.5 text-caption-1-medium text-page transition-opacity hover:opacity-90 sm:block"
+                >
+                  Overview
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}

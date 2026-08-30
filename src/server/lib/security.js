@@ -68,7 +68,9 @@ export function securityHeaders({ publicDir, isProduction }) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     // data: covers the inline SVG favicon.
-    "img-src 'self' data:",
+    // GitHub avatars, for the signed-in reader in the nav. Nothing else
+    // external is permitted — a wildcard here is how a tracking pixel gets in.
+    "img-src 'self' data: https://avatars.githubusercontent.com",
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

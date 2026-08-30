@@ -92,6 +92,28 @@ export const config = Object.freeze({
    * The account id is not a secret — it appears in every dashboard URL — but
    * it lives here rather than in `keys` so nothing treats it as one.
    */
+  /**
+   * Sign-in. Absent in development until a GitHub OAuth app is registered, in
+   * which case the API stays open rather than locking everyone out of a
+   * dashboard nobody can sign in to.
+   *
+   * SESSION_SECRET signs the session cookie. Rotating it signs everyone out,
+   * which is the only revocation mechanism there is — see lib/auth.js.
+   */
+  auth: Object.freeze({
+    githubClientId: process.env.GITHUB_CLIENT_ID ?? null,
+    githubClientSecret: process.env.GITHUB_CLIENT_SECRET ?? null,
+    sessionSecret: process.env.SESSION_SECRET ?? null,
+    callbackUrl: process.env.OAUTH_CALLBACK_URL ?? null,
+    // Origins allowed to send credentialed requests. Open CORS plus a session
+    // cookie is how a read-only API becomes a CSRF hole, which STATUS.md has
+    // warned about since before there was any auth to make it real.
+    allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+  }),
+
   cloudflare: Object.freeze({
     accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? null,
     model: process.env.CLOUDFLARE_AI_MODEL ?? '@cf/meta/llama-3.1-8b-instruct',

@@ -324,6 +324,12 @@ FOOTER = {
         "© 2026 Diffusion. Code is MIT. Data belongs to its publishers.",
     "Created by": "Built by",
     "Liana Tudakova": "Joshua Khalili",
+    # The template's "Follow Us" column linked to the author's personal
+    # accounts. Repurposed as the project's own links.
+    "Instagram": "Sign in",
+    "Threads": "The lenses",
+    "LinkedIn": "LinkedIn",
+    "X": "Source on GitHub",
 
     "support@atmos.com": "joshuakhalili20@gmail.com",
     "contact@atmos.com": "joshuakhalili20@gmail.com",
@@ -384,6 +390,39 @@ WORDMARK_VIEWBOX = {
     "0 0 1129.65 179": "0 0 1742 179",   # footer, 255px
     "0 0 744.04 118": "0 0 1148 118",    # tablet, 168px
     "0 0 332.25 53": "0 0 512 53",       # mobile, 75px
+}
+
+# ---------------------------------------------------------------------------
+# Where the links actually go
+# ---------------------------------------------------------------------------
+#
+# Every call to action in the template points at /waitlist — five on the home
+# page, one on each of the others. That is correct for a product that has not
+# shipped and wrong for one where the whole site is already there. Repointed at
+# the thing each button is actually offering.
+#
+# The template author's own links go too. They are hidden by content.css so
+# hydration does not break, but the hrefs are still in the markup and still
+# resolve, so they are repointed as well rather than merely covered up.
+
+LINKS = {
+    # The primary CTA. Reading requires an account — free, but a login — so it
+    # points at the sign-in page rather than straight at the data.
+    '"/waitlist"': '"/login"',
+
+    "https://x.com/liana_tme": "https://github.com/joshuakhalili/EconIntel",
+    "https://www.threads.com/@liana.tudakova": "https://github.com/joshuakhalili/EconIntel",
+    "https://www.linkedin.com/in/liana-tme/": "https://www.linkedin.com/in/joshuakhalili/",
+    "https://www.instagram.com/liana.tudakova/": "https://github.com/joshuakhalili/EconIntel",
+    "https://lunaui.co": "https://github.com/joshuakhalili/EconIntel",
+}
+
+# Anchors in the template's own nav, repointed at real routes. Kept apart from
+# LINKS because these are in-page hashes in the source and become real
+# navigation here.
+NAV_LINKS = {
+    '"#3356954461"': '"/overview"',
+    '"#1175957644"': '"/data"',
 }
 
 # ---------------------------------------------------------------------------

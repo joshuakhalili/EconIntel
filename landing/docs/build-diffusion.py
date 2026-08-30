@@ -45,7 +45,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from content_diffusion import REPLACEMENTS, HIDE_CSS, WORDMARK_VIEWBOX  # noqa: E402
+from content_diffusion import (  # noqa: E402
+    REPLACEMENTS, HIDE_CSS, WORDMARK_VIEWBOX, LINKS, NAV_LINKS,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 MARKER = ROOT / ".content-applied"
@@ -143,6 +145,21 @@ def main():
             path.write_text(html, encoding="utf-8", errors="surrogateescape")
             linked += 1
 
+    # Hrefs. Applied to HTML and chunks alike: Framer re-renders anchors from
+    # the chunk on mount, so patching only the markup gets overwritten. Done as
+    # plain replacement of the quoted value, which is why LINKS keys carry
+    # their own quotes — an unquoted "/waitlist" would also match the string
+    # inside a route table and break navigation.
+    link_fixes = 0
+    for path in [p for p in targets() if p.suffix in {".html", ".mjs"}]:
+        text = path.read_text(encoding="utf-8", errors="surrogateescape")
+        before = text
+        for old_href, new_href in {**LINKS, **NAV_LINKS}.items():
+            text = text.replace(old_href, new_href)
+        if text != before:
+            path.write_text(text, encoding="utf-8", errors="surrogateescape")
+            link_fixes += 1
+
     # The wordmark's viewBox is the old word's advance width; a longer word
     # clips against it. See the note in content_diffusion.py.
     wordmark_fixes = 0
@@ -184,6 +201,7 @@ def main():
           f"across {touched} files {DIM}({sum(counts.values())} substitutions){RESET}")
     print(f"{GREEN}✓{RESET} content.css written and linked into {linked} pages")
     print(f"{GREEN}✓{RESET} wordmark viewBox refitted in {wordmark_fixes} file(s)")
+    print(f"{GREEN}✓{RESET} links repointed in {link_fixes} file(s)")
 
     if missed:
         # A key that matched nothing is usually a typo against the template, or
