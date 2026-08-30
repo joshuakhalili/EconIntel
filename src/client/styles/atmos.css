@@ -150,6 +150,11 @@
 
   /* Light-only leftovers that would otherwise paint white blocks. */
   --color-stat-card-icon-background: #141414;
+
+  /* Text on a filled card. White on the electric blue is 5.03:1 — over the
+     4.5 floor and not by much. See the note in scripts/check-contrast.js
+     before putting anything else on that surface. */
+  --color-on-fill: #ffffff;
 }
 
 html,
@@ -218,4 +223,220 @@ h3 {
     radial-gradient(1px 1px at 12% 82%, #ffffff25 50%, transparent 50%),
     radial-gradient(1px 1px at 61% 90%, #7da0ff35 50%, transparent 50%);
   background-size: 340px 340px, 520px 520px, 410px 410px, 630px 630px, 290px 290px, 470px 470px;
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────
+
+   SEVEN NAMES, DEFINED ONCE, USED EVERYWHERE.
+
+   The app was off-idiom in a way that is measurable rather than aesthetic.
+   The landing page's compiled CSS carries one transition family — every one
+   `.4s cubic-bezier(.44, 0, .56, 1)` — and seven `data-framer-appear-id`
+   elements that all enter the same way: `opacity: 0.001` and `y: 50px`, over
+   400ms, after a 100ms delay. The app used Tailwind's default
+   `transition-colors`, which is 150ms with a different curve. Less than half
+   the duration. Matching that one number does more to make the two halves
+   read as one site than any new animation.
+
+   WHY NO ANIMATION LIBRARY
+
+   `motion` is in package.json and currently tree-shaken out entirely; the
+   first `import` of it in app code pulls ~120-180kB into a bundle that is
+   already the biggest thing this site ships. It earns that on layout
+   animation, shared-element transitions and gesture-driven drag with velocity
+   handoff. Nothing here needs any of them: every effect below is declarative,
+   uninterruptible, and has no state to interpolate. The closest case is a
+   sheet's exit animation, and react-aria's `data-exiting` attribute already
+   drives that from CSS.
+
+   So app code does not import `motion`. It stays a dependency because two
+   vendored BoardUI files import it and `boardui init` would re-add it.
+
+   TWO RULES THAT KEEP THIS FROM BECOMING A SLOT MACHINE
+
+   1. One reveal per section, not per element. `.rise` goes on the section;
+      `.stagger` goes on the list inside it. A page where every paragraph and
+      figure has its own entrance reads worse than a static one, and this is a
+      publication.
+   2. Nothing above the fold animates in except the hero. The landing page
+      animates its hero and only its hero on load; everything else waits for
+      the scroll. `useReveal` takes `immediate` for exactly this.            */
+
+:root {
+  --motion-ease: cubic-bezier(0.44, 0, 0.56, 1); /* the landing page's, verbatim */
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-fast: 200ms; /* hover, press */
+  --motion-base: 400ms; /* the landing page's transition duration */
+  --motion-in: 100ms; /* its universal entrance delay */
+  --motion-step: 60ms; /* stagger interval */
+}
+
+/* Section entrance. 50px is the landing page's own travel; `.rise-sm` is the
+   16px version for anything shorter than about 200px, where 50px overshoots
+   the element's own height and reads as a slide rather than a settle. */
+@keyframes rise {
+  from {
+    opacity: 0.001;
+    transform: translateY(50px);
+  }
+}
+
+@keyframes rise-sm {
+  from {
+    opacity: 0.001;
+    transform: translateY(16px);
+  }
+}
+
+.rise,
+.rise-sm {
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--motion-ease);
+  animation-delay: var(--motion-in);
+  animation-fill-mode: both;
+}
+
+.rise {
+  animation-name: rise;
+}
+.rise-sm {
+  animation-name: rise-sm;
+}
+
+/* Children enter in sequence. `--i` is set inline by the caller.
+
+   CAPPED AT 5. Without the cap a forty-item news grid has a 2.4 second tail,
+   and the reader is watching cards arrive long after they started reading the
+   first one. Past the fifth everything lands together, which nobody notices
+   and which keeps the list usable. */
+.stagger > * {
+  animation-delay: calc(var(--motion-in) + min(var(--i, 0), 5) * var(--motion-step));
+}
+
+/* Hover on anything that is a link.
+
+   Never `scale`. Scaling a card resamples its glyphs and the text goes soft
+   for the duration — on a site that is mostly type, that is the one transform
+   that cannot be used. Translate and colour only. */
+.lift {
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.lift:hover {
+  transform: translateY(-2px);
+}
+
+.lift:active {
+  transform: translateY(0);
+  transition-duration: 80ms;
+}
+
+/* The replacement for Tailwind's `transition-colors`, at the landing page's
+   duration and curve rather than Tailwind's 150ms default. */
+.tint {
+  transition:
+    color var(--motion-base) var(--motion-ease),
+    background-color var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) var(--motion-ease),
+    opacity var(--motion-base) var(--motion-ease);
+}
+
+/* Modal surfaces. The numbers are lifted from the vendored dropdown, so a
+   sheet and a menu open the same way. */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+    filter: blur(2px);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+    filter: blur(2px);
+  }
+}
+
+.sheet-in {
+  animation: sheet-in 150ms var(--motion-ease-out) both;
+}
+.sheet-out {
+  animation: sheet-out 150ms var(--motion-ease) both;
+}
+
+/* A bottom sheet that scales looks like a rendering bug; it travels instead. */
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.sheet-up {
+  animation: sheet-up 150ms var(--motion-ease-out) both;
+}
+
+/* The price marquee. Duration comes from the caller as `--marquee-dur`, so
+   adding a ticker lengthens the loop instead of speeding the row up — the
+   landing page's own marquee records that exact bug in a comment ("72s, not
+   60s: the track grew from 5 cards to 6"). */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee var(--marquee-dur, 60s) linear infinite;
+}
+
+/* A reader trying to read a moving number is the whole failure mode of a
+   marquee, so it stops for anyone who reaches for it. */
+.marquee-track:hover,
+.marquee-track:focus-within {
+  animation-play-state: paused;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────
+
+   A closed list, not a blanket `*, *::before, *::after { animation: none }`.
+
+   The blanket version would also kill TopNav's hide-on-scroll transform,
+   BoardUI's theme-transition freeze, and `.animate-number-fade`, which is not
+   decoration — it marks that a value CHANGED, which is information a reader
+   who has asked for less motion still wants.
+
+   `.animate-landing-marquee` is in the list because it lives in globals.css,
+   which is vendored and must stay re-runnable, and is the one keyframe there
+   that ships without a guard of its own.                                    */
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .rise-sm,
+  .stagger > *,
+  .sheet-in,
+  .sheet-out,
+  .sheet-up,
+  .marquee-track,
+  .animate-landing-marquee {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .lift,
+  .tint {
+    transition: none;
+  }
+
+  .lift:hover,
+  .lift:active {
+    transform: none;
+  }
 }

@@ -12,6 +12,7 @@
  */
 
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -62,6 +63,23 @@ const app = express();
  * requests carry no Origin header and are unaffected; this only governs who
  * may call the API from another site.
  */
+/*
+ * Gzip, before anything that can produce a body.
+ *
+ * `express.static` does not compress. The client bundle is 994 kB of
+ * JavaScript and 133 kB of CSS, and every reader has been downloading all of
+ * it uncompressed — roughly a megabyte where a quarter of one would do. The
+ * JSON responses are worse per byte: a series payload is thousands of repeated
+ * `{"date":"…","value":…}` keys, which is close to the best case gzip has.
+ *
+ * First in the chain because compression works by wrapping `res.write`, so it
+ * has to be installed before any handler that might call it.
+ *
+ * Left at the default 1 kB threshold: below that the gzip header costs more
+ * than the saving, and the CPU is not free on a small instance.
+ */
+app.use(compression());
+
 app.use(
   cors({
     credentials: auth.isConfigured(),

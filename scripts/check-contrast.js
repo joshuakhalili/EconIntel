@@ -145,20 +145,55 @@ const CHECKS = [
     role: 'chart series',
     min: UI,
   })),
+
+  /*
+   * Text on a filled card.
+   *
+   * Question cards and the price sheet are painted in the electric blue rather
+   * than the panel grey, and white on that blue is 5.03:1 — over the 4.5 floor
+   * by half a point and no more. That headroom is entirely spent, which has
+   * three consequences that are all counter-intuitive and all get reintroduced
+   * by someone who does not know the number:
+   *
+   *   - `text-white/90` composites to 4.38:1 and FAILS. There is no dimmed
+   *     white on this card; hierarchy comes from size, weight and leading.
+   *   - A `bg-white/10` pill under white text is 4.23:1 and fails. Badges on
+   *     the fill are transparent with a white border.
+   *   - Brightening the fill on hover fails too (`#4573ff` is 4.08:1), which
+   *     is why the hover moves the card rather than lightening it.
+   *
+   * Checked here rather than written in a comment, so changing the fill hex
+   * turns the build red instead of turning the card unreadable.
+   */
+  { cssVar: '--color-on-fill', role: 'text on a filled card', min: TEXT, surfaces: ['fill', 'fill-hover'] },
 ];
 
 /**
- * The surface each mode actually paints behind a card.
+ * Which surfaces a check runs against.
+ *
+ * Defaults to the two a card can sit on. The filled surfaces are opt-in
+ * because nothing else goes there — running the chart hues or the direction
+ * trio against the blue would fail correctly and uselessly, since none of them
+ * is ever painted on it.
+ */
+const DEFAULT_SURFACES = ['page', 'panel'];
+
+/**
+ * The surface each mode actually paints behind text.
  *
  * There is only one mode now. The identity is dark throughout — atmos.css
  * defines the same values under `:root` and `.dark`, so there is no light
  * variant to check and inventing one would test a page nobody can reach.
- * Both entries point at real surfaces from that file: the page itself, and the
- * raised panel used for cards.
+ *
+ * `fill` and `fill-hover` are the question card and the price sheet. They are
+ * literals rather than resolved tokens because they are what the components
+ * paint: if the two ever disagree, this file is the one that should win.
  */
 const SURFACES = [
   ['page', '#010101'],
   ['panel', '#0D0D0D'],
+  ['fill', '#2F61F7'],
+  ['fill-hover', '#2B59E3'],
 ];
 
 let failed = 0;
@@ -167,11 +202,12 @@ let checked = 0;
 for (const [label, surface] of SURFACES) {
   console.log(`\n${DIM}on ${label} ${surface}${RESET}`);
 
-  for (const { cssVar, role, min, modes } of CHECKS) {
+  for (const { cssVar, role, min, modes, surfaces } of CHECKS) {
     // `modes` used to gate a token to light or dark. There is one palette now,
     // so a token scoped to the theme that no longer exists is skipped rather
     // than checked against a surface it never sits on.
     if (modes && !modes.includes('dark')) continue;
+    if (!(surfaces ?? DEFAULT_SURFACES).includes(label)) continue;
 
     const hex = read(cssVar, 'dark');
     if (!hex) {
