@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, Suspense, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopNav from './TopNav';
+import { LoadingBlock } from '@/components/Page';
 
 /**
  * The frame every page sits in.
@@ -62,7 +63,14 @@ export default function AppShell() {
               above this. Deleting that row without adjusting here pulled every
               page up against the fixed nav's spacer. */}
           <main id="main" tabIndex={-1} className="pb-24 pt-6">
-            <Outlet />
+            {/* Suspense sits HERE, inside the chrome, not around the router.
+                Route components are lazy-loaded, and a boundary above this
+                point would unmount the nav for the fraction of a second a
+                chunk takes to arrive — the header would blink on every first
+                visit to a section, which reads as the page reloading. */}
+            <Suspense fallback={<LoadingBlock rows={4} />}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>

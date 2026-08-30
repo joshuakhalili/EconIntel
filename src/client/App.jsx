@@ -1,17 +1,48 @@
+import { lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { PreferencesProvider } from '@/lib/preferences';
 import { ContextDrawerProvider } from '@/components/chrome/ContextDrawer';
 import AppShell from '@/components/chrome/AppShell';
-import LoginPage from '@/routes/LoginPage';
 import OverviewPage from '@/routes/OverviewPage';
-import LensPage from '@/routes/LensPage';
-import QuestionPage from '@/routes/QuestionPage';
-import ExplorePage from '@/routes/ExplorePage';
-import DataPage from '@/routes/DataPage';
-import IndicatorPage from '@/routes/IndicatorPage';
-import NewsPage from '@/routes/NewsPage';
-import PipelinePage from '@/routes/PipelinePage';
+
+/**
+ * ROUTES ARE SPLIT; THE OVERVIEW IS NOT.
+ *
+ * One bundle held every route, and the expensive thing in it is Recharts —
+ * which only four of the nine routes draw with. A reader arriving at `/news`
+ * or `/data` was downloading an entire charting library to read a list.
+ *
+ * The overview stays statically imported on purpose. It is the route the
+ * landing page's every call to action leads to, so lazy-loading it would buy a
+ * smaller first chunk and immediately spend it on a second round trip before
+ * anything rendered — a loading state on the page most likely to be someone's
+ * first is the wrong trade.
+ *
+ * Everything else is reached by a click, where a chunk fetch overlaps with the
+ * reader's own attention shift and the fallback below is what they see for a
+ * fraction of a second.
+ *
+ * Note this is the only place `@/routes/*` may be imported. Import one of
+ * these modules from a component and it is pulled back into the main chunk,
+ * silently, with no error and no size warning to explain why the bundle grew.
+ */
+const LoginPage = lazy(() => import('@/routes/LoginPage'));
+const LensPage = lazy(() => import('@/routes/LensPage'));
+const QuestionPage = lazy(() => import('@/routes/QuestionPage'));
+const ExplorePage = lazy(() => import('@/routes/ExplorePage'));
+const DataPage = lazy(() => import('@/routes/DataPage'));
+const IndicatorPage = lazy(() => import('@/routes/IndicatorPage'));
+const NewsPage = lazy(() => import('@/routes/NewsPage'));
+const PipelinePage = lazy(() => import('@/routes/PipelinePage'));
+
+/*
+ * The Suspense boundary these need lives in `AppShell`, wrapped around the
+ * `Outlet` rather than around the router — see the note there. Its fallback is
+ * the same `LoadingBlock` skeleton every page shows while its data loads, so a
+ * slow chunk and a slow query look identical instead of introducing a second,
+ * unfamiliar waiting state.
+ */
 
 const queryClient = new QueryClient({
   defaultOptions: {
