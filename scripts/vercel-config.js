@@ -96,10 +96,15 @@ export function buildConfig() {
     buildCommand: 'npm run build:vercel',
     outputDirectory: 'dist',
     framework: null,
-    /* Frankfurt. The database is in Frankfurt and every request is
-       database-bound, so putting the function anywhere else adds a round trip
-       to the slowest part of the page. */
-    regions: ['fra1'],
+    /* London, because the database is in London.
+       Every request here is database-bound, so the function belongs in the
+       same region as Postgres — anywhere else adds a round trip to the
+       slowest part of the page, on every query.
+       This said `fra1` while the database was Render's Frankfurt instance.
+       The Neon project (`hidden-rice-12425013`) is `aws-eu-west-2`, so the
+       compute moved to the data rather than the reverse: one config line
+       against recreating a database that already holds 76,106 rows. */
+    regions: ['lhr1'],
     /* The mirror's own links are slash-less (/legal/privacy-policy), and the
        canonical tags detach.py wrote point at the slash-less form. These two
        flags redirect toward those rather than away from them, replacing the
