@@ -1,0 +1,87 @@
+# Scheduled ingestion.
+#
+# NOTHING SCHEDULED THIS BEFORE. Every number on the site was there because
+# somebody ran `npm run ingest` by hand, and the gap between runs was however
+# long it took to notice the charts had gone stale. That is the normal way a
+# dashboard like this rots: the page still renders, the numbers are quietly
+# months old, and nobody looks.
+#
+# WHY GITHUB ACTIONS AND NOT A VERCEL CRON
+#
+# The GDELT job alone runs for minutes — it fetches nine years in one-year
+# chunks with a retry ladder behind each. A Vercel function is killed at 15s.
+# Nothing about this work belongs in a request/response cycle: it is a batch
+# job that talks to eight upstreams and writes to Postgres.
+#
+# And the failure reporting is free and already correct. A failed scheduled
+# run emails the repository owner and puts a red X on the commit, with no code
+# written to make that happen. Given that this project's recurring failure
+# mode is a job reporting success while doing nothing, "the failure is loud by
+# default" is the deciding property.
+name: Ingest
+
+on:
+  schedule:
+    # 05:40 UTC daily. Deliberately not on the hour: GitHub queues scheduled
+    # workflows and the top of the hour is the most contended slot there is,
+    # which on a busy morning means a run starts twenty minutes late or is
+    # dropped entirely.
+    - cron: '40 5 * * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'One source (fred, lbma, worldbank, dbnomics, epoch_ai, rss, gdelt…). Blank runs everything due.'
+        required: false
+        default: ''
+      force:
+        description: 'Ignore refresh intervals and re-fetch regardless'
+        type: boolean
+        required: false
+        default: false
+
+# Two runs writing the same rows at once is a fight nobody wins. A scheduled
+# run that overlaps a manual one waits rather than racing it.
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    # Generous, because GDELT is slow and a timeout here means the run is
+    # killed mid-write. The default is 360 minutes, which is not a limit.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      # `npm ci` and not `npm install`: the lockfile is the point of a
+      # scheduled job. An unpinned transitive update should not be able to
+      # change what gets written to the database overnight.
+      - run: npm ci
+
+      - name: Run ingestion
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+          # Ingestion legitimately runs long statements and has no request
+          # ceiling to sit under, unlike the web deployment.
+          DB_STATEMENT_TIMEOUT_MS: '120000'
+          DB_POOL_MAX: '4'
+        run: |
+          npm run ingest -- ${{ inputs.source }} ${{ inputs.force && '--force' || '' }}
+
+      # Runs even when ingestion failed, because a failed run is exactly the
+      # one whose summary is worth reading.
+      - name: Summarise what actually changed
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/ingestion-summary.js >> "$GITHUB_STEP_SUMMARY"

@@ -1,23 +1,57 @@
 /**
  * US Census Business Trends and Outlook Survey (BTOS) — AI supplement.
  *
- * WHY THIS IS THE MOST IMPORTANT SOURCE IN THE PROJECT
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ NOT WIRED, AND NOT WIRABLE AS WRITTEN. BTOS IS NOT ON THE CENSUS API.   │
+ * │ Nothing imports this file. `runner.js` has no `census` handler.         │
+ * └─────────────────────────────────────────────────────────────────────────┘
  *
- * Every other source measures either an INPUT to AI (compute, capex, energy,
- * papers) or a LAGGING OUTPUT (employment, productivity). BTOS measures the
- * causal middle term: what share of real firms are actually using AI, broken
- * down by sector, state and firm size, refreshed roughly biweekly across a
- * sample of ~1.2 million businesses.
+ * The original version of this comment opened by calling BTOS "the most
+ * important source in the project", in the present tense, on a module that no
+ * code path had ever reached. It then noted, further down, that the endpoint
+ * was unverified because the machine had no network access. Both halves were
+ * true; together they read as a working integration with a small caveat, which
+ * is the failure mode this project has already been bitten by more than once.
  *
- * Without it the dashboard can show AI spending going up and employment moving,
- * and can never honestly connect the two. With it, adoption is an observed
- * variable rather than an assumption.
+ * WHAT WAS ACTUALLY CHECKED, 2026-08-30, with network access
  *
- * CAVEAT, STATED UP FRONT: the exact API path for the BTOS AI supplement was
- * not verifiable when this adapter was written (no outbound network access to
- * census.gov). Some Census products are API-served and others are
- * download-only. `discoverDatasets()` exists to resolve that at runtime rather
- * than guessing — run it first on a networked machine.
+ * `discoverDatasets()` was run against the live catalogue. It returned zero
+ * matches. Going direct to `https://api.census.gov/data.json` — 1,798 datasets,
+ * the complete list — and searching the full JSON of every entry:
+ *
+ *     "btos"                      0 datasets
+ *     "business trends"           0 datasets
+ *     "outlook survey"            0 datasets
+ *     "artificial intelligence"   0 datasets
+ *
+ * So this is not a wrong path to be corrected. BTOS is published as
+ * downloadable files (census.gov/hfp/btos/data — live, 200) and is not an API
+ * product at all. `fetchBtos()` cannot work against any endpoint, because
+ * there is no endpoint.
+ *
+ * WHY THE ARGUMENT FOR IT STILL STANDS
+ *
+ * Every other source here measures either an INPUT to AI (compute, capex,
+ * energy, papers) or a LAGGING OUTPUT (employment, productivity). BTOS
+ * measures the causal middle term — what share of real firms actually use AI,
+ * by sector, state and firm size, across a sample of ~1.2 million businesses.
+ * That is worth having. It is just a different job from this one: parsing
+ * published spreadsheets on a schedule, with a shape that changes between
+ * releases, not calling a JSON API.
+ *
+ * The gap is partly covered already. `eurostat.ai_any.*` and `oecd.ai_any.*`
+ * carry firm-level adoption rates for 17 countries including the USA, and the
+ * Growth lens's adoption module draws from those.
+ *
+ * WHAT TO DO WITH THIS FILE
+ *
+ * Kept, not deleted, for two reasons: `discoverDatasets()` is how you re-check
+ * whether Census has since published BTOS as an API — run it, and if it
+ * returns anything the rest of this module is most of the adapter — and
+ * deleting it loses the record that the question was investigated and
+ * answered, which invites the next person to propose it again from scratch.
+ *
+ * Do not import it until that check returns a real endpoint.
  */
 
 import { fetchJson, HttpError } from '../../lib/http.js';
