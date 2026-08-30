@@ -9,6 +9,24 @@
 
 export async function fetchJson(path, { signal } = {}) {
   const res = await fetch(path, { signal });
+
+  /*
+   * Signed out. Handled here rather than in each hook, because otherwise every
+   * page has to remember to check, and the one that forgets shows a wall of
+   * "Request failed (401)" instead of an explanation.
+   *
+   * A full assignment rather than a router navigate: the session changed
+   * underneath the app, so every cached query is now wrong and the cleanest
+   * thing is to start again. `/login` and `/api/me` are excluded or this
+   * bounces forever — asking who you are must be allowed to answer "nobody".
+   */
+  if (res.status === 401 && !path.startsWith('/api/me')) {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.assign('/login');
+    }
+    throw new Error('Sign in to read the data');
+  }
+
   if (!res.ok) {
     // The server returns { error } for its own failures; a proxy or a crash
     // returns HTML, so fall back to the status rather than showing markup.

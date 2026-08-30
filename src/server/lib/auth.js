@@ -3,17 +3,31 @@ import { config } from '../config.js';
 import { query } from '../db/pool.js';
 
 /**
- * Sign-in, via GitHub, without ever holding a credential.
+ * Sign-in, two ways, without ever holding a credential.
  *
  * WHY IT WORKS THIS WAY
  *
- * Reading Diffusion requires a free account. That means this codebase has to
- * know who someone is, and the safest way to know that is to never learn a
- * secret in the first place. GitHub does the authenticating; this file receives
- * a one-time code, exchanges it server-side for a token, reads the profile
- * once, and throws the token away. No password is accepted, stored or hashed
- * anywhere in this project, and there is nothing in the database an attacker
- * could steal and replay against another site.
+ * Reading Diffusion requires a free account, so this codebase has to know who
+ * someone is. **No password is accepted, stored or hashed anywhere in this
+ * project**, by either route, so there is nothing here an attacker could steal
+ * and replay against another site.
+ *
+ *   EMAIL   a name and an address, unverified. This is not authentication —
+ *           nobody proves they own the address — and it is not meant to be.
+ *           It identifies a reader the way a guestbook does, which is the
+ *           point: the data behind it is public, and the account exists to
+ *           count readers rather than to protect anything. Most of the
+ *           intended audience are economists and students, and requiring a
+ *           developer account would filter the readership to developers.
+ *
+ *   GITHUB  a real verified identity, for anyone who prefers it. The one-time
+ *           code is exchanged server-side, the profile read once, and the
+ *           token discarded — never stored.
+ *
+ * The database is what keeps the unverified route safe:
+ * `readers_editor_must_be_verified` refuses `is_editor` on anything but a
+ * GitHub identity, so an account made by typing an address into a form can
+ * never do anything.
  *
  * SESSIONS ARE SIGNED COOKIES, NOT ROWS
  *
@@ -97,8 +111,20 @@ function cookieOptions(maxAgeMs) {
   };
 }
 
-export function isConfigured() {
+/** GitHub is available as a sign-in option. Email works without it. */
+export function githubConfigured() {
   return Boolean(config.auth?.githubClientId && config.auth?.githubClientSecret);
+}
+
+/**
+ * Whether sign-in is switched on at all.
+ *
+ * Keyed on the session secret rather than on GitHub, because email sign-in
+ * needs no OAuth app and would otherwise leave the API open on a server that
+ * can perfectly well authenticate people.
+ */
+export function isConfigured() {
+  return Boolean(config.auth?.sessionSecret);
 }
 
 /**
@@ -175,17 +201,76 @@ export async function completeLogin(req, res) {
 
   // The token has done its only job. It is not stored and goes out of scope here.
 
+  /*
+   * A first-time GitHub reader may already exist as an unverified email row —
+   * they signed in with the address once, and are now signing in properly.
+   * ON CONFLICT (github_id) does not see that, and the unique email index
+   * would reject the insert. Upgrade the existing row instead, which also
+   * means their record is not duplicated.
+   */
+  if (email) {
+    await query(
+      `UPDATE readers
+          SET github_id = $1, handle = $2, name = COALESCE($3, name),
+              avatar_url = $4, identity = 'github', last_seen_at = now()
+        WHERE lower(email) = lower($5) AND github_id IS NULL`,
+      [profile.id, profile.login, profile.name ?? profile.login, profile.avatar_url ?? null, email]
+    );
+  }
+
   const { rows } = await query(
-    `INSERT INTO readers (github_id, handle, name, email, avatar_url)
-          VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO readers (github_id, handle, name, email, avatar_url, identity)
+          VALUES ($1, $2, $3, $4, $5, 'github')
      ON CONFLICT (github_id) DO UPDATE
             SET handle = EXCLUDED.handle,
                 name = EXCLUDED.name,
                 email = COALESCE(EXCLUDED.email, readers.email),
                 avatar_url = EXCLUDED.avatar_url,
+                identity = 'github',
                 last_seen_at = now()
-      RETURNING id, handle, name, email, avatar_url, is_editor`,
+      RETURNING id, handle, name, email, avatar_url, is_editor, identity`,
     [profile.id, profile.login, profile.name ?? profile.login, email, profile.avatar_url ?? null]
+  );
+
+  const reader = rows[0];
+  res.cookie(SESSION_COOKIE, seal(reader.id, SESSION_TTL_MS), cookieOptions(SESSION_TTL_MS));
+  return reader;
+}
+
+/**
+ * Sign in with a name and an email address. No password, and no verification.
+ *
+ * This is deliberately not authentication. Nobody proves they own the address,
+ * so it identifies a reader the way a guestbook does — which is exactly what is
+ * wanted, because the data behind it is public and the account exists to count
+ * readers rather than to protect anything.
+ *
+ * What keeps it safe is that an account created this way can never DO anything:
+ * `readers_editor_must_be_verified` in the database refuses `is_editor` on any
+ * identity other than 'github'. Without that, typing the operator's address
+ * into this form would hand over the ability to rewrite the site's claims.
+ */
+export async function signInWithEmail(res, { name, email }) {
+  const cleanEmail = String(email ?? '').trim().toLowerCase();
+  const cleanName = String(name ?? '').trim();
+
+  // Deliberately permissive. This is a readership record, and a regex that
+  // rejects a real address is a worse failure than one that accepts a fake.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    throw new Error('That does not look like an email address.');
+  }
+  if (cleanName.length < 1 || cleanName.length > 120) {
+    throw new Error('Please give a name to go with it.');
+  }
+
+  const { rows } = await query(
+    `INSERT INTO readers (name, email, identity)
+          VALUES ($1, $2, 'email')
+     ON CONFLICT (lower(email)) WHERE email IS NOT NULL DO UPDATE
+            SET name = EXCLUDED.name,
+                last_seen_at = now()
+      RETURNING id, handle, name, email, avatar_url, is_editor, identity`,
+    [cleanName, cleanEmail]
   );
 
   const reader = rows[0];
@@ -209,7 +294,7 @@ export async function currentReader(req) {
   const { rows } = await query(
     `UPDATE readers SET last_seen_at = now()
       WHERE id = $1
-  RETURNING id, handle, name, email, avatar_url, is_editor`,
+  RETURNING id, handle, name, email, avatar_url, is_editor, identity`,
     [id]
   );
   return rows[0] ?? null;

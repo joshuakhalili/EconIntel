@@ -74,6 +74,12 @@ app.use(
   })
 );
 app.use(cookieParser());
+/*
+ * JSON bodies, for the one route that takes one — email sign-in. Capped small:
+ * nothing here accepts an upload, and an unbounded parser in front of a public
+ * endpoint is a free denial-of-service.
+ */
+app.use(express.json({ limit: '4kb' }));
 
 app.use(securityHeaders({ publicDir, isProduction: config.env === 'production' }));
 app.disable('x-powered-by');
@@ -120,6 +126,25 @@ app.get('/auth/github/callback', async (req, res) => {
   }
 });
 
+/**
+ * Sign in with a name and an email address.
+ *
+ * JSON in, JSON out — the client posts it and stays on the page, so a failure
+ * shows inline rather than as a redirect that loses what was typed.
+ */
+app.post('/auth/email', route(async (req, res) => {
+  if (!auth.isConfigured()) {
+    return res.status(503).json({ error: 'Sign-in is not configured on this server.' });
+  }
+  try {
+    const reader = await auth.signInWithEmail(res, req.body ?? {});
+    return res.json({ reader });
+  } catch (error) {
+    // These messages are written for a reader and carry nothing sensitive.
+    return res.status(400).json({ error: error.message });
+  }
+}));
+
 app.post('/auth/logout', (req, res) => {
   auth.logout(res);
   res.json({ ok: true });
@@ -128,7 +153,11 @@ app.post('/auth/logout', (req, res) => {
 /** Who am I. Public, and answers null rather than 401 when signed out. */
 app.get('/api/me', route(async (req, res) => {
   const reader = auth.isConfigured() ? await auth.currentReader(req) : null;
-  res.json({ reader, authRequired: auth.isConfigured() });
+  res.json({
+    reader,
+    authRequired: auth.isConfigured(),
+    githubAvailable: auth.githubConfigured(),
+  });
 }));
 
 /*
