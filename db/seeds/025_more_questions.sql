@@ -12,17 +12,30 @@
 -- WHERE THIS FILE DIFFERS FROM 024
 --
 -- 024 recombined series that already sat on another question. Most of this
--- file does the same, but four indicators appear on a question here for the
--- FIRST time — they were in the catalogue holding real observations and placed
--- nowhere:
+-- file does the same, but one indicator appears on a question here for the
+-- FIRST time, and getting it there required reversing an audit decision:
 --
---   dbn.BEA.NIPA-T50605.B985RC-A            US software investment, annual,
---                                           66 observations back to 1959
 --   dbn.Eurostat.nrg_pc_205.…MWH20000-69999 EU electricity price, band IE,
 --                                           37 half-years back to 2007
---   dbn.Eurostat.isoc_eb_ai.…E_AI_TANY.…    EU27 enterprises using any AI
---   dbn.IMF.PCPS.M.W00.PGOLD.USD            still unplaced, and left that way:
---                                           it duplicates `lbma.gold`
+--
+-- `007_corrections.sql` deactivated it as a duplicate of band IG. That is the
+-- one call in 007 that does not hold, and the reversal — with the reasoning —
+-- is at the foot of this file. The other four series 007 deactivated stay
+-- deactivated and this file routes around them:
+--
+--   dbn.BEA.NIPA-T50605.B985RC-A    annual BEA software investment. A true
+--                                   duplicate of fred.B985RC1Q027SBEA, which
+--                                   is quarterly and two years fresher and
+--                                   carries identical annual figures — I
+--                                   checked: $65.5bn in 1995, $693.0bn in
+--                                   2024, the same to a decimal place.
+--                                   `software-not-steel` uses the FRED copy.
+--   dbn.Eurostat.isoc_eb_ai.…       EU27 AI adoption. A true duplicate of the
+--                                   OECD EU27 series, which is live, carries
+--                                   an extra year and is used instead by
+--                                   `diffusion-speed`.
+--   dbn.IMF.PCPS.M.W00.PGOLD.USD    stale gold. Not used here.
+--   derived.datacentre_investment   holds zero observations. Not used here.
 --
 -- Three report figures also MOVE. See the block at the foot of this file.
 --
@@ -170,19 +183,23 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 --                  (dbn.OECD.DSD_ICT_B_DF_BUSINESSES.OECD.A.G14_B.PT_ENT._T…)
 --   Same, information & communication: 14.43 (2020), 28.65 (2023),
 --     45.76 (2024), 57.51 (2025)
---   EU27 enterprises using any AI (%): 7.65 (2021), 8.06 (2023), 13.48 (2024),
---     19.95 (2025)   (dbn.Eurostat.isoc_eb_ai.…E_AI_TANY.PC_ENT.EU27_2020)
+--   Same, EU27 aggregate: 5.98 (2020), 7.65 (2021), 8.06 (2023), 13.48 (2024),
+--     19.95 (2025)
+--                  (dbn.OECD.DSD_ICT_B_DF_BUSINESSES.EU27.A.G14_B.PT_ENT._T…)
+--   EU27 manufacturers using AI (%): 6.93 (2021), 6.79 (2023), 10.57 (2024),
+--     17.27 (2025)          (dbn.Eurostat.isoc_eb_ain2.manufacturing)
 --
 -- CHECK BEFORE ACTIVATING: whether the survey question behind the OECD and
--- Eurostat adoption series changed between the 2023 and 2024 waves. Both
--- roughly double in that one year. If the questionnaire was revised, the
--- comparison this page makes is against a break rather than against a trend.
+-- Eurostat adoption series changed between the 2023 and 2024 waves. All four
+-- enterprise series roughly double in that one year. If the questionnaire was
+-- revised, the comparison this page makes is against a break rather than
+-- against a trend.
 ('diffusion-speed', 'diffusion-speed',
  'Is AI spreading faster than the internet did?',
  'Two diffusion curves, and why they cannot be laid on top of each other',
- 'Not obviously, and the comparison is not clean enough to insist on. Internet use among individuals worldwide went from 15.6 per cent in 2005 to 28.4 per cent in 2010 — 12.8 points in five years. AI use among OECD firms with ten or more employees went from 5.6 per cent in 2020 to 20.3 per cent in 2025 — 14.7 points in five years. Those are close enough that the honest answer is "about the same, on measures that are not the same". One counts people and the other counts firms; a firm where one team uses a chatbot is a yes in these surveys, as is a firm that has rebuilt itself around the technology. Inside the information and communication sector adoption is much faster — 14.4 per cent in 2020 to 57.5 per cent in 2025 — which is the number people usually have in mind when they say AI is spreading unusually quickly.',
- 'World internet penetration from the World Bank against three enterprise AI adoption series — the OECD aggregate for firms with ten or more employees, the same for the information and communication sector, and the Eurostat EU27 equivalent. The three enterprise series share a unit and sit on one axis. Internet penetration takes its own chart: it is a different population on a different definition, and putting the two on one axis would suggest a comparability the page spends its caveat denying. EU cloud purchasing sits alongside as the most recent enterprise technology to have diffused far enough to be measured through. The comparison is between five-year gains at similar points on each curve rather than between levels, because the curves start in different decades and the level of a diffusion curve is mostly a statement about when it started.',
- 'The two populations are not comparable and no arrangement of them makes them so. Individual internet use is a binary about a person; enterprise AI use is a binary about an organisation, self-reported, with a threshold the respondent chooses. The enterprise series also roughly doubles between 2023 and 2024 in both the OECD and Eurostat versions, which is a large enough break in an annual survey that a change in the wording of the question would explain it — and nothing in the data can exclude that.',
+ 'Not obviously, and the comparison is not clean enough to insist on. Internet use among individuals worldwide went from 15.6 per cent in 2005 to 28.4 per cent in 2010 — 12.8 points in five years. AI use among OECD firms with ten or more employees went from 5.6 per cent in 2020 to 20.3 per cent in 2025 — 14.7 points in five years. Those are close enough that the honest answer is "about the same, on measures that are not the same". One counts people and the other counts firms; a firm where one team uses a chatbot is a yes in these surveys, as is a firm that has rebuilt itself around the technology. What the enterprise data does show clearly is the spread inside it: 57.5 per cent of information and communication firms in 2025, against 17.3 per cent of European manufacturers — the same technology four or five years apart depending on where you look.',
+ 'World internet penetration from the World Bank against four enterprise AI adoption series — the OECD aggregate for firms with ten or more employees, the same for information and communication, the same for the EU27, and Eurostat''s count for European manufacturers. All four are the same measure on different populations, share a unit, and sit on one axis. Internet penetration takes its own chart: it is a different population on a different definition, and putting the two together would suggest a comparability the page spends its caveat denying. EU cloud purchasing sits alongside as the most recent enterprise technology to have diffused far enough to be measured through. The comparison is between five-year gains at similar points on each curve rather than between levels, because the curves start in different decades and the level of a diffusion curve is mostly a statement about when it started.',
+ 'The two populations are not comparable and no arrangement of them makes them so. Individual internet use is a binary about a person; enterprise AI use is a binary about an organisation, self-reported, with a threshold the respondent chooses. Every one of the enterprise series also roughly doubles between 2023 and 2024, which is a large enough break in an annual survey that a change in the wording of the question would explain it — and nothing in the data can exclude that.',
  'A diffusion curve is the most reliable regularity in the economics of technology: the S-shape recurs across electricity, the telephone, the personal computer and the internet, and its slope is what determines whether an economy has years or decades to absorb a shock. If AI is diffusing faster than anything before it, the labour-market adjustment problem is qualitatively different from every previous one. If it is diffusing at the ordinary pace, the historical analogies apply and the urgency is rhetorical.',
  'Populations that cannot be reconciled are kept on separate charts and the mismatch is stated as the finding rather than buried. Five-year gains are compared at comparable points on each curve rather than endpoints, because a diffusion curve read from its endpoints tells you when it started, not how fast it moved.',
  'insufficient', NULL, 'growth', 7, FALSE),
@@ -272,14 +289,22 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
  'consistent', NULL, 'investment', 7, FALSE),
 
 
--- Figures read 2026-08-30, both annual, both BEA via DBnomics, millions of
--- current USD:
---   Software: 65,477 (1995), 156,805 (2000), 157,653 (2001), 152,522 (2002),
---     154,983 (2003), 447,351 (2019), 692,996 (2024)
---                                     (dbn.BEA.NIPA-T50605.B985RC-A)
---   Computers & peripherals: 103,178 (2000), 87,556 (2001), 84,175 (2004),
+-- Figures read 2026-08-30. The two quarterly series are annual means; the
+-- computers series is annual as published.
+--   Software ($bn): 65.5 (1995), 156.8 (2000), 157.7 (2001), 152.5 (2002),
+--     155.0 (2003), 447.4 (2019), 693.0 (2024), 806.1 (2026 H1)
+--                                            (fred.B985RC1Q027SBEA)
+--   All information-processing equipment & software ($bn): 253.8 (1995),
+--     450.6 (2000), 423.6 (2001), 389.3 (2002), 397.7 (2003), 445.6 (2005),
+--     852.7 (2019), 1,194.1 (2024), 1,584.7 (2026 H1)  (fred.A679RC1Q027SBEA)
+--   Computers & peripherals ($m): 103,178 (2000), 87,556 (2001), 84,175 (2004),
 --     118,902 (2019), 160,258 (2022), 149,064 (2023), 178,731 (2024)
 --                                     (dbn.BEA.NIPA-T50505.B935RC-A)
+--
+-- NOTE ON THE SOFTWARE SERIES: the annual BEA copy of it,
+-- dbn.BEA.NIPA-T50605.B985RC-A, is deactivated by 007 as a duplicate and that
+-- is correct — its annual values match the FRED quarterly copy exactly. The
+-- FRED copy is used here and runs two years further.
 --
 -- CHECK BEFORE ACTIVATING: nothing about the figures — but decide whether the
 -- own-account software point belongs in the caveat or in the answer. It is the
@@ -287,12 +312,12 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 -- is currently in the caveat where fewer readers will reach it.
 ('software-not-steel', 'software-not-steel',
  'Is the money going into machines, or into code?',
- 'Two capital accounts that began together and did not stay together',
- 'Into code, by a factor of four, and the two behave completely differently in a bust. US private fixed investment in software was $65bn in 1995 and $693bn in 2024. Investment in computers and peripheral equipment started the same period at a similar scale and reached $179bn in 2024. The interesting part is the last downturn rather than the level: computer investment fell from $103bn in 2000 to $88bn in 2001 and was still only $84bn in 2004 — four years to recover — while software investment fell by three per cent between 2001 and 2002 and then resumed. One of these is a capital good you stop buying when times are bad. The other is mostly the salaries of people who would still be employed.',
- 'Two BEA capital-formation series, annual back to 1959, in the same unit and from the same set of national-accounts tables, so they share an axis and the ratio between the two lines is a real ratio rather than a presentational choice. Both are nominal, which limits the comparison across three decades but not the comparison between them in any given year — that is the comparison the page is built on. The construction of the software series is the thing to understand before reading it: a large share is own-account software, which the BEA estimates from the compensation of the programmers who wrote it plus intermediate inputs, because there is no transaction to observe. A rise in software wages therefore raises measured software investment directly.',
- 'Both series are nominal, so any statement about levels across decades is partly about the dollar. More seriously, the software series is estimated rather than observed for its own-account component: it moves with programmer pay whether or not more software was produced, and programmer pay rose sharply over exactly the years this page covers. That biases the headline comparison in the direction the headline goes. Neither series is AI-specific and both include a great deal — payroll systems, enterprise resource planning, telephony — that has nothing to do with it.',
+ 'What survived the last bust, and what did not',
+ 'Into code, and it is now about half of the total. US private fixed investment in software was $65bn in 1995, $693bn in 2024 and $806bn in the first half of 2026 — against $1,585bn for all information-processing equipment and software together. Investment in computers and peripheral equipment was $179bn in 2024. But the level is not the interesting part; the last bust is. Total information-processing investment fell from $451bn in 2000 to $389bn in 2002 and did not regain its 2000 level until 2005. Computer and peripheral investment fell from $103bn in 2000 to $88bn in 2001 and was still $84bn in 2004. Software investment across the same years went $156.8bn, $157.7bn, $152.5bn, $155.0bn — a fall of three per cent — and then carried on. One of these is a capital good firms stop buying when times are bad. The other is mostly the salaries of people who stay employed.',
+ 'Software investment and total information-processing investment share a unit, a frequency and a publication, so they sit on one axis and the share of the total that is software can be read directly off the chart. Investment in computers and peripheral equipment takes its own chart: it is annual rather than quarterly and denominated in millions rather than billions, and a frequency mismatch is not something a rebase fixes. All three are nominal, which limits comparison across three decades but not the comparison between them within a year — and that within-year comparison is what the page is built on. The construction of the software series is the thing to understand before reading it: a large share is own-account software, which the BEA estimates from the compensation of the programmers who wrote it plus intermediate inputs, because there is no transaction to observe. A rise in software wages raises measured software investment directly.',
+ 'All three series are nominal, so any statement about levels across decades is partly about the dollar. More seriously, the software series is estimated rather than observed for its own-account component: it moves with programmer pay whether or not more software was produced, and programmer pay rose sharply over exactly the years this page covers. That biases the headline in the direction the headline goes. None of the three is AI-specific, and all include a great deal — payroll systems, enterprise resource planning, telephony — that has nothing to do with it.',
  'The composition of a capital boom tells you what happens when it ends. A boom in physical equipment leaves a stock of machines that has to be written down and a supply chain that has to shrink; a boom in software leaves people who can be redeployed and code that costs nothing to keep. Which of the two this is determines whether an AI bust looks like 2001 in the semiconductor industry or like 2001 in the software industry, and those were very different events.',
- 'Two series from one statistical office, one unit and one frequency, on one axis, so the ratio between them is directly readable. The 1959 start is deliberate: the claim is about how the two behave through a cycle, which needs a cycle in the window.',
+ 'The two series that share a unit and a frequency share an axis, so the composition is visible rather than computed for the reader. The 1990 start is deliberate: the claim is about how the parts behave through a cycle, which needs a cycle inside the window.',
  'consistent', NULL, 'investment', 8, FALSE),
 
 
@@ -698,6 +723,16 @@ ON CONFLICT (id) DO UPDATE SET
 --     indices with different bases are kept on separate charts here —
 --     `chip-prices` is the case, and the comment above it says so.
 
+-- Two placements from an earlier revision of this file pointed at indicators
+-- 007 had deactivated, which /api/series filters out — the chart would simply
+-- not render. They were replaced by live equivalents above. Seeds insert and
+-- update but never delete, so without these two lines a database that ran the
+-- earlier revision keeps the dead rows and diverges from a fresh `db:reset`.
+DELETE FROM question_indicators
+ WHERE (question_id, indicator_id) IN (
+   ('diffusion-speed',    'dbn.Eurostat.isoc_eb_ai.A.GE10.C10-S951_X_K.E_AI_TANY.PC_ENT.EU27_2020'),
+   ('software-not-steel', 'dbn.BEA.NIPA-T50605.B985RC-A'));
+
 INSERT INTO question_indicators
   (question_id, indicator_id, role, sort_order, chart_group, country_iso3,
    caption_plain, caption_expert) VALUES
@@ -756,11 +791,15 @@ INSERT INTO question_indicators
  'The same measure inside information and communication, where it went from 14.4 per cent to 57.5. This is the number people have in mind when they say AI is spreading unusually fast.',
  'Same survey, NACE J only. Shares an axis with the all-sector line because they share a unit, a frame and a survey; the ratio between the two is the sectoral concentration of adoption.'),
 
-('diffusion-speed', 'dbn.Eurostat.isoc_eb_ai.A.GE10.C10-S951_X_K.E_AI_TANY.PC_ENT.EU27_2020', 'supporting', 4, 'enterprise-ai', NULL,
- 'Europe''s own count of the same thing, from a different statistical office: 7.7 per cent in 2021 to 20.0 in 2025.',
- 'Eurostat ICT usage in enterprises, EU27, 10+ employees, any AI technology. An independent construction that lands within a point of the OECD figure for 2025, which is the main reason to show both.'),
+('diffusion-speed', 'dbn.OECD.DSD_ICT_B_DF_BUSINESSES.EU27.A.G14_B.PT_ENT._T.S_GE10', 'supporting', 4, 'enterprise-ai', NULL,
+ 'Europe alone, which turns out to sit almost exactly on the OECD average: 6.0 per cent in 2020, 20.0 in 2025.',
+ 'OECD ICT access and use by businesses, EU27 aggregate, 10+ employees. The Eurostat publication of the same statistic is deactivated as a duplicate by 007 and carries one year fewer; this is the copy to use.'),
 
-('diffusion-speed', 'dbn.Eurostat.isoc_cicce_use.A.GE10.C10-S951_X_K.E_CC1_PANY.PC_ENT.EU27_202', 'context', 5, NULL, NULL,
+('diffusion-speed', 'dbn.Eurostat.isoc_eb_ain2.manufacturing', 'supporting', 5, 'enterprise-ai', NULL,
+ 'And European factories, which are years behind: 6.9 per cent in 2021, 17.3 in 2025 — roughly where the software sector was in 2020.',
+ 'Eurostat ICT usage in enterprises, NACE C manufacturing, EU27, 10+ employees. On the same axis as the other three because it is the same measure on a different population, and the spread between manufacturing and software is what a diffusion curve looks like part-way through.'),
+
+('diffusion-speed', 'dbn.Eurostat.isoc_cicce_use.A.GE10.C10-S951_X_K.E_CC1_PANY.PC_ENT.EU27_202', 'context', 6, NULL, NULL,
  'The enterprise technology that diffused just before this one: buying cloud services, now past half of EU firms.',
  'Eurostat, enterprises purchasing paid cloud computing services, EU27, 10+ employees. On its own chart: the level is far higher because the technology is older, and grouping it would compress everything above.'),
 
@@ -820,20 +859,24 @@ INSERT INTO question_indicators
  'PPI for semiconductor and related device manufacturing. Included so a rise in dollar orders is not read as a rise in quantity, or the reverse.'),
 
 -- ── software-not-steel ──────────────────────────────────────────────────────
--- Grouped on one axis on purpose: same office, same unit, same frequency,
--- same table family, and a level ratio near four to one — well inside the
--- axis-share threshold. The ratio between the lines is the finding.
-('software-not-steel', 'dbn.BEA.NIPA-T50605.B985RC-A', 'hero', 1, 'us-capital-composition', 'USA',
- 'US investment in software: $65bn in 1995, $693bn in 2024. It fell three per cent in the dot-com bust and then carried on.',
- 'BEA NIPA table 5.6.5, annual, millions of current dollars, back to 1959. A large share is own-account software, which BEA estimates from the compensation of the programmers who wrote it — so rising programmer pay raises this line directly.'),
+-- Grouped on one axis on purpose: same publication, same unit, same frequency,
+-- and one is a component of the other, so the ratio between the lines is a
+-- share and reads as one.
+('software-not-steel', 'fred.B985RC1Q027SBEA', 'hero', 1, 'us-information-capital', 'USA',
+ 'US investment in software: $65bn in 1995, $693bn in 2024, $806bn in the first half of 2026. It fell three per cent in the dot-com bust and then carried on.',
+ 'BEA nonresidential intellectual property products, software, nominal, SAAR, quarterly. A large share is own-account software, which BEA estimates from the compensation of the programmers who wrote it — so rising programmer pay raises this line directly.'),
 
-('software-not-steel', 'dbn.BEA.NIPA-T50505.B935RC-A', 'supporting', 2, 'us-capital-composition', 'USA',
- 'Investment in computers and peripheral equipment on the same axis: $179bn in 2024, and four years to recover from 2000. This is what a capital good looks like in a bust.',
- 'BEA NIPA table 5.5.5, annual, millions of current dollars, same frequency and unit as the line above, so the ratio between them is directly readable rather than a presentational choice.'),
+('software-not-steel', 'fred.A679RC1Q027SBEA', 'supporting', 2, 'us-information-capital', 'USA',
+ 'All information-processing investment on the same axis, of which the line below is now about half. This one fell 14 per cent after 2000 and took five years to recover.',
+ 'BEA fixed investment in information-processing equipment and software, nominal, SAAR. The software series is a component of it, so the gap between the two lines is hardware and everything else — which is the composition the page is about.'),
 
-('software-not-steel', 'fred.A679RC1Q027SBEA', 'context', 3, NULL, 'USA',
- 'The two together, quarterly, as the aggregate both lines sit inside.',
- 'BEA fixed investment in information-processing equipment and software, nominal, SAAR. On its own chart because it is quarterly and in billions; included so the annual composition can be tied back to the series used elsewhere on this site.'),
+('software-not-steel', 'dbn.BEA.NIPA-T50505.B935RC-A', 'supporting', 3, NULL, 'USA',
+ 'Investment in computers and peripheral equipment: $179bn in 2024, and four years to recover from 2000. This is what a capital good looks like in a bust.',
+ 'BEA NIPA table 5.5.5, annual, millions of current dollars, back to 1959. Kept off the quarterly axis above because a frequency mismatch is not something a rebase fixes — it misrepresents the timing of a peak, not just its height.'),
+
+('software-not-steel', 'dbn.OECD.DSD_PDB_DF_PDB_GR.USA.A.SOFT_PCCONK._T.PD.V.GOY._Z._Z', 'context', 4, NULL, 'USA',
+ 'The same shift seen from the capital stock: software''s contribution to the growth of US capital, back at its 1999 level.',
+ 'OECD growth accounting, percentage points of total capital growth, annual to 2022. On its own chart and in its own unit; included so the composition claim has a second construction behind it.'),
 
 -- ── is-europe-in-this ───────────────────────────────────────────────────────
 -- The two EU capital series share a base year and a construction. The two R&D
@@ -1078,6 +1121,38 @@ ON CONFLICT (question_id, indicator_id) DO UPDATE SET
   role = EXCLUDED.role, sort_order = EXCLUDED.sort_order,
   chart_group = EXCLUDED.chart_group, country_iso3 = EXCLUDED.country_iso3,
   caption_plain = EXCLUDED.caption_plain, caption_expert = EXCLUDED.caption_expert;
+
+
+-- ── One reversal of 007_corrections.sql, with the reasoning ─────────────────
+--
+-- 007 deactivated the EU electricity price series for consumption band IE
+-- (20,000-69,999 MWh a year) under the heading "Duplicate: two electricity
+-- price bands, one question", keeping band IG (150,000 MWh and over) on the
+-- grounds that IG is the hyperscale band and IE is a large factory.
+--
+-- Both halves of that are true and the conclusion does not follow. IE and IG
+-- are not two publications of one statistic — they are the prices paid by two
+-- different populations, and the DIFFERENCE between them is a quantity neither
+-- one contains. That difference is the bulk discount for buying power at
+-- data-centre scale, and on these two series it has narrowed from 39 per cent
+-- in 2007 to 15 per cent in 2025, inverting entirely in the first half of 2022.
+-- There is no other way to compute it from anything in this catalogue.
+--
+-- So the audit was right that IG is the series to use when you want one line,
+-- and wrong that IE is redundant. It is reactivated here for exactly one page.
+-- Reactivating also puts it back in the ingestion runner, which is correct: it
+-- is the same Eurostat dataset, on the same schedule, as the band already
+-- being fetched.
+--
+-- TO PUT IT BACK AS 007 LEFT IT:
+--   UPDATE indicators SET is_active = FALSE
+--    WHERE id = 'dbn.Eurostat.nrg_pc_205.S.6000.MWH20000-69999.KWH.X_TAX.EUR.EU27_2020';
+--   -- and then `bulk-discount` has to be deleted, because without both bands
+--   -- the question it asks cannot be answered at all.
+
+UPDATE indicators
+   SET is_active = TRUE, updated_at = now()
+ WHERE id = 'dbn.Eurostat.nrg_pc_205.S.6000.MWH20000-69999.KWH.X_TAX.EUR.EU27_2020';
 
 
 -- ── Three report figures move from the labour lens onto `ai-wages` ───────────
