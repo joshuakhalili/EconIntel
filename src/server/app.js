@@ -444,8 +444,16 @@ app.get('/api/series', route(async (req, res) => {
     );
     if (meta.length === 0) return { id, error: 'not found', points: [] };
 
+    /*
+     * `value_status` rides along per point because a forecast drawn like a
+     * measurement is the failure this site's first rule exists to prevent.
+     * AMECO's later years are the European Commission's own projection — real
+     * numbers, but not observations — and seed 029 marks them 'projected'.
+     * Sending only date and value left the chart no way to tell the two
+     * apart, so it drew them identically.
+     */
     const { rows } = await query(
-      `SELECT period_start::text AS date, value
+      `SELECT period_start::text AS date, value, value_status
          FROM observations
         WHERE indicator_id = $1
           AND ($2::char(3) IS NULL OR country_iso3 = $2)
@@ -557,9 +565,12 @@ app.get('/api/series', route(async (req, res) => {
     return {
       ...s,
       indexed: true,
+      // Rebasing changes the scale, not what the value IS: a projection
+      // indexed to 100 is still a projection, so the status survives the map.
       points: s.points.map((p) => ({
         date: p.date,
         value: p.value == null ? null : (p.value / anchor.value) * 100,
+        value_status: p.value_status,
       })),
     };
   });

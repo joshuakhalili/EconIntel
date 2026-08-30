@@ -32,7 +32,27 @@ import SeriesLegend from './SeriesLegend';
  *   - When x labels collide, the LAST one is kept rather than the first: the
  *     most recent period is the one a reader is looking for.
  *   - Clicking a point opens the context drawer for that period.
+ *   - A point the source publishes as a PROJECTION is drawn on its own dashed
+ *     line, so a forecast is never rendered as if it were a measurement. See
+ *     splitProjected.
  */
+
+/**
+ * Row key for the dashed projected half of a series.
+ *
+ * A suffix rather than a parallel structure because Recharts addresses data by
+ * string key, and ChartTooltip has to be able to get back to the series it
+ * belongs to — see readProjectedKey.
+ */
+export function projectedKey(label) {
+  return `${label} (projected)`;
+}
+
+/** The series label behind a projected key, or null if this is not one. */
+export function readProjectedKey(key) {
+  const suffix = ' (projected)';
+  return typeof key === 'string' && key.endsWith(suffix) ? key.slice(0, -suffix.length) : null;
+}
 export default function LineChart({
   series = [],
   cadence = 'monthly',
@@ -50,7 +70,7 @@ export default function LineChart({
   // series are tracked by label and the remaining ones keep their own colour.
   const [hidden, setHidden] = useState(() => new Set());
 
-  const { rows, ticks, domain, tickFormatter, duplicateDates, axisTruncated } = useMemo(
+  const { rows, ticks, domain, tickFormatter, duplicateDates, axisTruncated, projected } = useMemo(
     () => buildChartModel(series, cadence, indexed),
     [series, cadence, indexed]
   );
@@ -140,11 +160,11 @@ export default function LineChart({
             isAnimationActive={false}
           />
 
-          {visible.map((s) => {
+          {visible.flatMap((s) => {
             // The index into the ORIGINAL list, so hiding one series never
             // recolours another.
             const index = series.indexOf(s);
-            return (
+            const lines = [
               <Line
                 key={s.label}
                 type="linear"
@@ -161,8 +181,33 @@ export default function LineChart({
                 activeDot={{ r: 4, strokeWidth: 0 }}
                 connectNulls={false}
                 isAnimationActive={false}
-              />
-            );
+              />,
+            ];
+
+            // The projected tail is a SECOND line over the same rows, holding
+            // the forecast values plus the last measured one so the two meet
+            // rather than leaving a visible break. Same colour, because colour
+            // on this site means series identity and nothing else; the dash is
+            // the same 5 4 the raw-units case uses, because "this is not what
+            // the solid line is" is one idea and deserves one pattern.
+            if (projected.has(s.label)) {
+              lines.push(
+                <Line
+                  key={projectedKey(s.label)}
+                  type="linear"
+                  dataKey={projectedKey(s.label)}
+                  stroke={colorAt(palette, index)}
+                  strokeWidth={2}
+                  strokeDasharray="5 4"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                />
+              );
+            }
+
+            return lines;
           })}
         </RLineChart>
       </ResponsiveContainer>
@@ -209,11 +254,28 @@ function buildChartModel(series, cadence, indexed) {
     return s.points.some((p) => p.value != null && (seen.has(p.date) || !seen.add(p.date)));
   });
 
+  // Which series carry projections, and which of their dates belong to the
+  // dashed line — worked out once rather than per row.
+  const splits = new Map(series.map((s) => [s.label, splitProjected(s.points)]));
+  const projected = new Set(
+    series.filter((s) => splits.get(s.label).projectedDates.size > 0).map((s) => s.label)
+  );
+
   const rows = dates.map((date) => {
     const row = { date };
     for (const s of series) {
       const point = s.points.find((p) => p.date === date);
-      row[s.label] = point?.value ?? null;
+      const split = splits.get(s.label);
+      const value = point?.value ?? null;
+
+      // A projected value is withheld from the solid line entirely, so the
+      // measured line stops where the measurements stop.
+      row[s.label] = split.projectedDates.has(date) ? null : value;
+
+      if (projected.has(s.label)) {
+        row[projectedKey(s.label)] =
+          split.projectedDates.has(date) || split.bridgeDates.has(date) ? value : null;
+      }
     }
     return row;
   });
@@ -242,8 +304,39 @@ function buildChartModel(series, cadence, indexed) {
     ticks: pickTicks(dates),
     domain: [floor, 'auto'],
     axisTruncated: floor > 0,
+    projected,
     tickFormatter: (value) => fmt(value, precisionFor(range)),
   };
+}
+
+/**
+ * Which dates of a series are projections, and which measured points have to
+ * be repeated on the dashed line so it joins the solid one.
+ *
+ * Judged PER POINT from `value_status`, not as "everything after the first
+ * projection". The two agree for what is marked today — seed 029 keys on a
+ * future period, so projections are always a tail — but a source that revises
+ * a forecast year into an outturn would leave a measured point after a
+ * projected one, and inferring a tail would then draw that measurement as a
+ * forecast. Reading each point's own status cannot make that mistake; it
+ * breaks the dashed line at the seam instead, which is what happened.
+ */
+function splitProjected(points) {
+  const projectedDates = new Set();
+  const bridgeDates = new Set();
+
+  points.forEach((p, i) => {
+    if (p.value == null || p.value_status !== 'projected') return;
+    projectedDates.add(p.date);
+    // The measured point immediately before is drawn on both lines: without
+    // it the forecast floats detached from the history it continues.
+    const previous = points[i - 1];
+    if (previous && previous.value != null && previous.value_status !== 'projected') {
+      bridgeDates.add(previous.date);
+    }
+  });
+
+  return { projectedDates, bridgeDates };
 }
 
 /** Pad the low end so the lowest point is not welded to the axis. */

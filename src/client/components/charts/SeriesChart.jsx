@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import LineChart from './LineChart';
-import { inferCadence, displayUnit } from '@/lib/format';
+import { inferCadence, displayUnit, fmtDate } from '@/lib/format';
 
 const CADENCE_RANK = { daily: 0, weekly: 1, monthly: 2, quarterly: 3, annual: 4 };
 
@@ -24,9 +24,14 @@ const CADENCE_RANK = { daily: 0, weekly: 1, monthly: 2, quarterly: 3, annual: 4 
  *     base period, see /api/series — is flagged `raw` so the chart can draw
  *     it distinctly instead of letting it share an axis with true index
  *     points while looking identical to them.
+ *   - A series carrying values the source publishes as PROJECTIONS gets a
+ *     written note as well as the dashed tail LineChart draws. The dash is
+ *     the same treatment the raw-units case uses and the same rule applies:
+ *     on this site a visual difference is not a disclosure, because a reader
+ *     who does not know the convention reads a dashed line as a line.
  */
 export default function SeriesChart({ payload, height, onPick }) {
-  const { series, cadence, cadenceMismatch, unit } = useMemo(() => {
+  const { series, cadence, cadenceMismatch, unit, projectedNote } = useMemo(() => {
     const list = payload?.series ?? [];
     const indexed = payload?.indexed === true;
 
@@ -51,11 +56,29 @@ export default function SeriesChart({ payload, height, onPick }) {
         ? 'annual'
         : distinctCadences.sort((a, b) => CADENCE_RANK[a] - CADENCE_RANK[b])[0];
 
+    // Named per series and dated, because "part of this chart is a forecast"
+    // is not usable — a reader needs to know WHICH line and FROM WHEN before
+    // they can decide how much of the shape to believe.
+    const forecasts = mapped
+      .map((s) => ({
+        label: s.label,
+        from: s.points.find((p) => p.value != null && p.value_status === 'projected')?.date,
+      }))
+      .filter((f) => f.from);
+
     return {
       series: mapped,
       cadence,
       cadenceMismatch: distinctCadences.length > 1 ? distinctCadences : null,
       unit: indexed ? '' : units.size === 1 ? [...units][0] : '',
+      projectedNote:
+        forecasts.length === 0
+          ? null
+          : forecasts.length === 1 && mapped.length === 1
+            ? `From ${fmtDate(forecasts[0].from, cadence)} these are projections, not measurements — drawn dashed.`
+            : `Projections, not measurements — drawn dashed: ${forecasts
+                .map((f) => `${f.label} from ${fmtDate(f.from, cadence)}`)
+                .join('; ')}.`,
     };
   }, [payload]);
 
@@ -67,6 +90,7 @@ export default function SeriesChart({ payload, height, onPick }) {
           chart — spacing on this axis follows the finer one, not both evenly.
         </p>
       )}
+      {projectedNote && <p className="mb-2 text-caption-1-medium text-warn">{projectedNote}</p>}
       <LineChart
         series={series}
         cadence={cadence}
