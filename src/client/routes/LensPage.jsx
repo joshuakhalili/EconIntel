@@ -7,6 +7,7 @@ import TickerStrip from '@/components/TickerStrip';
 import NewsList from '@/components/NewsList';
 import Reading from '@/components/Reading';
 import LensSignature from '@/components/lens/LensSignature';
+import CircularFinancing from '@/components/lens/CircularFinancing';
 import FigureChart from '@/components/charts/FigureChart';
 import QuestionCard from '@/components/QuestionCard';
 import PriceMarquee from '@/components/PriceMarquee';
@@ -97,6 +98,15 @@ export default function LensPage() {
       )}
 
       <LensSignature lens={lens} tickers={tickers} accent={accent} />
+
+      {/* Investment only. The financing graph is about who funded whom, which
+          is a different question from every other lens's subject, and it is
+          the feature the `events` table was built for. Mounted here rather
+          than inside LensSignature because it fetches its own data — the
+          signature modules are all driven by tickers the page already has,
+          and putting a request inside that switch would make four lenses pay
+          for a query only one of them uses. */}
+      {lens.id === 'investment' && <CircularFinancing accent={accent} />}
 
       {tickers?.length > 0 && (
         <section className="mt-14">

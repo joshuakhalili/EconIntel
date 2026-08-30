@@ -14,6 +14,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { query } from '../db/pool.js';
 
 /**
  * Build the deduplication key for a deal.
@@ -83,4 +84,138 @@ export function buildEventDedupHash({ fromEntityId, toEntityId, kind, announcedD
   return createHash('sha256')
     .update(`${fromEntityId}|${toEntityId ?? ''}|${kind}|${day}`)
     .digest('hex');
+}
+
+/**
+ * The financing graph, as edges and the round trips inside it.
+ *
+ * WHY THIS RETURNS ROUND TRIPS AND NOT A NODE GRAPH
+ *
+ * The thing being reported is that money is going in circles: an investor puts
+ * capital into an AI lab, and the lab commits a comparable sum straight back
+ * as a purchase of the investor's compute. Drawn as a force-directed graph
+ * that fact is somewhere in a hairball of 23 arrows. Drawn as PAIRS — here is
+ * A paying B, here is B paying A, here are the two amounts and the two dates —
+ * it is the first thing you see.
+ *
+ * So the pairing is computed here, in SQL, rather than left to the browser to
+ * infer from a flat list.
+ *
+ * THE AMOUNTS ON A ROUND TRIP MUST NEVER BE ADDED
+ *
+ * They point in opposite directions. Microsoft put $13bn into OpenAI and
+ * OpenAI committed $250bn back in Azure purchases; "$263bn" describes nothing
+ * that happened. The same warning is why the diagram reads `investment_edges`
+ * and never `monthly_investment`, whose whole premise is summing legs. No
+ * total is computed here and none should be added downstream.
+ */
+export async function financingGraph() {
+  const { rows: edges } = await query(
+    `SELECT event_id, from_entity_id, from_name, to_entity_id, to_name,
+            kind, status, amount_usd, announced_date::text AS announced_date,
+            headline, loop_status, loop_description, structure_label,
+            from_sector, to_sector, evidence_count, is_verified, confidence_tier
+       FROM investment_edges
+      ORDER BY announced_date DESC`
+  );
+
+  /*
+   * WHAT MAKES A PAIR CIRCULAR, AND WHY IT IS NOT "MONEY BOTH WAYS"
+   *
+   * The obvious test is that A paid B and B paid A. It finds four pairs here
+   * and it misses the single most-reported case in the whole dataset.
+   *
+   * NVIDIA and CoreWeave have three edges and NVIDIA is the payer on all
+   * three: it invested $2.0bn, invested $0.1bn earlier, and separately
+   * committed $6.3bn to BUY CAPACITY BACK from the company it had just
+   * funded. No direction ever reverses, and that is exactly the arrangement
+   * the phrase "circular financing" was coined for — the money leaves as
+   * equity and returns as revenue. A both-ways test calls it two unrelated
+   * deals.
+   *
+   * So the test is about the KIND of leg, not its direction: a pair is
+   * circular when the same two parties are joined by both a CAPITAL leg
+   * (someone funded someone) and a COMMERCIAL one (someone bought from
+   * someone). That is what closes a circle, whoever happens to be named as
+   * payer on each line.
+   *
+   * It finds five pairs, and the four that the direction test found are all
+   * still among them.
+   */
+  const CAPITAL = new Set([
+    'investment',
+    'debt_facility',
+    'convertible_note',
+    'credit_facility',
+    'government_grant',
+    'acquisition',
+  ]);
+  const COMMERCIAL = new Set(['offtake', 'partnership']);
+
+  /*
+   * A pair key that is the same in both directions, so both legs of one circle
+   * collapse onto one row. Sorted by id rather than by name: names are
+   * editorial and get rewritten, ids do not.
+   */
+  const pairKey = (a, b) => [a, b].sort().join('::');
+  const pairs = new Map();
+
+  for (const edge of edges) {
+    if (!edge.to_entity_id) continue; // one-sided deal; no circle to find
+    const key = pairKey(edge.from_entity_id, edge.to_entity_id);
+    if (!pairs.has(key)) pairs.set(key, []);
+    pairs.get(key).push(edge);
+  }
+
+  const circles = [...pairs.values()]
+    .filter(
+      (legs) =>
+        legs.some((l) => CAPITAL.has(l.kind)) && legs.some((l) => COMMERCIAL.has(l.kind))
+    )
+    .map((legs) => {
+      const capital = legs.filter((l) => CAPITAL.has(l.kind));
+      const commercial = legs.filter((l) => COMMERCIAL.has(l.kind));
+
+      /*
+       * The funder is whoever pays on the capital legs. Named from the data
+       * rather than from the pair's first row, because the first row is
+       * whichever edge sorted first by date and carries no meaning.
+       */
+      const funderId = capital[0].from_entity_id;
+      const funded = capital[0].to_entity_id;
+
+      const named = (id) => {
+        const hit = legs.find((l) => l.from_entity_id === id) ?? legs.find((l) => l.to_entity_id === id);
+        return hit?.from_entity_id === id
+          ? { id, name: hit.from_name, sector: hit.from_sector }
+          : { id, name: hit?.to_name, sector: hit?.to_sector };
+      };
+
+      return {
+        funder: named(funderId),
+        funded: named(funded),
+        capital,
+        commercial,
+        /*
+         * Both sides are reported, and they are NEVER added. They point in
+         * opposite economic directions: Microsoft put $13bn into OpenAI and
+         * OpenAI committed $250bn back in Azure purchases, and "$263bn"
+         * describes nothing that happened. This is the same reason the
+         * feature reads `investment_edges` and never `monthly_investment`,
+         * whose premise is summing legs.
+         */
+        capitalUsd: capital.reduce((sum, l) => sum + (Number(l.amount_usd) || 0), 0),
+        commercialUsd: commercial.reduce((sum, l) => sum + (Number(l.amount_usd) || 0), 0),
+        /* Whether direction actually reverses. Shown on the card, because
+           "they bought from each other" and "the funder bought back from the
+           company it funded" are different arrangements and a reader should
+           not have to work out which one they are looking at. */
+        reverses: new Set(legs.map((l) => l.from_entity_id)).size > 1,
+        largestLegUsd: Math.max(...legs.map((l) => Number(l.amount_usd) || 0)),
+        latest: legs.map((l) => l.announced_date).sort().at(-1),
+      };
+    })
+    .sort((x, y) => y.largestLegUsd - x.largestLegUsd);
+
+  return { edges, circles };
 }

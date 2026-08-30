@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /**
  * Reveal a section the first time it comes into view.
@@ -31,6 +31,28 @@ import { useEffect, useRef, useState } from 'react';
  * `behavior: 'auto'` and `'smooth'` on a scroll the READER initiated. That is
  * a different question from "should this animate in", and it stays as it is.
  *
+ * THE REF IS A CALLBACK, AND THAT IS LOAD-BEARING
+ *
+ * It was `useRef` until 2026-08-30, and that version had a bug that hides
+ * content permanently and silently.
+ *
+ * `useEffect` runs once, reads `ref.current`, and returns early when it is
+ * null. Its dependency is `[revealed]`, which does not change when a ref
+ * attaches — so if the element is not in the DOM on that first run, no
+ * observer is ever created and the section stays at `opacity-0` for the life
+ * of the page. No error, no warning; the content is in the DOM, screen readers
+ * read it, and it is invisible.
+ *
+ * Which is not a rare shape. Any component that returns `null` while its data
+ * loads hits it, because hooks must be called before that early return. The
+ * financing band on the Investment lens did exactly that and rendered a
+ * 1,984-pixel void.
+ *
+ * A callback ref runs when the node actually attaches — and again with null
+ * when it detaches — so the observer is created at the right moment however
+ * late that is. `useCallback` with no dependencies keeps its identity stable,
+ * or React would call it with null and then the node on every single render.
+ *
  * @param {object} [options]
  * @param {boolean} [options.immediate] Reveal without waiting to intersect.
  *   For anything above the fold: the landing page animates its hero on load
@@ -38,8 +60,10 @@ import { useEffect, useRef, useState } from 'react';
  *   not fade in underneath the reader.
  */
 export function useReveal({ immediate = false } = {}) {
-  const ref = useRef(null);
+  const [node, setNode] = useState(null);
   const [revealed, setRevealed] = useState(immediate);
+
+  const ref = useCallback((element) => setNode(element), []);
 
   useEffect(() => {
     if (revealed) return undefined;
@@ -53,7 +77,6 @@ export function useReveal({ immediate = false } = {}) {
       return undefined;
     }
 
-    const node = ref.current;
     if (!node) return undefined;
 
     const observer = new IntersectionObserver(
@@ -69,7 +92,7 @@ export function useReveal({ immediate = false } = {}) {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [revealed]);
+  }, [revealed, node]);
 
   return [ref, revealed];
 }

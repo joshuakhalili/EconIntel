@@ -192,3 +192,15 @@ export function useStatus() {
     queryFn: ({ signal }) => fetchJson('/api/status', { signal }),
   });
 }
+
+/**
+ * The financing graph. One request; the circles are computed server-side
+ * because deciding what counts as circular is a definition, not a rendering
+ * detail — see `repositories/events.js`.
+ */
+export function useFinancing() {
+  return useQuery({
+    queryKey: ['financing'],
+    queryFn: ({ signal }) => fetchJson('/api/financing', { signal }),
+  });
+}

@@ -37,6 +37,7 @@ import { securityHeaders } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 import { listLenses, getLens, getLensTickers, overview } from './repositories/lenses.js';
+import { financingGraph } from './repositories/events.js';
 import cookieParser from 'cookie-parser';
 import { globe } from './repositories/globe.js';
 import * as auth from './lib/auth.js';
@@ -317,6 +318,17 @@ app.get('/api/lenses/:slug/tickers', route(async (req, res) => {
 app.get('/api/lenses/:slug/news', route(async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 24, 100);
   res.json({ documents: await documentsForLens(req.params.slug, { limit }) });
+}));
+
+/**
+ * The financing graph — every deal, and the circles inside it.
+ *
+ * Reads `investment_edges`, which is one row per non-cancelled deal. It must
+ * never read `monthly_investment`: that view sums opposite-facing legs of the
+ * same arrangement, so its totals describe nothing that happened.
+ */
+app.get('/api/financing', route(async (_req, res) => {
+  res.json(await financingGraph());
 }));
 
 app.get('/api/questions', route(async (_req, res) => {
