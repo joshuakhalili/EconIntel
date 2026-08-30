@@ -171,7 +171,11 @@ export default function TopNav() {
                       height={20}
                     />
                   )}
-                  {me.reader.handle}
+                  {/* Name first, handle second. `handle` is a GitHub username
+                      and is null for every reader who signed in with an email
+                      address — which is most of them — so keying on it alone
+                      rendered an empty pill for anyone but a GitHub user. */}
+                  {me.reader.name ?? me.reader.handle ?? 'Signed in'}
                 </Link>
               ) : me?.authRequired ? (
                 <Link

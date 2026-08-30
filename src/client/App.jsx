@@ -35,6 +35,12 @@ const router = createBrowserRouter([
       // relate, which made five ways of looking at one subject read as five
       // unrelated sections.
       { index: true, element: <OverviewPage /> },
+      // `/` is the landing page on a hard load — Express serves the static
+      // mirror there — so the app needs a real path of its own for the same
+      // component. Without it, signing in redirected to /overview, fell
+      // through to the catch-all, and rewrote the URL to `/`; a refresh then
+      // left the reader back on the landing page they had just come from.
+      { path: 'overview', element: <OverviewPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'lens/:slug', element: <LensPage /> },
       { path: 'q/:slug', element: <QuestionPage /> },
