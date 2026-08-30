@@ -13,16 +13,23 @@
      together. preconnect opens the connection during that gap. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- This link is load-bearing and was missing. atmos.css carried the same
+     families as an @import, and the CSS minifier drops an @import that does not
+     sit at the very top of the bundle — which it cannot, since atmos.css is
+     imported after globals.css and charts.css. The built stylesheet contained no
+     @import at all, so Trispace and Fragment Mono were never requested and every
+     eyebrow and figure rendered in the system mono fallback. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Trispace:wght@100..800&family=Fragment+Mono&display=swap">
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231F7A4D'/><path d='M8 21l5-6 4 3 6-8' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23010101'/><path d='M8 21l5-6 4 3 6-8' stroke='%237da0ff' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <!-- iOS ignores SVG favicons entirely; without a PNG, "Add to Home Screen"
      produces a blank grey tile. -->
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="manifest" href="/manifest.json">
 <!-- Colours the browser chrome around the page on Android and in standalone
-     mode, so the app does not sit in a white band on a dark phone. -->
-<meta name="theme-color" content="#F4F3EF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#131312" media="(prefers-color-scheme: dark)">
+     mode. One value, unconditional: the app is dark whatever the OS says, and
+     a light theme-color would put a pale band above a near-black page. -->
+<meta name="theme-color" content="#010101">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 

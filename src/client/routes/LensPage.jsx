@@ -159,6 +159,7 @@ export default function LensPage() {
       <Reading
         items={lens.reading}
         scopeNote="Institutional and industry work covering this subject as a whole."
+        accent={accent}
       />
 
       {lens.has_news !== false && (

@@ -37,20 +37,26 @@ const STANCE = {
   contradicts: { label: 'Disagrees', tone: 'text-neg' },
 };
 
-export default function Reading({ items, scopeNote }) {
+export default function Reading({ items, scopeNote, accent }) {
   if (!items?.length) return null;
 
   const anyUnreviewed = items.some((i) => i.takeaway_source === 'extracted');
 
   return (
-    <section className="mt-10">
-      <h2 className="text-title-3-medium text-text-primary">What others have found</h2>
-      <p className="prose-measure mt-1 text-body-regular text-text-tertiary">
+    <section className="mt-14">
+      {/* The eyebrow takes the parent lens's accent where one is passed, so a
+          question page and its lens read as the same publication rather than
+          as two components that happen to share a heading. */}
+      <p className="eyebrow" style={accent ? { color: accent.hex } : undefined}>
+        The literature
+      </p>
+      <h2 className="mt-3 text-title-1-medium text-text-primary">What others have found</h2>
+      <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
         {scopeNote} Labelled by who produced it, not ranked — method, motive and data access
         differ, and that is the part worth seeing.
       </p>
 
-      <ul className="mt-4 flex flex-col gap-2">
+      <ul className="mt-6 flex flex-col gap-2">
         {items.map((item) => {
           const stance = STANCE[item.stance];
           return (

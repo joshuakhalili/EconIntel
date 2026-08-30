@@ -28,8 +28,13 @@
 
 /* Trispace carries the small uppercase eyebrow labels; Fragment Mono the
    figures and timestamps. Both are on Google Fonts and both are what the
-   landing page uses. */
-@import url('https://fonts.googleapis.com/css2?family=Trispace:wght@100..800&family=Fragment+Mono&display=swap');
+   landing page uses.
+
+   They are loaded by a <link> in index.html, NOT by an @import here. An
+   @import is only valid at the top of a stylesheet, and this file is imported
+   third — so the minifier dropped it from the bundle entirely and neither face
+   was ever requested in a production build. Nothing warned; the eyebrows simply
+   rendered in the system mono fallback, which looks like a font choice. */
 
 /* Inter Display is NOT on Google Fonts — it is Inter's display optical size,
    and it is what the landing page sets every heading in. Self-hosted from the

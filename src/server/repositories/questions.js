@@ -125,7 +125,26 @@ export async function getQuestion(slug) {
     [questions[0].id]
   );
 
-  return { ...questions[0], indicators, reading };
+  /*
+   * The other questions under the same lens, in editorial order.
+   *
+   * A question page is one step in an argument, not a leaf: the reader should
+   * be able to walk to the next one without going back up to the lens and
+   * hunting for where they were. `sort_order` is the order the lens page lists
+   * them in, so previous and next mean the same thing in both places.
+   *
+   * Returned even when there is only one, so the client can say "the only
+   * question under this lens" rather than silently showing nothing.
+   */
+  const { rows: siblings } = await query(
+    `SELECT slug, question, sort_order
+       FROM questions
+      WHERE lens_id = $1 AND is_active
+      ORDER BY sort_order, id`,
+    [questions[0].lens_id]
+  );
+
+  return { ...questions[0], indicators, reading, siblings };
 }
 
 /**

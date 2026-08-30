@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { RiArrowLeftLine, RiAlertLine } from '@remixicon/react';
+import { RiArrowLeftLine, RiArrowRightLine, RiAlertLine } from '@remixicon/react';
 import { useQuestion } from '@/hooks/queries';
 import { useRegister } from '@/lib/preferences';
 import { usePageTitle } from '@/components/chrome/AppShell';
@@ -10,22 +10,35 @@ import ChartGroup from '@/components/charts/ChartGroup';
 import StrengthBadge, { STRENGTH } from '@/components/StrengthBadge';
 import Reading from '@/components/Reading';
 import { groupIndicators } from '@/lib/groupIndicators';
+import { LENS_ACCENT } from '@/lib/lensAccent';
 
 /**
  * One question, argued.
  *
- * This page used to be an answer, a caveat and a stack of charts, which stated
- * a conclusion without ever showing the reasoning — the reader had no way to
- * see what mechanism was being claimed, how it was measured, or how far the
- * evidence could be pushed. It now reads in the order an argument runs:
+ * A question page is a step inside a lens, so it is built out of the same
+ * pieces: the landing page's hero band, eyebrow kickers, one accent carried
+ * down from the parent lens, and figures in the mono face. What changes is the
+ * shape of the argument, which runs in this order and no other:
  *
  *   the finding → how confident, and when it was last checked
  *   → what it cannot show → the mechanism being claimed
  *   → how this page measures it → the evidence → what others have found
  *
- * The caveat stays directly under the answer and above every chart. Its
- * position is the claim: the limits of a finding are part of the finding, not
- * a footnote a reader reaches only if they scroll to the end.
+ * THE CAVEAT'S POSITION IS THE CLAIM.
+ *
+ * It sits directly under the answer, above every chart, in a full-width band of
+ * its own. An earlier version put it last, after four charts, in a recessed
+ * surface — technically a first-class section in the markup and a footnote to
+ * anybody actually reading. The limits of a finding are part of the finding.
+ *
+ * It is a hairline and a label rather than a coloured panel. Amber fill across
+ * a full-width band would read as an error state, and this is not an error —
+ * it is the honest edge of a real result.
+ *
+ * Nothing on this page is generated. Every sentence is stored prose, and the
+ * charts are drawn by components whose honesty behaviours (single axis, zero
+ * baseline disclosed, gaps left broken, rebasing declared) live inside them and
+ * are not this file's to reinterpret.
  */
 export default function QuestionPage() {
   const { slug } = useParams();
@@ -41,87 +54,169 @@ export default function QuestionPage() {
   if (isError) return <ErrorBlock error={error} what="this question" />;
 
   const answer = register(question.answer_plain, question.answer_expert);
+  const accent = LENS_ACCENT[question.lens_id] ?? LENS_ACCENT.default;
+
+  const siblings = question.siblings ?? [];
+  const here = siblings.findIndex((q) => q.slug === slug);
+  const prev = here > 0 ? siblings[here - 1] : null;
+  const next = here >= 0 && here < siblings.length - 1 ? siblings[here + 1] : null;
 
   return (
-    <article className="mx-auto max-w-4xl">
-      {question.lens_slug && (
-        <Link
-          to={`/lens/${question.lens_slug}`}
-          className="mb-4 inline-flex min-h-11 items-center gap-1.5 text-body-regular text-text-tertiary hover:text-text-secondary"
-        >
-          <RiArrowLeftLine className="size-4" aria-hidden />
-          {question.lens_name}
-        </Link>
-      )}
+    <article>
+      {/* ── The question ──────────────────────────────────────────────────
+          The same band the lens page opens on, shorter, with the accent wash
+          entering from the other side. A question is a step inside its lens,
+          not a different kind of page. */}
+      <header className="relative -mx-4 overflow-hidden rounded-3xl sm:-mx-6">
+        <div className="gradient-band absolute inset-0" aria-hidden />
+        <div className="starfield absolute inset-0 opacity-40" aria-hidden />
+        <div
+          className="absolute inset-0 mix-blend-screen"
+          style={{
+            background: `radial-gradient(70% 60% at 82% 0%, ${accent.glow}, transparent 70%)`,
+          }}
+          aria-hidden
+        />
 
-      {/* The question is the headline. It used to live only in the topbar,
-          so the page itself opened on an unattributed paragraph. */}
-      <h1 className="text-display-4-medium text-text-primary">{question.question}</h1>
-      {question.subtitle && (
-        <p className="mt-2 text-headline-regular text-text-tertiary">{question.subtitle}</p>
-      )}
+        <div className="relative px-6 py-12 sm:px-10 sm:py-16">
+          {question.lens_slug && (
+            <Link
+              to={`/lens/${question.lens_slug}`}
+              className="group inline-flex min-h-11 items-center gap-1.5"
+            >
+              <RiArrowLeftLine
+                className="size-3.5 shrink-0 transition-transform group-hover:-translate-x-0.5"
+                style={{ color: accent.hex }}
+                aria-hidden
+              />
+              <span className="eyebrow" style={{ color: accent.hex }}>
+                {question.lens_name}
+                {here >= 0 && siblings.length > 1 && (
+                  <>
+                    {' · '}Question {String(here + 1).padStart(2, '0')} of{' '}
+                    {String(siblings.length).padStart(2, '0')}
+                  </>
+                )}
+              </span>
+            </Link>
+          )}
 
-      <Strength strength={question.strength} reviewed={question.last_reviewed} />
+          <h1 className="mt-3 max-w-4xl text-[clamp(1.875rem,4.4vw,3.25rem)] leading-[1.06] text-text-primary">
+            {question.question}
+          </h1>
+          {question.subtitle && (
+            <p className="mt-3 max-w-2xl text-headline-regular text-text-secondary">
+              {question.subtitle}
+            </p>
+          )}
 
+          <Strength strength={question.strength} reviewed={question.last_reviewed} />
+        </div>
+      </header>
+
+      {/* ── The finding ───────────────────────────────────────────────────
+          Set larger than the prose below it. This paragraph is what the page
+          is for; everything after it is the working. */}
       {answer && (
-        <p className="prose-measure mt-6 text-headline-regular leading-relaxed text-text-primary">
-          {answer}
-        </p>
+        <section className="mt-12">
+          <p className="eyebrow" style={{ color: accent.hex }}>
+            The finding
+          </p>
+          <p className="prose-measure mt-4 text-[clamp(1.125rem,1.9vw,1.5rem)] leading-[1.55] text-text-primary">
+            {answer}
+          </p>
+        </section>
       )}
 
+      {/* ── What it does not show ─────────────────────────────────────────
+          Full width, above every chart, and impossible to scroll past on the
+          way to one. */}
       {question.caveat && (
-        <section className="mt-6 flex items-start gap-3 rounded-2xl border border-warn/40 bg-background-primary-default p-5">
-          <RiAlertLine className="mt-0.5 size-5 shrink-0 text-warn" aria-hidden />
-          <div className="prose-measure">
-            <h2 className="text-body-medium text-text-primary">What this does not show</h2>
-            <p className="mt-1 text-body-regular text-text-secondary">{question.caveat}</p>
+        <section className="relative -mx-4 mt-12 overflow-hidden rounded-3xl bg-panel sm:-mx-6">
+          <span
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: 'linear-gradient(90deg, var(--color-warn), transparent 70%)' }}
+            aria-hidden
+          />
+          <div className="relative flex flex-col gap-4 px-6 py-10 sm:flex-row sm:gap-6 sm:px-10 sm:py-12">
+            <RiAlertLine
+              className="size-5 shrink-0"
+              style={{ color: 'var(--color-warn)' }}
+              aria-hidden
+            />
+            <div>
+              <h2 className="eyebrow" style={{ color: 'var(--color-warn)' }}>
+                What this does not show
+              </h2>
+              <p className="prose-measure mt-3 text-headline-regular leading-relaxed text-text-secondary">
+                {question.caveat}
+              </p>
+            </div>
           </div>
         </section>
       )}
 
-      <Prose title="The claim being tested" body={question.theory} />
-      <Prose title="How this is measured" body={question.method} />
+      {/* ── The reasoning ─────────────────────────────────────────────────
+          Side by side because they answer two halves of the same objection:
+          what is being claimed, and what was actually counted. */}
+      {(question.theory || question.method) && (
+        <div className="mt-12 grid gap-3 lg:grid-cols-2">
+          <Prose accent={accent} title="The claim being tested" body={question.theory} />
+          <Prose accent={accent} title="How this is measured" body={question.method} />
+        </div>
+      )}
 
       {/* ── The evidence ─────────────────────────────────────────────────── */}
       {groups.hero.length > 0 && (
-        <Section title="The evidence">
+        <Band
+          accent={accent}
+          eyebrow="The evidence"
+          title={groups.hero.length === 1 ? 'The chart this rests on' : 'The charts this rests on'}
+        >
           {groups.hero.map((group) => (
-            <ChartGroup key={group.key} members={group.members} height={340} onPick={open} />
+            <ChartGroup key={group.key} members={group.members} height={360} onPick={open} />
           ))}
-        </Section>
+        </Band>
       )}
 
       {groups.supporting.length > 0 && (
-        <Section title="Supporting series">
-          <div className="grid gap-4 lg:grid-cols-2">
+        <Band accent={accent} eyebrow="Supporting series" title="What else points the same way">
+          <div className="grid gap-3 lg:grid-cols-2">
             {groups.supporting.map((group) => (
               <ChartGroup key={group.key} members={group.members} onPick={open} />
             ))}
           </div>
-        </Section>
+        </Band>
       )}
 
       {groups.context.length > 0 && (
-        <Section
-          title="Context"
-          note="Not evidence for the answer — the backdrop it has to be read against."
+        <Band
+          accent={accent}
+          eyebrow="Context"
+          title="The backdrop this has to be read against"
+          note="Not evidence for the answer. These are here so the evidence is not read in isolation."
         >
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {groups.context.map((group) => (
               <ChartGroup key={group.key} members={group.members} height={220} onPick={open} />
             ))}
           </div>
-        </Section>
+        </Band>
       )}
 
       {question.indicators?.length === 0 && (
-        <EmptyBlock>No indicators are attached to this question yet.</EmptyBlock>
+        <div className="mt-12">
+          <EmptyBlock>No indicators are attached to this question yet.</EmptyBlock>
+        </div>
       )}
 
       <Reading
         items={question.reading}
         scopeNote="Published elsewhere on this question."
+        accent={accent}
       />
+
+      <QuestionNav prev={prev} next={next} lens={question} />
     </article>
   );
 }
@@ -129,51 +224,112 @@ export default function QuestionPage() {
 /**
  * How far the evidence can be pushed, and when a person last checked.
  *
- * Shown at the top rather than buried, because it changes how everything below
- * should be read.
+ * Inside the hero band rather than below it, because it changes how every
+ * sentence after it should be read — including the one the reader meets first.
  */
 function Strength({ strength, reviewed }) {
   const meta = STRENGTH[strength];
   if (!meta && !reviewed) return null;
 
   return (
-    <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+    <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
       <StrengthBadge strength={strength} />
-      {meta && (
-        <span className="text-caption-1-regular text-text-tertiary">{meta.detail}</span>
-      )}
+      {meta && <span className="text-caption-1-regular text-text-secondary">{meta.detail}</span>}
       {reviewed && (
-        <span className="text-caption-1-regular text-text-tertiary">
+        <span className="figure text-caption-1-regular text-text-tertiary">
           {/* Numbers update on ingestion; the sentences around them do not. */}
-          · Prose last checked against the data on {formatDay(reviewed)}
+          · prose last checked against the data on {formatDay(reviewed)}
         </span>
       )}
     </div>
   );
 }
 
-function Prose({ title, body }) {
+/** One stored passage of reasoning, in a panel of its own. */
+function Prose({ accent, title, body }) {
   if (!body) return null;
   return (
-    <section className="mt-8">
-      <h2 className="text-title-3-medium text-text-primary">{title}</h2>
-      <p className="prose-measure mt-2 text-body-regular leading-relaxed text-text-secondary">
-        {body}
-      </p>
+    <section className="rounded-2xl border border-border-button-default bg-panel p-6">
+      <h2 className="eyebrow" style={{ color: accent.hex }}>
+        {title}
+      </h2>
+      <p className="mt-3 text-body-regular leading-relaxed text-text-secondary">{body}</p>
     </section>
   );
 }
 
-function Section({ title, note, children }) {
+/**
+ * A full-width band of charts.
+ *
+ * The band, not the card, is what separates one class of evidence from another
+ * — hero from supporting from context. Cards inside it stay on their own
+ * surface so a chart is never drawn on a gradient.
+ */
+function Band({ accent, eyebrow, title, note, children }) {
   return (
-    <section className="mt-10">
-      <h2 className="text-title-3-medium text-text-primary">{title}</h2>
-      {note && <p className="mt-1 text-body-regular text-text-tertiary">{note}</p>}
-      <div className="mt-4 flex flex-col gap-4">{children}</div>
+    <section className="relative -mx-4 mt-14 overflow-hidden rounded-3xl border border-border-button-default bg-panel/50 px-4 py-10 sm:-mx-6 sm:px-8 sm:py-12">
+      <p className="eyebrow" style={{ color: accent.hex }}>
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 text-title-1-medium text-text-primary">{title}</h2>
+      {note && (
+        <p className="prose-measure mt-2 text-body-regular text-text-tertiary">{note}</p>
+      )}
+      <div className="mt-6 flex flex-col gap-3">{children}</div>
     </section>
   );
 }
 
+/**
+ * Previous and next question under the same lens.
+ *
+ * The lens orders its questions deliberately, and a reader who finishes one
+ * should be able to take the next step without going back up and finding their
+ * place again.
+ */
+function QuestionNav({ prev, next, lens }) {
+  if (!prev && !next) return null;
+
+  return (
+    <nav
+      className="mt-16 grid gap-3 border-t border-border-button-default pt-8 sm:grid-cols-2"
+      aria-label={`Other questions under ${lens.lens_name}`}
+    >
+      {prev ? (
+        <Link
+          to={`/q/${prev.slug}`}
+          className="group flex flex-col rounded-2xl border border-border-button-default bg-panel p-5 transition-colors hover:bg-raised"
+        >
+          <span className="flex items-center gap-1.5 text-caption-1-regular text-text-tertiary">
+            <RiArrowLeftLine
+              className="size-3.5 transition-transform group-hover:-translate-x-0.5"
+              aria-hidden
+            />
+            Before this
+          </span>
+          <span className="mt-1 text-title-3-medium text-text-primary">{prev.question}</span>
+        </Link>
+      ) : (
+        <span />
+      )}
+      {next && (
+        <Link
+          to={`/q/${next.slug}`}
+          className="group flex flex-col items-end rounded-2xl border border-border-button-default bg-panel p-5 text-right transition-colors hover:bg-raised sm:col-start-2"
+        >
+          <span className="flex items-center gap-1.5 text-caption-1-regular text-text-tertiary">
+            Next
+            <RiArrowRightLine
+              className="size-3.5 transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </span>
+          <span className="mt-1 text-title-3-medium text-text-primary">{next.question}</span>
+        </Link>
+      )}
+    </nav>
+  );
+}
 
 function formatDay(iso) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {
