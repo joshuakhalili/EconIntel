@@ -184,7 +184,18 @@ async function ingestEpochIndicator(indicator) {
       case 'epoch.gpu_cluster_count':
         observations = await epoch.ingestGpuClusters();
         break;
+      case 'epoch.gpu_price_performance':
+        observations = await epoch.ingestGpuPricePerformance();
+        break;
       default:
+        /*
+         * A hard-coded switch is why this line exists. Epoch's three datasets
+         * share a provider and nothing else — different files, different
+         * shapes, different converters — so there is no generic path the way
+         * there is for DBnomics, and adding an Epoch indicator to the seed is
+         * not enough on its own. Without a case here the indicator is seeded,
+         * visible, and fails on every run.
+         */
         throw new Error(`No Epoch job defined for indicator "${indicator.id}"`);
     }
 

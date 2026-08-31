@@ -1,0 +1,99 @@
+# Check production actually works, after every deploy.
+#
+# WHY THIS EXISTS
+#
+# Vercel's Git integration deploys every push to `main` straight to
+# production. Two of those deploys went out broken while every local gate was
+# green — 106 tests, tokens, contrast, routes, vercel config, a clean build:
+#
+#   1. A syntax error in app.js, because no test imported it.
+#   2. Every app route returning the landing page's 404, because
+#      `cleanUrls: true` strips `.html` and the rewrites pointed at
+#      `/app.html`. Build green, function healthy, database connected,
+#      /overview saying "Page not found".
+#
+# The second could not be caught locally at all. Express resolves those paths
+# with a catch-all; the CDN resolves them with a rewrite table. Different
+# systems, and only one of them is what a reader gets. The only place to test
+# it is against a real deployment.
+#
+# WHY `deployment_status` AND NOT `push`
+#
+# On push, the code exists but the deployment does not — the job would race
+# Vercel's build and test the PREVIOUS version, which is worse than not
+# testing at all because it reports green. `deployment_status` fires when
+# Vercel finishes and carries the URL it actually produced, so this always
+# tests the thing that just shipped.
+
+name: Smoke
+
+on:
+  deployment_status:
+  schedule:
+    # 07:10 UTC daily. Not to catch a bad deploy — this workflow already does
+    # that — but to catch production breaking without a deploy: the database
+    # going away, a certificate lapsing, Neon suspending a branch.
+    - cron: '10 7 * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to check. Blank uses production.'
+        required: false
+        default: ''
+
+concurrency:
+  group: smoke-${{ github.event.deployment_status.environment_url || 'production' }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    # Only successful PRODUCTION deployments. A preview sits behind Vercel SSO
+    # and every request 302s to an auth page, so smoking one without a bypass
+    # token fails on all 18 checks for a reason that has nothing to do with
+    # the code. The schedule and manual runs carry no deployment context at
+    # all, hence the two null checks.
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment_status.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      # No `npm ci`. The script and everything it imports use only Node
+      # built-ins, which keeps this job a few seconds rather than a minute —
+      # and means a broken lockfile cannot stop production being checked.
+      - name: Smoke the deployment
+        env:
+          TARGET: >-
+            ${{ inputs.url
+                || github.event.deployment_status.environment_url
+                || 'https://diffusion-econintel.vercel.app' }}
+        run: |
+          echo "Checking $TARGET"
+          echo "### Smoke: \`$TARGET\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # `set +e` around the run, deliberately. Actions runs this with
+          # `bash -eo pipefail`, so a failing script would abort the step here
+          # — before the fence is closed and before the exit below. The step
+          # would still fail, but the job summary would be a truncated block
+          # with no result line, which is the one moment you actually want to
+          # read it.
+          #
+          # `tee` puts the output in both the log and the summary; PIPESTATUS
+          # takes the exit code from the script rather than from tee, so a
+          # failing check fails the job. That is the entire point of the file.
+          set +e
+          node scripts/smoke-deploy.js "$TARGET" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          set -e
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
