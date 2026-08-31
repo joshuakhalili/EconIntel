@@ -38,7 +38,30 @@ function readPalette() {
  * Colour follows the entity, never its rank — so this is always called with a
  * series' stable index, not its position after filtering. Hiding series 2 must
  * not repaint series 3.
+ *
+ * THE MODULO IS A WRAP, AND A WRAP IS A DUPLICATE COLOUR.
+ *
+ * With six validated hues, series 7 gets series 1's colour and nothing says
+ * so — two different countries drawn identically on one axis, with a legend
+ * that claims they are distinguishable. That is the failure the CVD-validated
+ * fixed hue order exists to prevent, and it is invisible: the chart renders,
+ * it just lies about which line is which.
+ *
+ * The wrap is kept rather than throwing, because a chart that crashes a page
+ * is worse than one that repeats a colour. What is NOT kept is the silence —
+ * `exceedsPalette` below lets a caller refuse to draw, and `ChartGroup` does.
  */
 export function colorAt(palette, index) {
   return palette[index % palette.length];
+}
+
+/**
+ * Would this many series force a duplicate colour?
+ *
+ * The honest maximum for a categorical chart is the number of validated hues.
+ * Beyond it the answer is a different chart — ranked bars, small multiples, a
+ * fold into "other" — not a longer legend.
+ */
+export function exceedsPalette(count, palette) {
+  return count > palette.length;
 }

@@ -3,6 +3,7 @@ import { displayUnit } from '@/lib/format';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import ChartCard from './ChartCard';
 import SeriesChart from './SeriesChart';
+import { useSeriesPalette, exceedsPalette } from './palette';
 
 /**
  * One chart, drawn from the indicators the editorial layer put in a group.
@@ -33,10 +34,22 @@ export default function ChartGroup({ members, height = 260, onPick }) {
   const units = new Set(members.map((m) => displayUnit(m.unit)).filter(Boolean));
   const mustIndex = units.size > 1;
 
-  const { data: payload, isPending, isError, error } = useSeries(ids, {
-    countries,
-    index: mustIndex,
-  });
+  /*
+   * Checked BEFORE the request, not after it fails. Firing a call the server
+   * will refuse spends a round trip to arrive at an error message written for
+   * an API caller rather than a reader.
+   */
+  const palette = useSeriesPalette();
+  const tooManySeries = exceedsPalette(members.length, palette);
+
+  const { data: payload, isPending, isError, error } = useSeries(
+    ids,
+    { countries, index: mustIndex },
+    // `enabled` is useSeries's THIRD argument, not part of the options object.
+    // Passing it in the second is silently ignored and the doomed request goes
+    // out anyway.
+    { enabled: !tooManySeries }
+  );
 
   const lead = members[0];
   const title = members.length === 1 ? lead.name : groupTitle(members);
@@ -71,9 +84,43 @@ export default function ChartGroup({ members, height = 260, onPick }) {
         </span>
       }
     >
-      {isPending && <LoadingBlock rows={1} />}
-      {isError && <ErrorBlock error={error} what={title} />}
-      {payload && <SeriesChart payload={payload} height={height} onPick={onPick} />}
+      {tooManySeries ? (
+        /*
+         * More series than there are validated hues, so this cannot be drawn
+         * honestly and is not drawn at all.
+         *
+         * `/q/adoption` shipped this: `ai-adoption-panel` holds 16 country
+         * series. The request went out, the server refused it at its 12-series
+         * cap, and a live published page rendered "Could not load Germany —
+         * Enterprises using AI" to readers.
+         *
+         * The 400 was doing the right thing for the wrong reason. Had the cap
+         * been higher the chart would have DRAWN — cycling six hues across
+         * sixteen countries, so Germany, Ireland and Korea shared a colour
+         * while the legend implied they did not. A wrong chart that renders is
+         * worse than one that refuses, because nobody investigates it.
+         *
+         * So the refusal is explicit and says what is wrong. The fix is
+         * editorial and belongs to a person: sixteen countries is a ranked bar
+         * chart or small multiples, not sixteen lines on one axis.
+         */
+        <div className="rounded-2xl border border-border-button-default p-5">
+          <p className="text-body-regular text-text-secondary">
+            Not drawn: {members.length} series on one pair of axes, and there are
+            only {palette.length} validated colours. Drawing it would give
+            different series the same colour and a legend that says otherwise.
+          </p>
+          <p className="mt-2 text-caption-1-regular text-text-tertiary">
+            {members.map((m) => m.name).join(' · ')}
+          </p>
+        </div>
+      ) : (
+        <>
+          {isPending && <LoadingBlock rows={1} />}
+          {isError && <ErrorBlock error={error} what={title} />}
+          {payload && <SeriesChart payload={payload} height={height} onPick={onPick} />}
+        </>
+      )}
     </ChartCard>
   );
 }
