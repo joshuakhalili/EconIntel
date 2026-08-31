@@ -71,11 +71,32 @@ jobs:
       # and means a broken lockfile cannot stop production being checked.
       - name: Smoke the deployment
         env:
-          TARGET: >-
-            ${{ inputs.url
-                || github.event.deployment_status.environment_url
-                || 'https://diffusion-econintel.vercel.app' }}
+          # THE STABLE ALIAS, NOT `deployment_status.environment_url`.
+          #
+          # Vercel's environment_url is the immutable per-deployment address
+          # (…-a5g6qa83h-…), and Deployment Protection applies to it: every
+          # request 302s to vercel.com/sso-api. The first run of this workflow
+          # failed 14 of 18 checks for exactly that reason, having tested an
+          # auth redirect rather than the site.
+          #
+          # The alias is exempt from protection, and it is also the better
+          # target on the merits: it is the address readers actually use, so a
+          # green run means production is serving a working site — not merely
+          # that some deployment somewhere built.
+          #
+          # The tradeoff, stated: Vercel marks a deployment ready and then
+          # assigns aliases, so there is a small window where this could test
+          # the PREVIOUS version and report green. The settle delay below
+          # covers the normal case; the daily schedule and the next deploy
+          # cover the rest. Testing the immutable URL instead would need a
+          # protection-bypass secret in the repo, which is a credential this
+          # does not currently need.
+          TARGET: ${{ inputs.url || 'https://diffusion-econintel.vercel.app' }}
         run: |
+          if [ "${{ github.event_name }}" = "deployment_status" ]; then
+            echo "Waiting 20s for the production alias to settle…"
+            sleep 20
+          fi
           echo "Checking $TARGET"
           echo "### Smoke: \`$TARGET\`" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
