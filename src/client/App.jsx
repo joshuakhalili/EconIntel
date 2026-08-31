@@ -35,6 +35,7 @@ const DataPage = lazy(() => import('@/routes/DataPage'));
 const IndicatorPage = lazy(() => import('@/routes/IndicatorPage'));
 const NewsPage = lazy(() => import('@/routes/NewsPage'));
 const PipelinePage = lazy(() => import('@/routes/PipelinePage'));
+const SimulationPage = lazy(() => import('@/routes/SimulationPage'));
 
 /*
  * The Suspense boundary these need lives in `AppShell`, wrapped around the
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
       { path: 'data/:id', element: <IndicatorPage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'pipeline', element: <PipelinePage /> },
+      { path: 'simulate/:slug', element: <SimulationPage /> },
       // An unknown path lands on the overview rather than a lens, so a stale
       // or mistyped link explains where it has arrived instead of dropping a
       // reader into the middle of an argument.

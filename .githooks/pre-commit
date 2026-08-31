@@ -69,6 +69,27 @@ done
 #         inside it. Real credentials are high-entropy and effectively always
 #         carry digits; header names, CSS properties and English words do not.
 #
+#    UNDERSCORES ARE NOT ALLOWED IN A VALUE, and that is the second false
+#    positive this hook has produced. Rule 1 matched
+#
+#      baselineKey: 'unemployment_pct'
+#      modelKey:    'investment_shock_v1'
+#
+#    in an ordinary simulation module. `<something>Key: '<snake_case>'` is one
+#    of the most common shapes in JavaScript, and rule 1's value side accepted
+#    any 16 characters.
+#
+#    The discriminator is entropy. A real credential is random — hex, base64,
+#    a provider prefix and a blob — and does not contain underscores dividing
+#    short English words. So the value side now excludes `_` entirely, which
+#    admits every real key shape below and rejects snake_case identifiers.
+#
+#    The cost, stated: a secret that genuinely contains an underscore is missed
+#    by rules 1 and 2. That is a narrow gap — every provider pattern below
+#    still catches its own shape regardless, and .env files are refused
+#    outright by the file check above, which is where such a value would
+#    actually live.
+#
 #    The known gap in rule 2, stated rather than left to be discovered: a bare
 #    `secret = 'somepassphrasewithnodigits'` is not caught. Rule 1 catches it
 #    the moment the variable has a real name, and every provider shape below is
@@ -85,8 +106,8 @@ done
 #    ordinary words — `task-oriented-design-system` contains `sk-oriented-…`,
 #    twenty-odd legal characters, and blocked a commit in testing. `risk-`,
 #    `desk-` and `disk-` do the same.
-patterns='[A-Za-z0-9_]+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_-]{16,}
-(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_-]{6,}[0-9][A-Za-z0-9_-]{6,}
+patterns='[A-Za-z0-9_]+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9-]{16,}
+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9-]{6,}[0-9][A-Za-z0-9-]{6,}
 (^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}
 ghp_[A-Za-z0-9]{36}
 AKIA[0-9A-Z]{16}

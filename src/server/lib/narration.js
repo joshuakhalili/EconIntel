@@ -502,6 +502,11 @@ function renderGrounding(grounding) {
  * @param {string} options.instruction  what to write, one line
  * @param {string[]} [options.indicatorIds] what it was allowed to discuss
  * @param {boolean} [options.force]     bypass the cache
+ * @param {string} [options.inputHash]  cache key, when the caller addresses this
+ *   row by something other than the grounding's own hash. Simulations need it:
+ *   a scenario page finds its narration from the run's inputs, before it has
+ *   built a grounding to hash — see `runSimulation()`. Defaults to
+ *   `groundingHash(grounding)`, which is what every other caller wants.
  * @returns {Promise<{body: string, cached: boolean} | null>} null when it could
  *   not produce something that passes the gate. Callers MUST handle null by
  *   rendering nothing.
@@ -513,8 +518,21 @@ export async function narrate({
   indicatorIds = [],
   force = false,
   attempts = 2,
+  inputHash: inputHashOverride,
 }) {
-  const inputHash = groundingHash(grounding);
+  /*
+   * The cache key. Normally the grounding's own hash — same numbers, same
+   * prose, and a changed figure is automatically a new row.
+   *
+   * A caller may override it when it needs to FIND this row from something it
+   * has before it has a grounding. Scenario pages do: a reader arrives with
+   * slider values, and the run they identify has to resolve to a narration
+   * without the page reconstructing the exact grounding object this script
+   * built. Overriding the key is safe because the guarantee that matters is
+   * unchanged — the stored `grounding` column still holds the numbers the prose
+   * was checked against, and `validate()` still ran against them.
+   */
+  const inputHash = inputHashOverride ?? groundingHash(grounding);
 
   if (!force) {
     const { rows } = await query(

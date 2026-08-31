@@ -38,6 +38,12 @@ import { recentDocuments, documentsInWindow, documentsForLens } from './reposito
 import { listQuestions, getQuestion, orphanedIndicators } from './repositories/questions.js';
 import { listLenses, getLens, getLensTickers, overview } from './repositories/lenses.js';
 import { financingGraph } from './repositories/events.js';
+import {
+  listScenarios,
+  getScenario,
+  runSimulation,
+  scenarioEvidence,
+} from './repositories/simulations.js';
 import cookieParser from 'cookie-parser';
 import { globe } from './repositories/globe.js';
 import * as auth from './lib/auth.js';
@@ -329,6 +335,59 @@ app.get('/api/lenses/:slug/news', route(async (req, res) => {
  */
 app.get('/api/financing', route(async (_req, res) => {
   res.json(await financingGraph());
+}));
+
+/**
+ * Simulations — the one part of this site whose numbers were not measured.
+ *
+ * Every other endpoint here reports something an agency published. These
+ * report arithmetic performed on published coefficients, which is a weaker
+ * kind of fact, and the payloads say so: `model_version` and the citation list
+ * ship with the response so a client cannot render a projection without having
+ * been handed its provenance.
+ */
+app.get('/api/simulations', route(async (_req, res) => {
+  res.json({ scenarios: await listScenarios() });
+}));
+
+app.get('/api/simulations/:slug', route(async (req, res) => {
+  const scenario = await getScenario(req.params.slug);
+  if (!scenario) return res.status(404).json({ error: `No scenario "${req.params.slug}"` });
+  res.json(scenario);
+}));
+
+/**
+ * Run a scenario. A GET, deliberately.
+ *
+ * It computes rather than reads, which usually argues for POST — but it has no
+ * side effect a reader can observe (the run cache is an implementation
+ * detail), it is idempotent, and being a URL is most of the feature: a result
+ * worth arguing about is a result worth linking to. It also keeps the client
+ * on `useQuery` like every other route here rather than introducing this
+ * codebase's first mutation for a read.
+ *
+ * Slider values arrive as query parameters and are checked against the bounds
+ * in `simulation_inputs` — out of range is a 400, never a silent clamp.
+ */
+app.get('/api/simulations/:slug/run', route(async (req, res) => {
+  const { country = 'USA', ...inputs } = req.query;
+
+  const result = await runSimulation(req.params.slug, country, inputs);
+  if (!result) return res.status(404).json({ error: `No scenario "${req.params.slug}"` });
+  if (result.error) return res.status(result.status ?? 400).json({ error: result.error });
+
+  res.json(result);
+}));
+
+/**
+ * The measured data beside the projection — real series, real deals.
+ *
+ * Separate from `/run` because it does not change when a slider moves, and
+ * refetching decades of observations on every drag would make the one genuinely
+ * cheap thing on the page expensive.
+ */
+app.get('/api/simulations/:slug/evidence', route(async (req, res) => {
+  res.json(await scenarioEvidence(req.params.slug));
 }));
 
 app.get('/api/questions', route(async (_req, res) => {

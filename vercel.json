@@ -73,6 +73,10 @@
     {
       "source": "/pipeline",
       "destination": "/app"
+    },
+    {
+      "source": "/simulate/:slug",
+      "destination": "/app"
     }
   ],
   "headers": [

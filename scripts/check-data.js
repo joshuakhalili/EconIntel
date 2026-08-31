@@ -117,6 +117,30 @@ const CHECKS = [
            ORDER BY 1`,
     format: (r) => `${r.id} stores a country but is not declared country-dimensioned`,
   },
+  {
+    name: 'unrunnable scenarios',
+    why:
+      'A scenario offering a country it has no coefficients for throws at request ' +
+      'time. The engine refuses to default a missing parameter, so this is a broken ' +
+      'page rather than a wrong number — and nobody sees it until a reader does.',
+    sql: 'SELECT id, country_iso3 FROM unrunnable_scenarios ORDER BY id, country_iso3',
+    format: (r) => `${r.id} offers ${r.country_iso3} but has no parameters for it`,
+  },
+  {
+    name: 'uncited coefficients',
+    why:
+      'The simulation feature rests entirely on every coefficient tracing to published ' +
+      'research. The schema requires a citation; this catches one that is technically ' +
+      'present but says nothing a reader could follow.',
+    sql: `SELECT scenario_id AS id, country_iso3, param_key
+            FROM simulation_parameters
+           WHERE citation_url IS NULL
+             AND citation_text !~ '[0-9]'
+           ORDER BY 1, 2, 3`,
+    format: (r) =>
+      `${r.id}/${r.country_iso3}/${r.param_key} has no URL and a citation with no year, ` +
+      'table or page number in it',
+  },
 ];
 
 /** Rows printed per failing check before the rest are summarised. */

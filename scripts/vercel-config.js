@@ -57,6 +57,7 @@ export const APP_ROUTES = [
   '/data/:id',
   '/news',
   '/pipeline',
+  '/simulate/:slug',
 ];
 
 /** Paths the Express function answers. Everything else is static. */

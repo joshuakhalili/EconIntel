@@ -204,3 +204,60 @@ export function useFinancing() {
     queryFn: ({ signal }) => fetchJson('/api/financing', { signal }),
   });
 }
+
+/* ── Simulations ─────────────────────────────────────────────────────────── */
+
+/**
+ * The scenario itself — thesis, caveat, controls, and the citations behind its
+ * coefficients. Structural: none of it changes while a reader sits there, and
+ * all of it is needed before the first run can be requested.
+ */
+export function useScenario(slug) {
+  return useQuery({
+    queryKey: ['scenario', slug],
+    queryFn: ({ signal }) => fetchJson(`/api/simulations/${slug}`, { signal }),
+    enabled: Boolean(slug),
+    ...STRUCTURAL,
+  });
+}
+
+export function useScenarios() {
+  return useQuery({
+    queryKey: ['scenarios'],
+    queryFn: ({ signal }) => fetchJson('/api/simulations', { signal }),
+    select: unwrap('scenarios'),
+    ...STRUCTURAL,
+  });
+}
+
+/**
+ * One run of the model.
+ *
+ * `inputs` is part of the query key, so React Query caches every position a
+ * reader has already visited and dragging a slider back is instant with no
+ * request at all. `keepPreviousData` holds the last result on screen while the
+ * next one is in flight — without it every drag blanks the chart, which reads
+ * as breakage rather than as loading.
+ *
+ * The caller debounces. The computation is microseconds, but one request per
+ * pixel of drag is still one request per pixel of drag.
+ */
+export function useSimulationRun(slug, country, inputs, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['simulation-run', slug, country, inputs],
+    queryFn: ({ signal }) =>
+      fetchJson(`/api/simulations/${slug}/run${qs({ country, ...inputs })}`, { signal }),
+    enabled: Boolean(slug && country) && enabled,
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** Measured series and real deals beside the projection. Never changes with a slider. */
+export function useScenarioEvidence(slug) {
+  return useQuery({
+    queryKey: ['scenario-evidence', slug],
+    queryFn: ({ signal }) => fetchJson(`/api/simulations/${slug}/evidence`, { signal }),
+    enabled: Boolean(slug),
+    ...STRUCTURAL,
+  });
+}
