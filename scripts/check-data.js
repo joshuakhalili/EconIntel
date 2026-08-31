@@ -32,6 +32,21 @@
  */
 
 import { pool, closePool } from '../src/server/db/pool.js';
+import { __testing as simulationInternals } from '../src/server/lib/simulation.js';
+
+/**
+ * Every (model, parameter) pair the engine demands, as SQL rows.
+ *
+ * Built from the engine's own REQUIRED_PARAMS rather than restated here, so
+ * the gate cannot drift from the thing it is guarding. Adding a parameter to a
+ * model automatically starts failing every scenario that has not been updated,
+ * which is the behaviour you want from a list like this.
+ */
+const REQUIRED_PARAM_ROWS = Object.entries(simulationInternals.REQUIRED_PARAMS)
+  .flatMap(([modelKey, keys]) =>
+    keys.map((paramKey) => `('${modelKey}', '${paramKey}')`)
+  )
+  .join(', ');
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -116,6 +131,44 @@ const CHECKS = [
              AND NOT i.has_country_dim
            ORDER BY 1`,
     format: (r) => `${r.id} stores a country but is not declared country-dimensioned`,
+  },
+  {
+    /*
+     * INCOMPLETE parameter sets, which `unrunnable_scenarios` does not catch.
+     *
+     * That view is `HAVING count(param_key) = 0` — it finds a country with NO
+     * coefficients. A country with nine of the ten a model requires passes it
+     * cleanly and then throws at request time, because the engine refuses to
+     * default a missing parameter. The brief that specified this feature said
+     * `check:data` would catch that case. It would not have.
+     *
+     * The missing keys are aggregated per country so a country with nothing at
+     * all reports one line rather than ten.
+     */
+    name: 'incomplete parameter sets',
+    why:
+      'A scenario offering a country it has only SOME coefficients for throws at ' +
+      'request time, exactly like one with none. The engine will not default a ' +
+      'missing parameter, so this is a broken page rather than a wrong number.',
+    sql: `WITH required(model_key, param_key) AS (VALUES ${REQUIRED_PARAM_ROWS}),
+               offered AS (
+                 SELECT s.id, s.model_key, c.iso3
+                   FROM simulation_scenarios s
+                   CROSS JOIN LATERAL unnest(s.countries) AS c(iso3)
+               )
+          SELECT o.id,
+                 o.iso3                                   AS country_iso3,
+                 string_agg(r.param_key, ', ' ORDER BY r.param_key) AS missing
+            FROM offered o
+            JOIN required r ON r.model_key = o.model_key
+            LEFT JOIN simulation_parameters p
+                   ON p.scenario_id = o.id
+                  AND p.country_iso3 = o.iso3
+                  AND p.param_key = r.param_key
+           WHERE p.param_key IS NULL
+           GROUP BY o.id, o.iso3
+           ORDER BY 1, 2`,
+    format: (r) => `${r.id} offers ${r.country_iso3} but is missing: ${r.missing}`,
   },
   {
     name: 'unrunnable scenarios',
