@@ -40,39 +40,39 @@
     },
     {
       "source": "/overview",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/login",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/lens/:slug",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/q/:slug",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/explore",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/data",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/data/:id",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/news",
-      "destination": "/app.html"
+      "destination": "/app"
     },
     {
       "source": "/pipeline",
-      "destination": "/app.html"
+      "destination": "/app"
     }
   ],
   "headers": [

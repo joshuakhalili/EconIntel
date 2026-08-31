@@ -135,9 +135,16 @@ export function buildConfig() {
          `public/index.html` and `landing/index.html` cannot both be
          `/index.html`: Express resolves that collision by trying landing first
          and falling through, but a CDN has no ordering to fall through. So the
-         assembly step writes the app shell to `/app.html` and the landing page
-         keeps `/`. Every app route rewrites to it. */
-      ...APP_ROUTES.map((source) => ({ source, destination: '/app.html' })),
+         assembly step writes the app shell to `app.html` and the landing page
+         keeps `/`. Every app route rewrites to it.
+
+         DESTINATION IS `/app`, NOT `/app.html`. `cleanUrls: true` above
+         strips the extension, so `/app.html` is not a path this deployment
+         serves — a rewrite pointing at it resolves to nothing and every app
+         route returns the landing page's 404. Which is exactly what shipped:
+         the build was green, the function was healthy, the database was
+         connected, and /overview said "Page not found". */
+      ...APP_ROUTES.map((source) => ({ source, destination: '/app' })),
     ],
     headers: [
       {

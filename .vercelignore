@@ -24,12 +24,26 @@
 # get their CSP from the headers block in vercel.json, which is generated from
 # the same scan and gated by `npm run check:vercel`.
 
-public/
-legacy/
-docs/
-db/
-.githooks/
-.mirror-cache/
+# EVERY PATTERN IS ANCHORED WITH A LEADING SLASH, AND THAT IS NOT STYLE.
+#
+# These are gitignore-style patterns, so a bare `db/` matches a directory
+# named `db` AT ANY DEPTH. It therefore excluded `src/server/db/` along with
+# the root `db/` of SQL migrations, and the deployed function died on
+#
+#   Cannot find module '/var/task/src/server/db/pool.js'
+#
+# after the build had reported success — the bundle contained api/index.js
+# and app.js and nothing app.js imports. `docs/` had the same reach into
+# `landing/docs/`.
+#
+# A leading slash anchors to the project root, which is what was meant in
+# every case here.
+/public/
+/legacy/
+/docs/
+/db/
+/.githooks/
+/.mirror-cache/
 
 # Committed reference material and screenshots, not runtime code.
 *.md
