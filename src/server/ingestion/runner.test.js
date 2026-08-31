@@ -20,9 +20,24 @@ import { FEEDS } from './sources/rss.js';
 // first draft of this test asserted FEEDS.length and failed — correctly.
 const RSS_FEEDS = FEEDS.filter((f) => f.sourceId.startsWith('rss:'));
 
+// Document jobs that are not feeds. Named individually rather than counted,
+// because the point of this file is that a job which stops being selectable
+// fails loudly — and `FEEDS.length + n` would go on passing if one of these
+// were dropped and another added.
+const NON_FEED_JOBS = ['openalex'];
+
 test('no filter selects every document job', () => {
-  assert.equal(matchDocumentJobs(null).length, FEEDS.length);
-  assert.equal(matchDocumentJobs(undefined).length, FEEDS.length);
+  const expected = FEEDS.length + NON_FEED_JOBS.length;
+  assert.equal(matchDocumentJobs(null).length, expected);
+  assert.equal(matchDocumentJobs(undefined).length, expected);
+});
+
+test('the academic corpus is a document job, not a feed', () => {
+  // OpenAlex produces documents but has no RSS feed and is not in FEEDS, so it
+  // reaches DOCUMENT_JOBS by a different route. It was previously possible for
+  // that route to exist and for `npm run ingest -- openalex` still to match
+  // nothing, which is the failure this whole file is about.
+  assert.deepEqual(matchDocumentJobs('openalex'), ['openalex']);
 });
 
 test('a bare prefix selects the whole family and nothing else', () => {

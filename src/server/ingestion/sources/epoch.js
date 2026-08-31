@@ -358,3 +358,87 @@ export async function ingestDatacentreCapacity() {
   const rows = await fetchCsv(DATASETS.gpuClusters);
   return toCapacityObservations(rows);
 }
+
+/**
+ * Best price-performance ever achieved in ML hardware — FLOP/s per dollar.
+ *
+ * The point of this series is to sit beside the semiconductor PPI, which has
+ * been flat since roughly 2021. The PPI is a NOMINAL price for a chip; this is
+ * a price for a unit of COMPUTATION, so the two disagreeing is the finding.
+ *
+ * READ THE THREE LIMITS BEFORE PUTTING THIS ON A PAGE. They are not
+ * boilerplate; each one has changed what this series may be used to claim.
+ *
+ * 1. IT IS A FRONTIER, NOT AN INDEX. Emitted as a running maximum, for the same
+ *    reason toFrontierComputeObservations is: the ml_hardware table is a
+ *    convenience sample of notable accelerators, not a priced market basket.
+ *    Any mean or per-year maximum over it moves with WHICH hardware Epoch
+ *    happened to record that year rather than with prices — taking the annual
+ *    maximum of this same column yields 413 GFLOP/s per dollar in 2022 and 66
+ *    in 2024, an apparent 84% price rise that is entirely composition, because
+ *    2022 caught a consumer card and 2024 caught only datacentre parts. A
+ *    running maximum cannot manufacture that: it can only understate, by going
+ *    flat where the sample missed a better chip.
+ *
+ * 2. THE 2018 STEP IS PART ARTEFACT. Epoch's Price-performance column divides
+ *    'Max performance' by release price, and max performance is taken at
+ *    whatever precision the chip is fastest at. That basis moved from FP32 to
+ *    tensor FP16 with the RTX 2080 Ti, so the 14x jump in September 2018 is a
+ *    change of measurement as well as a real gain. Lower precision is a genuine
+ *    quality improvement for ML work, which is why the column is built this way
+ *    — but the step is not fourteen times more compute per dollar of the same
+ *    kind.
+ *
+ * 3. IT HAS BEEN FLAT SINCE SEPTEMBER 2022. The record holder is the RTX 4090,
+ *    a consumer card, and no sampled accelerator has since beaten it on FLOP/s
+ *    per dollar at maximum precision. So this series does NOT by itself show
+ *    quality-adjusted compute prices continuing to fall through the 2020s. It
+ *    shows a ~430x improvement from 2008 to 2022 against a PPI that barely
+ *    moved, and then a gap. Anything stronger than that needs a precision- and
+ *    population-consistent index that nobody publishes.
+ *
+ * The value is Epoch's own published Price-performance figure, not arithmetic
+ * done here — the column exists in the CSV and is used as given.
+ */
+export function toGpuPricePerformanceObservations(rows, indicatorId = 'epoch.gpu_price_performance') {
+  const dated = [];
+
+  for (const row of rows) {
+    const date = isoDate(row['Release date'] ?? row.release_date);
+    const perf = num(row['Price-performance'] ?? row.price_performance);
+    // Zero and negative are as wrong as missing here: a chip cannot deliver no
+    // compute per dollar, so a 0 means the upstream cell was blank or unparsed.
+    if (!date || perf === null || perf <= 0) continue;
+    dated.push({ date, perf, name: row['Hardware name'] ?? row.hardware_name ?? null });
+  }
+
+  dated.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Keyed by date for the reason spelled out in toFrontierComputeObservations:
+  // two chips can share a release date, both clear the running maximum, and two
+  // rows on one date breaks the ON CONFLICT upsert. Last write wins, which is
+  // the highest value that day — which is what a frontier means.
+  const byDate = new Map();
+  let runningMax = 0;
+
+  for (const entry of dated) {
+    if (entry.perf <= runningMax) continue;
+    runningMax = entry.perf;
+
+    byDate.set(entry.date, {
+      indicatorId,
+      periodStart: entry.date,
+      periodEnd: entry.date,
+      value: entry.perf,
+      sourceRef: 'https://epoch.ai/data/machine-learning-hardware',
+    });
+  }
+
+  return [...byDate.values()];
+}
+
+/** Convenience: fetch and shape GPU price-performance in one call. */
+export async function ingestGpuPricePerformance() {
+  const rows = await fetchCsv(DATASETS.mlHardware);
+  return toGpuPricePerformanceObservations(rows);
+}

@@ -27,6 +27,7 @@ import * as gdelt from './sources/gdelt.js';
 import * as sec from './sources/sec.js';
 import * as lbma from './sources/lbma.js';
 import * as rss from './sources/rss.js';
+import * as openalex from './sources/openalex.js';
 import { insertDocuments } from '../repositories/documents.js';
 
 /**
@@ -482,18 +483,67 @@ async function runDerivedJob(indicator) {
  * data" rather than "broken", and it is why this is keyed by name and reported
  * explicitly below.
  */
-const DOCUMENT_JOBS = Object.fromEntries(
-  rss.FEEDS.map((feed) => [
-    feed.sourceId,
-    async () => {
-      const documents = await rss.fetchFeed(feed);
-      const { written, duplicates, skipped } = await insertDocuments(documents);
-      // Duplicates are the normal case, not an error: a feed re-serves the same
-      // items on every poll and the URL unique constraint absorbs them.
-      return { written, fetched: documents.length, skipped: skipped + duplicates };
-    },
-  ])
-);
+const DOCUMENT_JOBS = {
+  ...Object.fromEntries(
+    rss.FEEDS.map((feed) => [
+      feed.sourceId,
+      async () => {
+        const documents = await rss.fetchFeed(feed);
+        const { written, duplicates, skipped } = await insertDocuments(documents);
+        // Duplicates are the normal case, not an error: a feed re-serves the same
+        // items on every poll and the URL unique constraint absorbs them.
+        return { written, fetched: documents.length, skipped: skipped + duplicates };
+      },
+    ])
+  ),
+
+  /**
+   * The academic corpus — papers measuring AI's economic effects.
+   *
+   * A document job rather than an indicator job for the obvious reason (it
+   * produces text, not numbers) and a less obvious one: nothing here derives a
+   * figure from it. These works are CANDIDATES for `question_reading`, and
+   * which of them ends up cited on a page — with what stance, under what
+   * takeaway — is an editorial decision a person makes later. See
+   * 0012_editorial.sql.
+   *
+   * One job for both strands rather than two, because `ingestion_runs.source_id`
+   * is a foreign key into `sources` and 'openalex:journals' is not a provider,
+   * it is half a query. The per-strand counts go into the run's `details`
+   * instead, which is where a thin strand should be visible.
+   *
+   * Roughly fourteen requests and a minute of wall time for the full corpus.
+   * It re-fetches from CORPUS_START every run rather than a rolling window:
+   * OpenAlex back-fills abstracts and DOIs onto works it indexed months ago, so
+   * a window would permanently miss the ones that arrived incomplete.
+   */
+  openalex: async () => {
+    const { documents, strands, truncated } = await openalex.fetchCorpus();
+
+    if (truncated) {
+      console.warn(
+        '  note  the OpenAlex corpus hit the per-strand page cap; it is a ' +
+          'lower bound and the query has grown past what this job expects'
+      );
+    }
+
+    const { written, duplicates, skipped } = await insertDocuments(documents);
+    return {
+      written,
+      fetched: documents.length,
+      skipped: skipped + duplicates,
+      details: {
+        strands: strands.map((s) => ({
+          strand: s.id,
+          matched: s.total,
+          kept: s.documents,
+          vetoed: s.vetoed,
+          unusable: s.unusable,
+        })),
+      },
+    };
+  },
+};
 
 /**
  * Match a job filter against document job names.
@@ -512,8 +562,15 @@ export function matchDocumentJobs(sourceId) {
 async function runDocumentJob(name) {
   const runId = await startRun(`documents:${name}`, name);
   try {
-    const { written, fetched, skipped } = await DOCUMENT_JOBS[name]();
-    await finishRun(runId, { status: 'succeeded', written, skipped, details: { fetched } });
+    // `details` is optional: a job that has more to say than a count returns
+    // one, and it is merged rather than replacing `fetched`, which every job has.
+    const { written, fetched, skipped, details } = await DOCUMENT_JOBS[name]();
+    await finishRun(runId, {
+      status: 'succeeded',
+      written,
+      skipped,
+      details: { fetched, ...details },
+    });
     return { written, fetched, skipped };
   } catch (error) {
     await finishRun(runId, { status: 'failed', error: error.message });
