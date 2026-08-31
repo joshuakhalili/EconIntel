@@ -6,8 +6,16 @@
 # directly and the function can never reach.
 #
 # This does not affect the static deploy: `npm run build:vercel` assembles
-# dist/ from these directories BEFORE this file is consulted, and dist/ is what
-# ships to the CDN.
+# dist/ from these directories, and dist/ is what ships to the CDN. Function
+# bundling is driven by what the API entry file actually imports, not by
+# what's present during the build — so keeping a directory available here
+# doesn't put it in the function bundle unless the function imports from it.
+#
+# scripts/ and landing/ are deliberately NOT listed: build:vercel calls
+# scripts/build-static.js directly, check:tokens/check:contrast/check:routes/
+# check:vercel run from scripts/ too, and check:vercel scans landing/ for
+# inline-script hashes to build the CSP — so Vercel needs both directories
+# present during the build itself, even though the function never imports them.
 #
 # One consequence worth stating: with landing/ and public/ absent from the
 # function bundle, `securityHeaders` finds no HTML and emits a CSP with no
@@ -16,12 +24,10 @@
 # get their CSP from the headers block in vercel.json, which is generated from
 # the same scan and gated by `npm run check:vercel`.
 
-landing/
 public/
 legacy/
 docs/
 db/
-scripts/
 .githooks/
 .mirror-cache/
 

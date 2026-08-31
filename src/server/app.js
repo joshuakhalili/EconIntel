@@ -673,6 +673,28 @@ app.get('/api/indicators/:id', route(async (req, res) => {
   res.json({ indicator: rows[0] });
 }));
 
+/**
+ * Which countries an indicator holds data for — populates the dropdown.
+ *
+ * ORDERED BY lower(name), NOT BY name.
+ *
+ * A bare text ORDER BY resolves through the DATABASE's collation, and this
+ * project has now run on two with different ones: Render was en_US.UTF8, Neon
+ * is C.UTF-8. Under C it is byte order, so an all-caps name sorts ahead of a
+ * Title Case one and the same query returns a different order on the two hosts
+ * from identical data. lower() is deterministic on any Postgres, which pinning
+ * a named collation would not be.
+ *
+ * This is the only reader-facing text ordering left in the API. Everything
+ * else orders by a count, a date or an id: /api/indicators is pillar then
+ * count then id, the source register is row count with name only as a
+ * tiebreaker, and /data sorts in the browser.
+ *
+ * NOTE FOR ANYONE ADDING A COMMENT TO A QUERY BELOW: put it here, outside the
+ * template literal. A comment placed inside one that uses backticks to quote
+ * an identifier terminates the string, and the file stops parsing — which is
+ * exactly how this endpoint shipped broken once.
+ */
 app.get('/api/indicators/:id/countries', route(async (req, res) => {
   const { rows } = await query(
     `SELECT o.country_iso3, c.name, count(*)::int AS n
@@ -680,22 +702,6 @@ app.get('/api/indicators/:id/countries', route(async (req, res) => {
        JOIN countries c ON c.iso3 = o.country_iso3
       WHERE o.indicator_id = $1 AND o.country_iso3 IS NOT NULL
       GROUP BY o.country_iso3, c.name
-      /*
-       * `lower(c.name)`, not `c.name`, because a bare text ORDER BY depends on
-       * the DATABASE's collation and this project has now run on two with
-       * different ones: Render was en_US.UTF8, Neon is C.UTF-8. Under C, byte
-       * order applies and an all-caps name sorts before a Title Case one —
-       * "BBC" ahead of "Bank" — so the same query returns a different order on
-       * the two hosts with identical data.
-       *
-       * This is the only reader-facing text ordering left in the API. Every
-       * other list orders by a count, a date, or an id: /api/indicators is
-       * pillar then count then id, the source register is row count with name
-       * only as a tiebreaker, and /data sorts in the browser. So this is a
-       * one-line fix rather than a sweep, and lower() is enough — the values
-       * here are country names, where case is the only thing that differs
-       * between the two collations.
-       */
       ORDER BY lower(c.name)`,
     [req.params.id]
   );

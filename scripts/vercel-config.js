@@ -207,7 +207,19 @@ if (!invokedDirectly) {
   }
 
   const expected = serialise(buildConfig());
-  if (committed === expected) {
+
+  // Vercel's own build step writes `name` and `version` into vercel.json
+  // before running buildCommand — that's the CLI linking the deployment to
+  // the project, not drift in what we generate. Ignore those two keys.
+  const normalise = (json) => {
+    const { name, version, ...rest } = JSON.parse(json);
+    return rest;
+  };
+  const matches =
+    committed === expected ||
+    JSON.stringify(normalise(committed)) === JSON.stringify(normalise(expected));
+
+  if (matches) {
     const count = expected.match(/sha256-/g).length;
     console.log(
       `${GREEN}✓${RESET} vercel.json matches the HTML being served ` +

@@ -130,7 +130,7 @@ export function inlineScriptHashes(roots) {
       }
     }
   }
-  return [...hashes];
+  return [...hashes].sort();
 }
 
 export function securityHeaders({ publicDir, landingDir, isProduction }) {
