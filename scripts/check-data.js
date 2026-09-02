@@ -33,6 +33,7 @@
 
 import { pool, closePool } from '../src/server/db/pool.js';
 import { __testing as simulationInternals } from '../src/server/lib/simulation.js';
+import { APP_ROUTES } from './vercel-config.js';
 
 /**
  * Every (model, parameter) pair the engine demands, as SQL rows.
@@ -47,6 +48,91 @@ const REQUIRED_PARAM_ROWS = Object.entries(simulationInternals.REQUIRED_PARAMS)
     keys.map((paramKey) => `('${modelKey}', '${paramKey}')`)
   )
   .join(', ');
+
+/**
+ * What each shipped route needs to exist in the database before it is a page.
+ *
+ * WHY THIS IS HERE, WRITTEN DOWN WHILE IT IS STILL EMBARRASSING
+ *
+ * /simulate/:slug shipped to production dead. The migration ran, the engine
+ * was written and tested, the repository cached runs, the route was registered
+ * in App.jsx and in vercel.json, the page rendered — and not one row was ever
+ * inserted into `simulation_scenarios`. `listScenarios()` returned `[]`,
+ * `getScenario()` returned null, and every visit answered 404.
+ *
+ * Every gate this project owns passed, and they passed for the same reason:
+ * A CONSTRAINT IS A STATEMENT ABOUT ROWS, SO NO CONSTRAINT CAN FAIL ON AN
+ * EMPTY TABLE. `unrunnable_scenarios` unnests a column of an absent row and
+ * finds nothing to complain about. The "incomplete parameter sets" check below
+ * joins against scenarios that do not exist. Both report clean. So does every
+ * other check in this file, and so would any check anybody adds in the same
+ * shape, because they are all quantified over contents.
+ *
+ * The only way out of that is to assert against something that is NOT in the
+ * database — a list of things the site claims to have — and the route table is
+ * exactly that list. A route in APP_ROUTES is a promise made in `vercel.json`
+ * and honoured by the CDN: the URL resolves, the shell loads, React mounts.
+ * Whether there is anything behind it is a separate question that nothing was
+ * asking.
+ *
+ * `null` means the route genuinely has no content behind it, and each one has
+ * to say why. That is deliberately tedious: an entry added carelessly as
+ * `null` is how this check gets quietly defeated, and a sentence is cheap
+ * insurance against that.
+ */
+const ROUTE_DATA = {
+  '/overview':
+    'SELECT count(*) FROM lenses WHERE is_active',
+  '/lens/:slug':
+    'SELECT count(*) FROM lenses WHERE is_active',
+  '/q/:slug':
+    'SELECT count(*) FROM questions WHERE is_active',
+  '/data':
+    'SELECT count(*) FROM indicators WHERE is_active',
+  /* Both of these render a chart, so an indicator with a definition and no
+     observations is not enough — the page would load and draw nothing. */
+  '/data/:id': `SELECT count(*) FROM indicators i
+                 WHERE i.is_active
+                   AND EXISTS (SELECT 1 FROM observations o WHERE o.indicator_id = i.id)`,
+  '/explore': `SELECT count(*) FROM indicators i
+                WHERE i.is_active
+                  AND EXISTS (SELECT 1 FROM observations o WHERE o.indicator_id = i.id)`,
+  '/news':
+    'SELECT count(*) FROM documents',
+  '/pipeline':
+    'SELECT count(*) FROM ingestion_runs',
+  /* The one this check was written for. Published, not merely present: a
+     drafts-only table is the same 404 with a different cause. */
+  '/simulate/:slug':
+    "SELECT count(*) FROM simulation_scenarios WHERE status = 'published'",
+
+  /* A sign-in form. It reads `readers` only after someone submits it, and an
+     empty `readers` table is the correct state of a site nobody has signed
+     into yet — so a row count here would fail on a healthy deployment. */
+  '/login': null,
+};
+
+/*
+ * Fail closed on a route nobody has classified.
+ *
+ * Without this the check degrades exactly the way the last one did: a new
+ * route ships, nobody adds it here, and the gate keeps printing a tick while
+ * covering less of the site every release. Adding a route now costs one line
+ * in this file, and refusing to write that line is the decision this makes
+ * visible.
+ */
+const unclassified = APP_ROUTES.filter((route) => !(route in ROUTE_DATA));
+if (unclassified.length > 0) {
+  console.error(
+    `\n\x1b[31m✗ routes with no data classification\x1b[0m\n` +
+      `  These are in APP_ROUTES but not in ROUTE_DATA in this file, so nothing\n` +
+      `  checks whether they have anything behind them:\n    ${unclassified.join('\n    ')}\n\n` +
+      `  Add each one: either a "SELECT count(*) …" for the table it needs, or\n` +
+      `  null with a comment saying why the route has no content behind it.`
+  );
+  await closePool();
+  process.exit(1);
+}
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -178,6 +264,28 @@ const CHECKS = [
       'page rather than a wrong number — and nobody sees it until a reader does.',
     sql: 'SELECT id, country_iso3 FROM unrunnable_scenarios ORDER BY id, country_iso3',
     format: (r) => `${r.id} offers ${r.country_iso3} but has no parameters for it`,
+  },
+  {
+    name: 'routes with nothing behind them',
+    why:
+      'A route that resolves over an empty table is a 404 with a green build. No ' +
+      'constraint can catch it, because a constraint is a statement about rows — ' +
+      'see ROUTE_DATA above for the one this already cost.',
+    /*
+     * One query rather than one per route so a failure lists every dead page
+     * at once. Each subquery is a scalar count and the wrapper keeps only the
+     * zeroes, which is the same "rows returned means broken" contract every
+     * other check here honours.
+     */
+    sql: `SELECT * FROM (
+            ${Object.entries(ROUTE_DATA)
+              .filter(([, counter]) => counter !== null)
+              .map(([route, counter]) => `SELECT '${route}' AS route, (${counter})::int AS rows`)
+              .join('\n            UNION ALL ')}
+          ) t WHERE rows = 0 ORDER BY route`,
+    format: (r) =>
+      `${r.route} is a live route in vercel.json with an empty table behind it — ` +
+      'it will resolve, load the app shell, and then 404',
   },
   {
     name: 'uncited coefficients',

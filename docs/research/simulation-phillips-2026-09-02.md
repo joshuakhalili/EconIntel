@@ -441,10 +441,40 @@ FRA, ITA and ESP get the same treatment — narrative only, no numbers:
 > steady-state pass-through in the services sector."*
 
 So the ranking is France > Italy ≈ Germany > Spain, with one number attached to
-one country. Note this reverses the intuitive story: the paper flags that except
-in France, the pass-through is driven by **services** rather than manufacturing,
-which *"contrasts with the idea that the pass-through of wages into prices should
-be higher in sectors more exposed to international competition"* (conclusions, p. 33).
+one country.
+
+> **CORRECTION, 2 September 2026.** This passage originally carried a quotation
+> attributed to the conclusions of ECB WP 2235 which **does not appear in that
+> paper**. It read: *"contrasts with the idea that the pass-through of wages into
+> prices should be higher in sectors more exposed to international competition"*.
+> The real sentence is:
+>
+> > "Hence, with the exception of France, this evidence contrasts with the idea
+> > that the pass-through of wages into prices should be particularly strong in
+> > firms/sectors with a high labor share, i.e. sectors which should also be
+> > characterized by a higher degree of price stickiness (Druant et al. (2009))."
+>
+> The invented version substitutes a different mechanism — trade exposure instead
+> of labour share and price stickiness — so it is not a paraphrase that drifted,
+> it is a different economic claim. The phrase "international competition" occurs
+> exactly once in the paper, on a different page, about manufacturing's cost
+> structure rather than about pass-through.
+>
+> The accompanying paraphrase was wrong too: the original said pass-through is
+> driven by services "except in France", but the same conclusions paragraph says
+> **Spain's** manufacturing sector shows the highest pass-through.
+>
+> Nothing downstream depended on it. ECB WP 2235 is cited nowhere in
+> `db/seeds/034_scenario_ai-capex-dotcom.sql`, so no seeded coefficient rests on
+> this. It is corrected here rather than deleted because a fabricated citation
+> that is quietly removed teaches nobody anything, and this project's central
+> claim is that no model writes a figure or a citation. One did. This is what it
+> looks like when it happens.
+
+What the paper actually supports, stated without the invented quote: outside
+France the pass-through is concentrated in services, and the authors read that as
+cutting *against* the expectation that it should be strongest where the labour
+share is highest.
 
 ### USA — no number, and the previous round's characterisation needs a correction
 
@@ -523,12 +553,49 @@ Recording these so nobody re-runs them. All were read, not skimmed.
 September 2019. Fetched
 `https://www.ecb.europa.eu/pub/pdf/scpops/ecb.op232~4b89088255.en.pdf`, HTTP 200.
 This looks like the ideal source — 23 national central banks each estimating a
-wage Phillips curve for their own country — and **it publishes no coefficients at
-all.** Table 1 (p. 15) lists, per country, which wage measure, which slack measure
-and which expectations measure each NCB chose, and nothing else. Chart 4 shows
-average actual wage growth against a forecast *range* whose width depends on how
-many specifications each NCB deemed plausible (*"from 4 to 255 by countries"*).
-There is no parameter anywhere in the document.
+wage Phillips curve for their own country. Table 1 (p. 15) lists, per country,
+which wage measure, which slack measure and which expectations measure each NCB
+chose, and nothing else. Chart 4 shows average actual wage growth against a
+forecast *range* whose width depends on how many specifications each NCB deemed
+plausible (*"from 4 to 255 by countries"*).
+
+> **CORRECTION, 2 September 2026.** This entry originally read *"it publishes no
+> coefficients at all … There is no parameter anywhere in the document"*, and
+> filed the paper under "recording these so nobody re-runs them". **That is
+> false, and it is the worst kind of false — a wrong dead end stops the next
+> person looking.**
+>
+> OP 232 contains **Table A, "Phillips curve estimation with conventional and
+> unconventional measures of slack"** (printed pp. 20–21), re-extracted and
+> confirmed here character by character:
+>
+> | term | coefficient | SE |
+> |---|---|---|
+> | unemployment rate | −0.317*** | 0.050 |
+> | unemployment gap | −0.364*** | 0.085 |
+> | output gap | 0.315*** | 0.026 |
+> | broad unemployment rate | −0.252*** | 0.020 |
+> | past inflation | 0.390*** | 0.076 |
+> | labour productivity growth | 0.318*** | 0.077 |
+>
+> Euro area 19, 2000Q1–2018Q4, N = 1,436, R² 0.533, country fixed effects, SEs
+> clustered by country.
+>
+> That is precisely the object this document spends its length hunting for: a
+> sourced `wage_phillips_slope` (−0.364 on the gap) and a `wage_persistence`
+> (0.390 on past inflation), both with standard errors and a stated sample.
+>
+> The narrower claim survives — this is a **panel with country fixed effects, not
+> a set of per-country coefficients**, so it does not deliver the per-country
+> differentiation this round was looking for. But that is not what the entry
+> said, and "no parameter anywhere" would have stopped anyone from checking.
+>
+> Not swapped into the seed here, for a stated reason rather than by oversight:
+> OP 232 is **euro area only**, and the shipped scenario spans the United States,
+> France, Italy and Japan. A euro-area panel is not obviously a better source for
+> a four-country scenario than the advanced-economy panel already cited. Whether
+> to prefer it for the euro-area members specifically is an editorial call, and
+> it is left open here rather than made silently.
 
 **Bank of Japan Working Paper 23-E-4** — Fukunaga, Furukawa, Haba, Hogen, Kido,
 Okubo, Suita & Takatomi (2023), *Wage Developments in Japan: Four Key Issues for
@@ -663,8 +730,26 @@ The clean pairs actually available:
 
 ## Fetch notes for whoever repeats this
 
-- `one.oecd.org/document/ECO/WKP(YYYY)NN/en/pdf` serves OECD Economics Department
-  working papers directly with a browser user-agent — no proxy needed. This is a
+- `one.oecd.org/document/ECO/WKP(YYYY)NN/en/pdf` — **CORRECTED 2 Sep 2026.** This
+  originally said the path serves OECD working papers "directly with a browser
+  user-agent — no proxy needed". That is not reproducible: an independent check
+  got **403 behind a Cloudflare interstitial** on the direct path with a browser
+  UA, and 404 on both the oecd.org CDN path and the 10.1787 DOI. It works
+  **through `r.jina.ai`**, which is the route that should be recorded.
+
+  Because this is the source behind every per-country `price_phillips_slope` in
+  the shipped scenario, its Table 1 was re-extracted independently rather than
+  trusted. Every cell matches what this document reports:
+
+  `United States 0.11 *** 0.50 · Japan 0.69 *** 0.68 · Germany 0.87 *** 0.30 ·
+  United Kingdom -0.30 * 0.46 · France 1.00 * 0.33 · Italy 0.37 *** 0.66 ·
+  Canada 0.18 0.29`
+
+  Canada carries no significance stars, which is the stated ground for excluding
+  it. Footnote 6 independently corroborates the UK exclusion: *"the United
+  Kingdom stands out as being the country where it is difficult to find a
+  correctly signed effect on the unemployment gap."* The numbers are sound; only
+  the fetch instruction was wrong. This is a
   better route than `oecd.org` or `oecd-ilibrary.org`, both of which returned 403
   to WebFetch.
 - `dnb.nl` returns **403** to curl with a browser user-agent, but

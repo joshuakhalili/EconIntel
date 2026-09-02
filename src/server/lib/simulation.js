@@ -39,7 +39,7 @@
  * The standard undergraduate transmission chain, which is standard precisely
  * because each link is separately estimated in the literature:
  *
- *   spending  →  output       a fiscal multiplier, decaying over the horizon
+ *   spending  →  output       the published annual fiscal-multiplier profile
  *   output    →  unemployment Okun's law
  *   unemployment → wages      a wage Phillips curve, with persistence
  *   wages     →  prices       pass-through, plus a direct Phillips term
@@ -68,7 +68,7 @@ import { createHash } from 'node:crypto';
  * narration written about them, so the prose and the chart would agree with
  * each other and both be stale.
  */
-export const MODEL_VERSION = 'v1-2026-08-31';
+export const MODEL_VERSION = 'v2-2026-09-02';
 
 /* ── Parameter contracts ─────────────────────────────────────────────────── */
 
@@ -83,8 +83,39 @@ export const MODEL_VERSION = 'v1-2026-08-31';
 const REQUIRED_PARAMS = {
   investment_shock_v1: [
     'gdp_usd_bn',              // denominator: converts an absolute shock to a share of output
-    'fiscal_multiplier_y1',    // impact multiplier, year one
-    'multiplier_decay',        // geometric decay of the multiplier per subsequent year
+    /*
+     * THE MULTIPLIER IS FIVE CITED CELLS, NOT ONE CELL AND A FITTED CURVE.
+     *
+     * This model used to carry `fiscal_multiplier_y1` and `multiplier_decay`,
+     * and compute year t as `y1 × decay^(t−1)`. That was wrong twice over.
+     *
+     * It could not be sourced. The research round of 31 Aug 2026 went looking
+     * for a published geometric decay parameter for a fiscal multiplier and
+     * found that no such number exists anywhere in the literature — every
+     * survey reports CUMULATIVE multipliers, which by construction cannot give
+     * a per-year decay. See `docs/research/simulation-coefficients-2026-08-31.md`
+     * §2, which is titled "NOT VERIFIABLE as a published coefficient".
+     *
+     * And it pointed the wrong way. Both IMF sources say the investment
+     * multiplier RISES over exactly the horizon this model runs — Abiad,
+     * Furceri & Topalova put output 0.46% higher in the shock year and 1.54%
+     * higher four years on. A decay below 1 does not merely mis-size that; it
+     * inverts the shape of the thing it claims to describe.
+     *
+     * So the shape is looked up too, not just the numbers. Each year of the
+     * horizon is its own parameter, each one a cell from IMF WP/15/95 Table 1
+     * column (1) — k = 0 through k = 4 — carrying its own standard error and
+     * its own citation in `simulation_parameters`. There is no fitted
+     * parameter left in the multiplier at all, which is the point: the
+     * project's rule is that coefficients are looked up rather than estimated,
+     * and a decay rate we chose was that rule broken at the level of the
+     * model's SHAPE while every individual number still looked cited.
+     */
+    'fiscal_multiplier_y1',    // AFT Table 1, k = 0 — the impact year
+    'fiscal_multiplier_y2',    // k = 1
+    'fiscal_multiplier_y3',    // k = 2
+    'fiscal_multiplier_y4',    // k = 3
+    'fiscal_multiplier_y5',    // k = 4 — the last horizon the paper publishes
     'okun_coefficient',        // pp of unemployment per pp of output gap
     'unemployment_baseline',   // where unemployment sits absent the shock
     /*
@@ -111,6 +142,50 @@ const REQUIRED_PARAMS = {
 };
 
 /**
+ * The multiplier profile, in horizon order. Names only — the values are rows.
+ *
+ * Kept as its own list rather than filtered out of `REQUIRED_PARAMS` by a
+ * prefix match, because the order is load-bearing: index 0 is the impact year
+ * and the model indexes straight into it. A regex over parameter names would
+ * make that ordering depend on how somebody spells the tenth year, and
+ * `fiscal_multiplier_y10` sorts before `fiscal_multiplier_y2`.
+ */
+const MULTIPLIER_PROFILE = [
+  'fiscal_multiplier_y1',
+  'fiscal_multiplier_y2',
+  'fiscal_multiplier_y3',
+  'fiscal_multiplier_y4',
+  'fiscal_multiplier_y5',
+];
+
+/**
+ * How far each model may be run, and why this one stops at five.
+ *
+ * AFT publish k = 0 to k = 4 and nothing beyond, so year six is a number this
+ * project would have to make up. Two ways to make one up were available and
+ * both are refused here:
+ *
+ *   Extrapolate the trend. The profile is still climbing at k = 4 (1.389 →
+ *   1.539), so continuing it puts the multiplier through 1.7 and beyond on no
+ *   evidence at all. Rejected outright — it is the most confident possible
+ *   version of inventing a number.
+ *
+ *   Hold flat at 1.539. This is the tempting one, because it LOOKS like
+ *   modesty. It is not: the published profile is rising when it stops, so
+ *   flattening it asserts that the peak falls exactly at year five, which the
+ *   paper does not say and no other source says either. It would also be
+ *   invisible — a flat tail on a chart reads as a result, and this engine's
+ *   whole design premise is that a plausible line is the dangerous failure.
+ *
+ * So the horizon is capped instead, and asking for more is an error rather
+ * than an extrapolation. A reader who wants year eight is asking a question
+ * the literature has not answered, and the honest response is to say so.
+ */
+const MAX_HORIZON_YEARS = {
+  investment_shock_v1: MULTIPLIER_PROFILE.length,
+};
+
+/**
  * Sign contracts. Which way a coefficient must point to mean what it says.
  *
  * THIS EXISTS BECAUSE A DROPPED MINUS SIGN IS INVISIBLE.
@@ -127,7 +202,18 @@ const REQUIRED_PARAMS = {
  */
 const PARAM_SIGNS = {
   okun_coefficient: 'negative',        // U − U* = β(Y − Y*), β < 0
-  multiplier_decay: 'positive',        // a decay rate; negative would oscillate
+  /*
+   * The five multiplier years are deliberately absent from this list.
+   *
+   * `multiplier_decay` was here and had to be, because a negative decay rate
+   * is not a claim anybody makes — it would oscillate the sign of the shock
+   * year by year and mean nothing. The published profile is different: a
+   * negative multiplier at some horizon is a real position in the literature
+   * (crowding out, expansionary austerity), so constraining these to positive
+   * would refuse a coefficient a future source might genuinely publish. AFT's
+   * five cells are all positive; that is a fact about the source, not a
+   * contract the engine should enforce.
+   */
   wage_persistence: 'positive',        // carry-forward, not reversal
   wage_phillips_slope: 'positive',     // tighter labour market, faster wages
   price_phillips_slope: 'positive',    // applied to negated slack — see the model
@@ -163,8 +249,14 @@ function investmentShockModel({ inputs, parameters, horizonYears }) {
 
   const shockUsdBn = toNumber(inputs.shock_usd_bn);
   /* 0 or 1. A sustained shock re-injects the same amount every year; a one-off
-     injects in year one only and the multiplier's decay carries the rest. */
+     injects in year one only and the published profile carries the rest. */
   const sustained = toNumber(inputs.sustained) >= 1;
+
+  /* The impulse response, year by year, straight out of the parameter table.
+     `runScenario` has already refused a horizon longer than this array, so
+     `profile[t - 1]` below is always a real number rather than an undefined
+     that would arrive downstream as NaN. */
+  const profile = MULTIPLIER_PROFILE.map((key) => p[key]);
 
   /* The shock as a percentage of baseline output. Everything downstream is in
      percentage points, so this conversion happens once, here, and no other
@@ -176,22 +268,28 @@ function investmentShockModel({ inputs, parameters, horizonYears }) {
 
   for (let t = 1; t <= horizonYears; t += 1) {
     /*
-     * The multiplier decays geometrically from its year-one value.
+     * The multiplier is read off the published profile, not computed.
      *
-     * A one-off injection still moves output in later years — the money is
-     * spent onward, and the literature's multipliers are cumulative for exactly
-     * this reason. A sustained injection adds a fresh year-one impulse on top
-     * of the decaying tail of every previous year's, which is why it is a sum
-     * rather than a single term.
+     * A one-off injection keeps moving output in later years — the money is
+     * spent onward — and in AFT's estimates it moves it by MORE each year for
+     * four years, not less. `profile[t − 1]` is that path, cell for cell.
+     *
+     * A sustained injection lays a fresh impulse on top of every previous
+     * year's, so year t carries the year-t response of the first vintage, the
+     * year-(t−1) response of the second, and so on down to the impulse just
+     * made. That sum is superposition, which is exactly what a linear model
+     * licenses and nothing more — and it is also where this model gets least
+     * trustworthy fastest, because reality has a capacity constraint and this
+     * arithmetic does not. `scenario.caveat` has to say so.
      */
     let multiplier;
     if (sustained) {
       multiplier = 0;
       for (let vintage = 0; vintage < t; vintage += 1) {
-        multiplier += p.fiscal_multiplier_y1 * p.multiplier_decay ** vintage;
+        multiplier += profile[vintage];
       }
     } else {
-      multiplier = p.fiscal_multiplier_y1 * p.multiplier_decay ** (t - 1);
+      multiplier = profile[t - 1];
     }
 
     /* spending → output */
@@ -378,6 +476,25 @@ export function runScenario({ modelKey, inputs, parameters, horizonYears }) {
     throw new Error(`horizonYears must be an integer between 1 and 20, got ${horizonYears}`);
   }
 
+  /*
+   * And no further than the model's own evidence reaches — see MAX_HORIZON_YEARS.
+   *
+   * The schema's `horizon_years` allows up to 20 because that is a sensible
+   * bound for a column, not because this model can honour it. A scenario row
+   * asking for eight years is a seed mistake, and this is where it surfaces:
+   * loudly, at the door, naming the number of years that actually exist,
+   * rather than as three undefined multipliers arriving downstream as NaN.
+   */
+  const maxHorizon = MAX_HORIZON_YEARS[modelKey];
+  if (maxHorizon !== undefined && horizonYears > maxHorizon) {
+    throw new Error(
+      `Model "${modelKey}" is published only to year ${maxHorizon}, but the ` +
+        `scenario asks for ${horizonYears}. The horizon is capped rather than ` +
+        'extrapolated — beyond the last published cell there is no coefficient ' +
+        'to cite, and a line drawn there would be this project inventing one.'
+    );
+  }
+
   /* Coerce once, so a model body never has to wonder whether it holds a string.
      Postgres NUMERIC arrives over the wire as a string, so this is not
      defensive — it is the normal path. */
@@ -411,4 +528,10 @@ export function runHash({ scenarioId, countryIso3, inputs }) {
     .digest('hex');
 }
 
-export const __testing = { MODELS, REQUIRED_PARAMS, round };
+export const __testing = {
+  MODELS,
+  REQUIRED_PARAMS,
+  MULTIPLIER_PROFILE,
+  MAX_HORIZON_YEARS,
+  round,
+};

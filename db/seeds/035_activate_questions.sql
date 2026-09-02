@@ -66,10 +66,34 @@
 -- figure on these twelve pages was recomputed from the observations on
 -- 2026-09-02 and matches. It is not an editorial sign-off on the writing.
 --
--- A literal date rather than CURRENT_DATE, and `AND NOT is_active` on every
--- statement, so that re-running the seed after a genuine later review cannot
--- drag the review date backwards or re-activate something a person has since
--- retired. Following 028, which guards its UPDATE the same way.
+-- A literal date rather than CURRENT_DATE, and TWO conditions on every
+-- statement: `AND NOT is_active AND last_reviewed IS NULL`.
+--
+-- THE SECOND CONDITION IS THE LOAD-BEARING ONE, and this originally shipped
+-- without it. The guard was `AND NOT is_active` alone, with a comment claiming
+-- that stopped a re-run "re-activating something a person has since retired,
+-- following 028, which guards its UPDATE the same way". Both halves were wrong,
+-- and in the direction that matters.
+--
+-- `AND NOT is_active` selects PRECISELY the retired state. It is structurally
+-- incapable of protecting a retirement — it is the one case it matches. Proven
+-- rather than reasoned: retiring `dot-com` by hand the way a person would
+-- (is_active = FALSE, last_reviewed = a later date) and re-running this file
+-- brought it back to life and dragged its review date backwards.
+--
+-- The appeal to 028 was backwards too. 028 guards a DE-activation with
+-- `AND is_active`, so its predicate stops matching once a person reverses it.
+-- Mirroring the shape without mirroring the logic inverted the protection.
+--
+-- This is the only statement in the whole seed run that can overwrite a human
+-- decision: 024 and 025 both preserve `is_active` and `last_reviewed` on
+-- conflict, so nothing else in `npm run db:seed` can undo a retirement.
+--
+-- `last_reviewed IS NULL` means "no person has ever reviewed this". Once this
+-- file sets a date the row is permanently out of scope, so the statement is
+-- genuinely one-shot and a later retirement is safe. Verified against the live
+-- database before adding it: all 29 inactive questions have a NULL
+-- `last_reviewed`, so the extra condition excludes none of the twelve.
 --
 -- NOTHING ELSE IS TOUCHED. No prose, no caveat, no placement, no indicator.
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -95,7 +119,7 @@
 -- says the flattening is nominal, which is what the evidence supports.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'chip-prices' AND NOT is_active;
+ WHERE slug = 'chip-prices' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- bulk-discount — the cleanest of the eight, and it verifies exactly.
@@ -117,7 +141,7 @@ UPDATE questions
 -- methodological transition, which is a real limit on this data and is named.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'bulk-discount' AND NOT is_active;
+ WHERE slug = 'bulk-discount' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- ── INVESTMENT & CAPITAL ────────────────────────────────────────────────────
@@ -138,7 +162,7 @@ UPDATE questions
 -- method quotes, including the 2025 reporting lag it warns about.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'frontier-compute' AND NOT is_active;
+ WHERE slug = 'frontier-compute' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- dot-com — dbn.BEA.NIPA-T50505.B935RC-A verifies to the dollar: 103,178
@@ -160,7 +184,7 @@ UPDATE questions
 -- `strength` is `insufficient` rather than a hedge.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'dot-com' AND NOT is_active;
+ WHERE slug = 'dot-com' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- orders-and-output — fred.IPG334S 110.3 (2021) to 135.4 (2026 to July), a
@@ -182,7 +206,7 @@ UPDATE questions
 --    where name ilike '%producer price%' or name ilike '%deflator%';
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'orders-and-output' AND NOT is_active;
+ WHERE slug = 'orders-and-output' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- ── GROWTH & PRODUCTIVITY ───────────────────────────────────────────────────
@@ -205,7 +229,7 @@ UPDATE questions
 -- implies either covers 2025 or 2026.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'sector-output' AND NOT is_active;
+ WHERE slug = 'sector-output' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- exposed-productivity — dbn.ONS.PRDY.DJR5.Q annual means 47.4 (2010) and
@@ -226,7 +250,7 @@ UPDATE questions
 -- accounting, so the sector most likely to show a spurious effect is this one.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'exposed-productivity' AND NOT is_active;
+ WHERE slug = 'exposed-productivity' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- total-factor-productivity — fred.RTFPNAUSA632NRUG 0.9643 (2019) to 0.9930
@@ -246,7 +270,7 @@ UPDATE questions
 --    where indicator_id = 'dbn.AMECO.ZVGDF.GBR.3.0.0.0.ZVGDF' order by 1;
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'total-factor-productivity' AND NOT is_active;
+ WHERE slug = 'total-factor-productivity' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- computer-dividend — the gate was whether the OECD had extended either
@@ -262,7 +286,7 @@ UPDATE questions
 -- (1999), 0.296 (2003), 1.493 (2022) — the answer's 1.49, 0.30, 1.49.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'computer-dividend' AND NOT is_active;
+ WHERE slug = 'computer-dividend' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- china-mirror — the gate was the unit multipliers, and it named itself the
@@ -286,7 +310,7 @@ UPDATE questions
 -- and the answer ends both at 2024.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'china-mirror' AND NOT is_active;
+ WHERE slug = 'china-mirror' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- ── LABOUR MARKETS ──────────────────────────────────────────────────────────
@@ -313,7 +337,7 @@ UPDATE questions
 -- knowing before anyone quotes the figure more precisely than the page does.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'clerical' AND NOT is_active;
+ WHERE slug = 'clerical' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- aggregate-unemployment — the gate was that the World Bank series still ends
@@ -337,7 +361,7 @@ UPDATE questions
 -- which is the mechanism most of the displacement literature proposes.
 UPDATE questions
    SET is_active = TRUE, last_reviewed = DATE '2026-09-02', updated_at = now()
- WHERE slug = 'aggregate-unemployment' AND NOT is_active;
+ WHERE slug = 'aggregate-unemployment' AND NOT is_active AND last_reviewed IS NULL;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
