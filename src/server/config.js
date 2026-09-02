@@ -170,7 +170,21 @@ export function describeIntegrations() {
     { name: 'SEC',         ready: Boolean(config.secUserAgent), note: 'no key; SEC_USER_AGENT="Name contact@email" is mandatory' },
     { name: 'Epoch AI',    ready: true,                         note: 'no key; CC BY 4.0; fetched live, never cached to disk' },
     { name: 'Fed Register',ready: true,                         note: 'no key required' },
-    { name: 'Census BTOS', ready: Boolean(config.keys.census),  note: 'free key: api.census.gov/data/key_signup.html — AI adoption rates' },
+    /*
+     * Census BTOS is deliberately absent, and CENSUS_API_KEY above is kept only
+     * so the key is not lost. It used to be listed here as `ready` whenever the
+     * key was set, which made startup advertise an integration that cannot run
+     * under any circumstance: BTOS is not on the Census API at all — checked
+     * against the live catalogue, all 1,798 datasets, zero matches — so no key
+     * enables it and `runner.js` has no census handler to call. The full
+     * evidence is in the banner at the top of
+     * `ingestion/sources/census-btos.js`, which stays on disk because the
+     * argument for the source still stands; only the API route is dead.
+     *
+     * This list exists so the operator learns what will not run at startup
+     * rather than from an empty chart hours later. A row that reports READY for
+     * something that can never produce a row inverts the one job it has.
+     */
     { name: 'Ember',       ready: Boolean(config.keys.ember),   note: 'free key: api.ember-energy.org — electricity, CC BY 4.0' },
     { name: 'EIA',         ready: Boolean(config.keys.eia),     note: 'free key: eia.gov/opendata — US grid demand' },
     { name: 'BLS',         ready: Boolean(config.keys.bls),     note: 'free key: data.bls.gov/registrationEngine — 500 req/day' },

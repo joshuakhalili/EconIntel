@@ -61,15 +61,37 @@ const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 /** The handshake should take seconds. Ten minutes is generous already. */
 const STATE_TTL_MS = 10 * 60 * 1000;
 
-function secret() {
+/**
+ * The shortest secret this project will sign with, and the one number that
+ * decides whether sign-in exists at all.
+ *
+ * It is a named constant rather than a literal in two places because those two
+ * places disagreeing is the exact bug this fixes: `secret()` refused anything
+ * under 32 characters while `isConfigured()` only asked whether the variable
+ * was truthy. Set SESSION_SECRET to "dev" and the result was a site that
+ * looked entirely healthy — /healthz green, smoke suite green — with the API
+ * gate switched ON and every single sign-in attempt throwing a 500. Sealed
+ * shut, silently, with nothing in the logs that named the cause.
+ *
+ * 32 is not arbitrary: an HMAC-SHA256 key shorter than its 256-bit output adds
+ * no strength, and `openssl rand -hex 32` is the command in the error message.
+ */
+const MIN_SECRET_LENGTH = 32;
+
+/** Whether the configured secret is long enough to sign with. */
+function usableSecret() {
   const value = config.auth?.sessionSecret;
-  if (!value || value.length < 32) {
+  return typeof value === 'string' && value.length >= MIN_SECRET_LENGTH;
+}
+
+function secret() {
+  if (!usableSecret()) {
     throw new Error(
-      'SESSION_SECRET must be set and at least 32 characters. ' +
+      `SESSION_SECRET must be set and at least ${MIN_SECRET_LENGTH} characters. ` +
         'Generate one with: openssl rand -hex 32'
     );
   }
-  return value;
+  return config.auth.sessionSecret;
 }
 
 function sign(payload) {
@@ -122,9 +144,16 @@ export function githubConfigured() {
  * Keyed on the session secret rather than on GitHub, because email sign-in
  * needs no OAuth app and would otherwise leave the API open on a server that
  * can perfectly well authenticate people.
+ *
+ * It asks the SAME question `secret()` does, deliberately. A secret that is
+ * present but too short cannot sign a cookie, so a server holding one cannot
+ * sign anybody in — and answering "configured" for it turns the API gate on in
+ * front of a login route that can only ever throw. The two states this can
+ * report are "sign-in works" and "sign-in is off and the site is open"; there
+ * is no third state where the gate is armed and the door is broken.
  */
 export function isConfigured() {
-  return Boolean(config.auth?.sessionSecret);
+  return usableSecret();
 }
 
 /**
@@ -283,21 +312,66 @@ export function logout(res) {
 }
 
 /**
+ * How stale `last_seen_at` is allowed to get before a read turns into a write.
+ *
+ * An hour, because of what the column is FOR: it answers "is this reader still
+ * around", on a page that groups readers by day. Nothing in the project reads
+ * it at finer resolution than that, so a value up to an hour old is the same
+ * answer as a fresh one — and one write per reader per hour is roughly three
+ * orders of magnitude fewer than one per request.
+ */
+const LAST_SEEN_STALE_MS = 60 * 60 * 1000;
+
+/**
  * The reader on this request, or null. Reads one row — cheap, and it means a
  * reader deleted from the database stops being able to read on their next
  * request rather than when their cookie happens to expire.
+ *
+ * WHY THE COMMON PATH IS A SELECT AND NOT AN UPDATE ... RETURNING
+ *
+ * It was an UPDATE, which fetched the row and refreshed `last_seen_at` in one
+ * statement. Tidy, and wrong for where this runs. Every `/api/*` request goes
+ * through the gate, and `/api/me` fires on every page load whether or not
+ * anyone is signed in, so an unconditional UPDATE made a WRITE TRANSACTION out
+ * of loading the dashboard — one per widget, since the overview fans out into
+ * several parallel fetches.
+ *
+ * On Neon's pooler that is not merely an extra millisecond. A write pins the
+ * request to the primary and defeats read routing entirely, so the endpoint
+ * that exists to answer "who am I" from a cookie was the thing forcing every
+ * page load onto the write path. It also takes a row lock on a row several
+ * concurrent requests from the same reader all want.
+ *
+ * So: read the row, and only write when the timestamp is actually stale. The
+ * write is awaited rather than left floating — a serverless function can be
+ * frozen the moment its handler returns, which kills an un-awaited query
+ * mid-flight and surfaces as an unhandled rejection rather than as a lost
+ * write. Once an hour per reader, that latency is not worth the risk.
  */
 export async function currentReader(req) {
   const id = unseal(req.cookies?.[SESSION_COOKIE]);
   if (!id) return null;
 
   const { rows } = await query(
-    `UPDATE readers SET last_seen_at = now()
-      WHERE id = $1
-  RETURNING id, handle, name, email, avatar_url, is_editor, identity`,
+    `SELECT id, handle, name, email, avatar_url, is_editor, identity, last_seen_at
+       FROM readers
+      WHERE id = $1`,
     [id]
   );
-  return rows[0] ?? null;
+
+  const reader = rows[0];
+  if (!reader) return null;
+
+  const lastSeen = reader.last_seen_at ? new Date(reader.last_seen_at).getTime() : 0;
+  if (!Number.isFinite(lastSeen) || Date.now() - lastSeen > LAST_SEEN_STALE_MS) {
+    await query('UPDATE readers SET last_seen_at = now() WHERE id = $1', [id]);
+  }
+
+  // `last_seen_at` was fetched to make that decision, not to be published. The
+  // caller's contract is the columns the UPDATE ... RETURNING used to hand
+  // back, and /api/me serialises this object straight to the browser.
+  const { last_seen_at: _lastSeenAt, ...publicFields } = reader;
+  return publicFields;
 }
 
 /**

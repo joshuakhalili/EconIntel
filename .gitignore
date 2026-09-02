@@ -33,3 +33,7 @@ landing/docs/verify-shots/
 landing/.content-applied
 .vercel
 .env*
+
+# Database dumps from scripts/backup-db.js. Never commit data.
+/backups/
+*.sql.gz

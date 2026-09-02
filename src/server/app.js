@@ -85,21 +85,41 @@ const app = express();
  * may call the API from another site.
  */
 /*
- * Gzip, before anything that can produce a body.
+ * Gzip, before anything that can produce a body — but only on the host that
+ * needs it.
  *
- * `express.static` does not compress. The client bundle is 994 kB of
- * JavaScript and 133 kB of CSS, and every reader has been downloading all of
- * it uncompressed — roughly a megabyte where a quarter of one would do. The
- * JSON responses are worse per byte: a series payload is thousands of repeated
- * `{"date":"…","value":…}` keys, which is close to the best case gzip has.
+ * FOR `npm start` ON A LONG-LIVED HOST, WHERE THIS IS STILL RIGHT
  *
- * First in the chain because compression works by wrapping `res.write`, so it
- * has to be installed before any handler that might call it.
+ * There, Express serves everything itself and `express.static` does not
+ * compress. This used to say 994 kB of JavaScript, which was true before route
+ * code-splitting landed; the three chunks `index.html` actually preloads now
+ * come to about 380 kB, plus 143 kB of CSS. Still half a megabyte uncompressed
+ * where a fraction of it would do, and the lazy route chunks land on top as
+ * the reader moves around. The JSON responses are worse per byte: a series
+ * payload is thousands of repeated `{"date":"…","value":…}` keys, which is
+ * close to the best case gzip has. First in the chain because compression
+ * works by wrapping `res.write`, so it has to be installed before any handler
+ * that might call it. Left at the default 1 kB threshold: below that the gzip
+ * header costs more than the saving, and the CPU is not free on a small
+ * instance.
  *
- * Left at the default 1 kB threshold: below that the gzip header costs more
- * than the saving, and the CPU is not free on a small instance.
+ * FOR VERCEL, WHERE IT IS A PURE CPU TAX
+ *
+ * None of the above applies. `vercel.json` routes only `/api/*`, `/auth/*` and
+ * `/healthz` into this function — the bundle and the landing page are served
+ * by the CDN, which brotli-compresses them without ever entering this process.
+ * What is left is the JSON, and Vercel already compresses function responses
+ * at the edge. So this middleware gzips a body that is about to be
+ * decompressed and recompressed by the platform, and bills the function for
+ * the privilege.
+ *
+ * `process.env.VERCEL` is set by the platform on every deployment and in
+ * `vercel dev`, and is absent everywhere else, which makes it the honest test
+ * for "is something else already doing this".
  */
-app.use(compression());
+if (!process.env.VERCEL) {
+  app.use(compression());
+}
 
 app.use(
   cors({
@@ -140,14 +160,9 @@ const route = (handler) => (req, res, next) =>
   Promise.resolve(handler(req, res, next)).catch(next);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Health
+// Sign-in
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Render polls this to decide whether a deploy succeeded. It must actually
- * touch the database: a process that has booted but cannot reach Postgres is
- * not healthy, and reporting it as healthy means a broken deploy goes live.
- */
 /**
  * Sign-in. Three routes, all outside the API gate for obvious reasons.
  *
@@ -214,6 +229,36 @@ app.get('/api/me', route(async (req, res) => {
  */
 app.use('/api', auth.requireReader());
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Health
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Is this deployment alive, and WHICH deployment is it.
+ *
+ * Nothing deploys to Render any more — this comment used to say so, and used
+ * to sit above `/auth/github`, having been orphaned when the auth routes were
+ * inserted underneath it. What reads this now is Vercel, and the smoke
+ * workflow that runs against the deployed URL after every push.
+ *
+ * It must actually touch the database: a process that has booted but cannot
+ * reach Postgres is not healthy, and reporting it as healthy means a broken
+ * deploy goes live.
+ *
+ * WHY `commit` IS IN THE BODY
+ *
+ * A green smoke run proved the site was up. It could not prove the site was
+ * the site that had just been pushed — a deploy that never finished, or one
+ * that rolled back, leaves last week's build answering happily on the same URL
+ * and every assertion still passes. The SHA is the only thing that ties the
+ * running process to a commit, so the smoke suite can assert it matches the
+ * one it tested.
+ *
+ * Vercel injects it as VERCEL_GIT_COMMIT_SHA. Locally there is nothing to
+ * inject, so the answer is null: an honest "this build does not know which
+ * commit it is" rather than a placeholder string that a test would happily
+ * compare and a human would eventually mistake for a real SHA.
+ */
 app.get('/healthz', route(async (_req, res) => {
   const started = performance.now();
   await query('SELECT 1');
@@ -222,6 +267,7 @@ app.get('/healthz', route(async (_req, res) => {
     database: 'connected',
     latencyMs: Math.round(performance.now() - started),
     env: config.env,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
   });
 }));
 

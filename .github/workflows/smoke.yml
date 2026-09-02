@@ -47,19 +47,73 @@ concurrency:
 
 jobs:
   smoke:
-    # Only successful PRODUCTION deployments. A preview sits behind Vercel SSO
-    # and every request 302s to an auth page, so smoking one without a bypass
-    # token fails on all 18 checks for a reason that has nothing to do with
-    # the code. The schedule and manual runs carry no deployment context at
-    # all, hence the two null checks.
+    # PRODUCTION deployments that have finished, one way or the other.
+    #
+    # Previews are still excluded: one sits behind Vercel SSO and every request
+    # 302s to an auth page, so smoking one without a bypass token fails every
+    # check in the suite for a reason that has nothing to do with the code. The
+    # schedule and manual runs carry no deployment context at all, hence the
+    # event-name escape at the front.
+    #
+    # WHY THIS NO LONGER FILTERS ON `state == 'success'`
+    #
+    # It used to, and that turned a broken build into a GREY check. A failed
+    # Vercel build emits `failure` or `error`; the condition was false; GitHub
+    # renders a job that never ran as skipped, which reads as "nothing to see"
+    # on the commit and in the PR list — the same colour as a job that was
+    # deliberately not applicable. The one moment you most need a red mark was
+    # the one moment this file guaranteed you would not get one.
+    #
+    # So the terminal states are all admitted here and sorted out in the first
+    # step. `pending`, `queued`, `in_progress` and `inactive` are deliberately
+    # NOT in the list: Vercel emits those while a build is still running, and
+    # failing on them would paint every deploy red on its way to going green.
+    #
+    # The limit worth stating plainly: this still cannot see a deploy that
+    # never happened. No event fires, so no workflow runs, and silence looks
+    # exactly like health. The 07:10 schedule above is the only thing covering
+    # that case, and it covers it a day late.
     if: >-
       github.event_name != 'deployment_status' ||
-      (github.event.deployment_status.state == 'success' &&
-       github.event.deployment_status.environment == 'Production')
+      (github.event.deployment_status.environment == 'Production' &&
+       contains(fromJSON('["success", "failure", "error"]'),
+                github.event.deployment_status.state))
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
+      # FIRST, before checkout, so that a broken deploy costs nothing and
+      # nothing downstream has to remember to guard itself. This step exiting
+      # non-zero skips every step after it — the HTTP checks only ever run
+      # against a deployment that actually succeeded — and, unlike the old
+      # `if:` filter, it leaves a red X and a reason instead of a grey dash.
+      - name: Fail on a deployment that did not succeed
+        if: >-
+          github.event_name == 'deployment_status' &&
+          github.event.deployment_status.state != 'success'
+        env:
+          STATE: ${{ github.event.deployment_status.state }}
+          DESCRIPTION: ${{ github.event.deployment_status.description }}
+          LOG_URL: ${{ github.event.deployment_status.log_url }}
+        run: |
+          # Written to the summary as well as the log, because the summary is
+          # what is visible from the commit without opening the run.
+          {
+            echo "### Deploy failed — production was not smoked"
+            echo ""
+            echo "Vercel reported deployment state \`$STATE\` for Production."
+            echo "${DESCRIPTION:-No description was supplied.}"
+            # An `if`, not `[ -n … ] && echo …`: Actions runs this with `-e`,
+            # and that one-liner returns 1 when LOG_URL is empty, which would
+            # abort the group before the annotation below ever got written.
+            if [ -n "$LOG_URL" ]; then
+              echo ""
+              echo "Build log: $LOG_URL"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error title=Deploy $STATE::Vercel deployment state '$STATE' — ${DESCRIPTION:-no description}"
+          exit 1
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -92,6 +146,24 @@ jobs:
           # protection-bypass secret in the repo, which is a credential this
           # does not currently need.
           TARGET: ${{ inputs.url || 'https://diffusion-econintel.vercel.app' }}
+
+          # THE SHA THIS RUN EXPECTS TO FIND LIVE.
+          #
+          # On a `deployment_status` event, `github.sha` is the commit the
+          # deployment was created for — the thing that just built. The script
+          # compares it against the `commit` field in /healthz, and that
+          # comparison is the direct answer to the tradeoff admitted above: if
+          # the alias still points at the previous deployment, every other
+          # check passes against last week's site and this one does not.
+          #
+          # Empty on schedule and workflow_dispatch, deliberately. There
+          # `github.sha` is the tip of the default branch, which is what we
+          # HOPE is deployed rather than anything we were told is — a push
+          # that skipped deploy, or a deploy still in flight, would fail the
+          # comparison for a reason that is not a production fault. The script
+          # reports the comparison SKIPPED with that reason rather than
+          # passing it silently.
+          EXPECT_COMMIT: ${{ github.event_name == 'deployment_status' && github.sha || '' }}
         run: |
           if [ "${{ github.event_name }}" = "deployment_status" ]; then
             echo "Waiting 20s for the production alias to settle…"
