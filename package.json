@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/server/index.js",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node src/server/index.js",

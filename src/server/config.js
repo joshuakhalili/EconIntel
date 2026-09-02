@@ -17,7 +17,10 @@ function required(name, fallback) {
     // there is no .env file on a hosted service to copy anything into.
     const remedy =
       (process.env.NODE_ENV ?? 'development') === 'production'
-        ? `Set it in the service's environment settings (Render: Dashboard → the service → Environment).`
+        ? `Set it on the deployment. Vercel: Project → Settings → Environment Variables, ` +
+          `then redeploy — Vercel bakes them in at build time, so changing one does ` +
+          `nothing until a new deployment exists. GitHub Actions: Settings → ` +
+          `Secrets and variables → Actions.`
         : `Copy .env.example to .env and fill it in.`;
     throw new Error(`Missing required environment variable ${name}. ${remedy}`);
   }
@@ -48,11 +51,20 @@ const env = process.env.NODE_ENV ?? 'development';
  * should look like a config error at startup, not like a database outage an
  * hour later.
  *
- * The credentials below are the documented local dev pair from the README.
+ * The credentials below MUST match the ones .env.example tells you to create
+ * (`createuser econintel` / `createdb econintel`, lines 12-14). They did not:
+ * this said `diffusion:diffusion_dev@…/diffusion` while the setup instructions
+ * said `econintel`, and a comment claimed the pair came "from the README" —
+ * which documents no database at all. So the fallback pointed at a database
+ * nobody had been told to create, and the one path it exists to serve (a fresh
+ * clone with no .env yet) was the one path it could not serve.
+ *
  * They are deliberately the only secret-shaped string in the repository, and
  * they unlock nothing that is not already on your own machine.
+ *
+ * When the repo is renamed to Diffusion, this and .env.example change together.
  */
-const LOCAL_DEV_DATABASE = 'postgres://diffusion:diffusion_dev@localhost:5432/diffusion';
+const LOCAL_DEV_DATABASE = 'postgres://econintel:econintel_dev@localhost:5432/econintel';
 
 export const config = Object.freeze({
   env,

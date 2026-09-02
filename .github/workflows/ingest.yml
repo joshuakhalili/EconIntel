@@ -67,6 +67,20 @@ jobs:
 
       - name: Run ingestion
         env:
+          # NODE_ENV=production is here for ONE reason: it decides whether a
+          # missing DATABASE_URL is an error or a silent fallback.
+          #
+          # config.js only refuses to start without DATABASE_URL when the env
+          # is production. This workflow set no NODE_ENV, so it ran as
+          # 'development' and a missing secret resolved to the localhost dev
+          # database instead — meaning the run died on ECONNREFUSED against a
+          # machine that does not exist, rather than on the "Missing required
+          # environment variable DATABASE_URL" the config module was written to
+          # produce. One is a mystery, the other names the fix.
+          #
+          # That is not hypothetical: the repository had NO Actions secrets set
+          # at all, and every scheduled run since this file was added failed.
+          NODE_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
@@ -83,5 +97,8 @@ jobs:
       - name: Summarise what actually changed
         if: always()
         env:
+          # Same reason as above. This step runs on failure, which is exactly
+          # when a wrong-database fallback would be most misleading.
+          NODE_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: node scripts/ingestion-summary.js >> "$GITHUB_STEP_SUMMARY"
