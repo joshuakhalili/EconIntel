@@ -37,3 +37,9 @@ landing/.content-applied
 # Database dumps from scripts/backup-db.js. Never commit data.
 /backups/
 *.sql.gz
+
+# Internal working docs — planning notes and live engineering status. Useful
+# locally (STATUS.md is what a new session reads to catch up) but not written
+# for a public audience, so they stay untracked rather than on the repo.
+CONCEPT-GRILL-LOG.md
+STATUS.md

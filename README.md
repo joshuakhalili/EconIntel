@@ -31,8 +31,8 @@ These are the point of the project. Everything else is implementation.
 **No number here is written by a language model.** Every figure is computed in
 SQL from a named source. Every claim is written by a person and dated. There is
 a `narrations` table designed to cache LLM output *grounded in stored values* —
-it is deliberately unused, and `STATUS.md` says so rather than implying the
-rule is already protecting something.
+it is deliberately unused, and that is tracked as an open item rather than
+implied to already be protecting something.
 
 **What the data cannot show is a section, not a footnote.** Every question page
 states its limits directly beneath its answer and above every chart. A page
@@ -127,8 +127,8 @@ both. Take the data from the publisher.
   the documents are actually read, because a takeaway paraphrased from an
   abstract nobody opened is worse than none.
 
-`STATUS.md` carries the full list, under a standing rule: nothing is written
-there as present-tense fact unless a code path enforces it right now.
+That list is tracked in full internally, under a standing rule: nothing is
+written there as present-tense fact unless a code path enforces it right now.
 
 ---
 
