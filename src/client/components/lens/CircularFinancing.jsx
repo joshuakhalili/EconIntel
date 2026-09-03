@@ -51,6 +51,25 @@ export default function CircularFinancing({ accent }) {
   const circles = data?.circles ?? [];
   if (circles.length === 0) return null;
 
+  /*
+   * WHETHER A PERSON HAS CHECKED THESE DEALS, STATED RATHER THAN ASSUMED.
+   *
+   * `is_verified` and `confidence_tier` are selected by financingGraph() and
+   * were then dropped on the floor: nothing on this component read either, so
+   * no reader was ever told that every one of the 23 deals is unverified.
+   *
+   * The header comment above says each row carries at least one citation, and
+   * that is true — but a citation is a pointer to a claim, not a person having
+   * confirmed it. Loading a deal from a report and checking a deal are
+   * different acts, and the schema keeps them apart on purpose.
+   *
+   * Counted from the payload rather than written as a sentence, so this stops
+   * saying "none" the moment one is actually verified. A hardcoded caveat goes
+   * stale silently and then misrepresents in the other direction.
+   */
+  const edges = data?.edges ?? [];
+  const verified = edges.filter((e) => e.is_verified).length;
+
   return (
     <section
       ref={ref}
@@ -77,6 +96,16 @@ export default function CircularFinancing({ accent }) {
           never added here.
         </p>
 
+        {/* Sits with the introduction, not in a footnote under the ledger. The
+            reader meets the claim and its standing in the same breath — putting
+            it below the cards means it is read after the arrangements have
+            already been believed. */}
+        <p className="prose-measure mt-3 text-body-regular leading-relaxed text-warn">
+          {verified === 0
+            ? `Every one of these ${edges.length} deals is drawn from public reporting and none has been checked by a person. Amounts and dates are as announced, which is not the same as as happened.`
+            : `${verified} of these ${edges.length} deals have been checked by a person against their sources; the remaining ${edges.length - verified} are drawn from public reporting as announced.`}
+        </p>
+
         <ul className="mt-8 flex flex-col gap-4">
           {circles.map((circle) => (
             <li key={`${circle.funder.id}-${circle.funded.id}`}>
@@ -93,7 +122,26 @@ export default function CircularFinancing({ accent }) {
 
 function Circle({ circle, accent }) {
   const { funder, funded, capital, commercial, capitalUsd, commercialUsd, reverses } = circle;
-  const alleged = [...capital, ...commercial].every((l) => l.loop_status === 'alleged');
+
+  /*
+   * `.some`, NOT `.every` — and the difference was a live honesty bug.
+   *
+   * This read `.every((l) => l.loop_status === 'alleged')`, so the "reported,
+   * not confirmed" warning appeared only when EVERY leg was alleged. One
+   * confirmed leg among several alleged ones silenced it entirely.
+   *
+   * Measured against the shipped data, that is not hypothetical. Of the five
+   * circles, exactly one mixes statuses — microsoft <-> mistral, three legs,
+   * two `alleged` and one `forms_loop`. The single confirmed leg made `every`
+   * false, so THE MOST SPECULATIVE ARRANGEMENT IN THE SET was the only one
+   * rendering with no warning at all. The other four are uniformly
+   * `forms_loop` and correctly showed nothing, which is why it looked right.
+   *
+   * A caveat that switches off as a circle gets more speculative is worse than
+   * no caveat, because the reader learns to trust its absence. If any leg is
+   * only reported, the arrangement as a whole is only reported.
+   */
+  const alleged = [...capital, ...commercial].some((l) => l.loop_status === 'alleged');
 
   return (
     <div className="rounded-2xl border border-border-button-default bg-panel p-5">

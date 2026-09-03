@@ -368,6 +368,146 @@ describe('runScenario — the grounding payload', () => {
   });
 });
 
+describe('runScenario — the range verdict', () => {
+  /*
+   * THE BUG THIS BLOCK EXISTS OVER.
+   *
+   * `/simulate/ai-capex-dotcom` shipped live with a slider whose maximum was
+   * $1000bn, and France crossed zero unemployment at $420bn — less than
+   * halfway along. The equations were right, the coefficients were cited, the
+   * caveat was on the page, and the chart drew a dashed line to −1.61%.
+   *
+   * Nothing in the engine could have caught that, because nothing in the
+   * engine was asked to. A refusal is only as good as the thing that decides
+   * to refuse, so the decision is tested here rather than left to the
+   * component that renders it.
+   *
+   * The fixture is the same violent one used above — a shock worth 10% of GDP
+   * — which puts unemployment at exactly 0 in year one and −2.5% in year two.
+   * That boundary case is the most valuable one in the file: it is the
+   * difference between "on the floor" and "through it".
+   */
+  test('a run that stays inside the possible is reported as ok', () => {
+    /* 10bn against a GDP of 1000 is a 1% shock: unemployment bottoms out at
+       5 − 0.5 × 3 × 1 = 3.5% in year five, comfortably above the floor. */
+    const result = run({ shock_usd_bn: 10 }, {}, 5);
+
+    assert.equal(result.validity.ok, true);
+    assert.equal(result.validity.first_invalid_year, null);
+    assert.deepEqual(result.validity.reasons, []);
+  });
+
+  test('a zero shock is ok — the baseline itself must never be refused', () => {
+    assert.equal(run({ shock_usd_bn: 0 }, {}, 5).validity.ok, true);
+  });
+
+  test('negative unemployment is refused, and named by the year it happens', () => {
+    const result = run({ shock_usd_bn: 100 }, {}, 5);
+
+    assert.equal(result.validity.ok, false);
+    assert.equal(result.validity.first_invalid_year, 2);
+
+    const [first] = result.validity.reasons;
+    assert.equal(first.year, 2);
+    assert.equal(first.kind, 'unemployment_below_zero');
+    assert.equal(first.metric, 'unemployment_pct');
+    assert.equal(first.value, -2.5);
+    /* The message has to carry the figure, because it is what the reader is
+       shown in place of the line that was not drawn. A refusal that does not
+       say what happened is a blank. */
+    assert.match(first.message, /-2\.5%/);
+    assert.match(first.message, /year 2/);
+  });
+
+  /*
+   * Exactly zero is the boundary and it is deliberately NOT a refusal.
+   *
+   * The check runs on the rounded, published figure, so a year the chart would
+   * label "0.00%" is a year the reader can see for themselves. Refusing it
+   * would be refusing something they could check — and it would put the
+   * verdict and the axis in disagreement, which is worse than either answer.
+   */
+  test('unemployment of exactly zero is the floor, not past it', () => {
+    const result = run({ shock_usd_bn: 100 }, {}, 1);
+
+    assert.equal(result.years[0].unemployment_pct, 0);
+    assert.equal(result.validity.ok, true, 'a rate of 0.00% is possible; a negative one is not');
+  });
+
+  /*
+   * One step further and it must flip. Without this, a check that simply never
+   * fired would pass the test above.
+   */
+  test('one step past the floor flips the verdict', () => {
+    /* 100.4bn: year one's unemployment is 5 − 0.5 × 10.04 = −0.02%. */
+    const result = run({ shock_usd_bn: 100.4 }, {}, 1);
+
+    assert.equal(result.years[0].unemployment_pct, -0.02);
+    assert.equal(result.validity.ok, false);
+    assert.equal(result.validity.first_invalid_year, 1);
+  });
+
+  /*
+   * The other end of the same bound. A large enough withdrawal drives the
+   * arithmetic through 100%, which is impossible for the same structural
+   * reason and not for an economic one — there is no larger number of people
+   * than all of them.
+   */
+  test('unemployment above the whole labour force is refused too', () => {
+    /* −2000bn is a −200% output shock: the unemployment gap is +100, so the
+       rate lands at 105%. */
+    const result = run({ shock_usd_bn: -2000 }, {}, 1);
+
+    assert.equal(result.years[0].unemployment_pct, 105);
+    assert.equal(result.validity.ok, false);
+    assert.equal(result.validity.reasons[0].kind, 'unemployment_above_labour_force');
+  });
+
+  /*
+   * The impossible years are still returned. The page needs them to say what
+   * it is refusing to draw — "unemployment at −2.5% in year two" is an
+   * explanation a reader can act on, and a truncated payload could only offer
+   * "the projection stops at year one".
+   */
+  test('the out-of-range years are still emitted, so the refusal can quote them', () => {
+    const result = run({ shock_usd_bn: 100 }, {}, 5);
+
+    assert.equal(result.years.length, 5, 'the verdict replaces nothing — it is added');
+    assert.equal(result.years[4].unemployment_pct, -10);
+  });
+
+  /*
+   * A verdict that vanishes on the way to the browser is not a verdict.
+   * `simulation_runs.results` is a jsonb column and the cached row is what a
+   * later reader is served, so every field has to survive a round trip through
+   * JSON with nothing lost — no undefined, no NaN dressed as null.
+   */
+  test('the verdict survives being stored as jsonb and read back', () => {
+    const result = run({ shock_usd_bn: 100 }, {}, 5);
+    const roundTripped = JSON.parse(JSON.stringify(result));
+
+    assert.deepEqual(roundTripped.validity, result.validity);
+  });
+
+  /*
+   * An out-of-range RESULT is not an out-of-range INPUT, and the two must not
+   * be confused. A slider value outside the published bounds is a 400 raised
+   * by `validateInputs` in the repository. This is a value the page itself
+   * offered, computed honestly, that produced something impossible — so it
+   * returns a run, with a verdict attached, and the reader is told what
+   * happened rather than handed an error.
+   */
+  test('an impossible result is reported, not thrown', () => {
+    assert.doesNotThrow(() => run({ shock_usd_bn: 1000 }, {}, 5));
+
+    const result = run({ shock_usd_bn: 1000 }, {}, 5);
+    assert.equal(result.validity.ok, false);
+    /* Everything else is still there — the shock, the baseline, the years. */
+    assert.equal(result.shock.usd_bn, 1000);
+    assert.equal(result.baseline.unemployment_pct, 5);
+  });
+});
+
 describe('runHash', () => {
   test('is stable across key order', () => {
     const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { a: 1, b: 2 } });

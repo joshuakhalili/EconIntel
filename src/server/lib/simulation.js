@@ -49,6 +49,14 @@
  * omissions makes it wrong in a knowable direction, and `scenario.caveat` is
  * required by the schema so the page has to say so.
  *
+ * A caveat is not enough on its own, though, and this was shipped before it was
+ * fixed. Linear means the arithmetic never stops: drag the flagship's injection
+ * slider under halfway and the equations put French unemployment at −1.6%, and
+ * the chart drew it, dashed and captioned and completely impossible. So every
+ * run now returns `validity` alongside its numbers, saying whether it left the
+ * range where a result can exist at all, and the page refuses to draw the part
+ * that could not have happened. See `checkRange`.
+ *
  * WHAT THIS MEANS FOR A READER, STATED PLAINLY
  *
  * The output is `modelled` tier. It is arithmetic on assumptions, not a
@@ -67,8 +75,16 @@ import { createHash } from 'node:crypto';
  * from `simulation_runs`, indefinitely — and worse, serves them next to
  * narration written about them, so the prose and the chart would agree with
  * each other and both be stale.
+ *
+ * v3 changed no arithmetic at all and still had to bump, which is the case
+ * that is easy to get wrong. It added `validity` to the result, and the client
+ * refuses to draw a run whose `validity.ok` is false. A cached v2 row has no
+ * such key, so it would arrive at that check as `undefined`, be read as "not
+ * false", and draw the impossible path — the exact chart this version exists to
+ * prevent, served only to the readers whose run happened to be cached. The rule
+ * is therefore the SHAPE of the result, not just its numbers.
  */
-export const MODEL_VERSION = 'v2-2026-09-02';
+export const MODEL_VERSION = 'v3-2026-09-03';
 
 /* ── Parameter contracts ─────────────────────────────────────────────────── */
 
@@ -368,6 +384,126 @@ const MODELS = {
   investment_shock_v1: investmentShockModel,
 };
 
+/* ── Where the arithmetic leaves the world ───────────────────────────────── */
+
+/**
+ * The bounds of the unit itself, and why two numbers are allowed to be here.
+ *
+ * This file's rule is that it contains no numbers, because a number in an
+ * equation is an uncited claim about the world. These two are not that, and the
+ * distinction is worth being exact about rather than waving at: a coefficient is
+ * a claim that could have come out another way — Okun's β is −0.56 and might
+ * have been −0.4, so somebody has to have measured it and be named. Zero and one
+ * hundred could not have come out another way. Unemployment is the share of the
+ * labour force without work; a share of a population is bounded by nought and by
+ * all of it, by construction, in every country, for every year, under every
+ * school of economics. Nobody publishes it because there is nothing to publish.
+ *
+ * That is also precisely why THESE are the bounds this file checks and no
+ * others. The tempting additions all fail the same test:
+ *
+ *   "unemployment below about 2% is implausible" — true, probably, and a
+ *   number this project would be choosing. Frictional unemployment is a real
+ *   floor but its level is contested and country-specific, and 2 would sit in
+ *   the code looking exactly as sourced as −0.563.
+ *
+ *   "inflation above 10% is outside the Phillips curve's estimation sample" —
+ *   the direction is right and the threshold is invented. The papers behind
+ *   `price_phillips_slope` do not publish the range over which their slope
+ *   stops holding, so any figure written here would be this project's own
+ *   opinion wearing a citation's clothes, which is the one thing the whole
+ *   module is built to refuse. It would also be the worse kind of invention:
+ *   invisible, because it would only ever surface as a warning that looked
+ *   authoritative.
+ *
+ * So the engine reports the structurally impossible and stays quiet about the
+ * merely improbable. The page carries `scenario.caveat` for the rest, which is
+ * where a judgement belongs — written by a person, in prose, over a signature.
+ */
+const UNEMPLOYMENT_MIN_PCT = 0;
+const UNEMPLOYMENT_MAX_PCT = 100;
+
+/**
+ * Did this run produce something that cannot exist?
+ *
+ * A separate question from every other check in this file, and it has to be
+ * answered differently. A missing coefficient, a flipped sign, a horizon past
+ * the last published cell: all of those are the CALLER wrong, so they throw at
+ * the door and nothing is computed. This one is nobody wrong. The parameters are
+ * all cited, the inputs are all inside the bounds the page published, the
+ * arithmetic is exactly what the literature implies — and the answer is still
+ * that 4.5% of the French labour force minus 5.2 points of it is a negative
+ * number of people.
+ *
+ * That is the model's linearity failing, which `scenario.caveat` already says
+ * will happen and cannot say where. Throwing would be wrong twice: it would turn
+ * a legitimate reader question into a 500, and it would destroy the one thing
+ * worth showing, which is the part of the horizon that IS still inside the
+ * range. So this returns a verdict and the caller decides.
+ *
+ * Checked against the ROUNDED, published figures rather than the raw ones, so
+ * that the verdict and the chart can never disagree. A year that renders as
+ * "0.00%" is on the boundary, not past it, and refusing to draw a value the
+ * reader would see as zero would be a refusal they could not check.
+ *
+ * Applied to every model's output rather than written inside one, because a
+ * model added later must not be able to forget it. Rows without an
+ * `unemployment_pct` simply pass — a future model that projects something else
+ * needs its own structural bound, and inheriting silence is better than
+ * inheriting a check on a field it does not have.
+ */
+function checkRange(years) {
+  const reasons = [];
+
+  for (const year of years) {
+    const u = year.unemployment_pct;
+    if (typeof u !== 'number') continue;
+
+    if (u < UNEMPLOYMENT_MIN_PCT) {
+      reasons.push({
+        year: year.year,
+        kind: 'unemployment_below_zero',
+        metric: 'unemployment_pct',
+        value: u,
+        /* The sentence lives here, not in the component, because it has two
+           readers: the page renders it, and anyone reading this endpoint's JSON
+           gets the same explanation rather than a bare enum they would have to
+           look up in this file. */
+        message:
+          `Unemployment reaches ${u}% in year ${year.year}, which cannot happen: ` +
+          'a rate below zero does not exist.',
+      });
+    } else if (u > UNEMPLOYMENT_MAX_PCT) {
+      reasons.push({
+        year: year.year,
+        kind: 'unemployment_above_labour_force',
+        metric: 'unemployment_pct',
+        value: u,
+        message:
+          `Unemployment reaches ${u}% in year ${year.year}, which cannot happen: ` +
+          'no more people can be unemployed than are in the labour force.',
+      });
+    }
+  }
+
+  return {
+    ok: reasons.length === 0,
+    /*
+     * The first breach, not the list, is what a caller should draw up to — and
+     * the difference matters when the breaches are not contiguous.
+     *
+     * Once a year is impossible, the years after it are not innocent. Wage
+     * persistence carries that year's deviation forward by construction, so
+     * year four is computed FROM the negative unemployment of year three; it
+     * inherits the failure whether or not its own unemployment reads positive.
+     * A caller that drew every individually-valid year would draw a line with a
+     * hole in it, which is a chart claiming the model recovered.
+     */
+    first_invalid_year: reasons.length > 0 ? reasons[0].year : null,
+    reasons,
+  };
+}
+
 /**
  * Two decimal places, everywhere, once.
  *
@@ -502,7 +638,19 @@ export function runScenario({ modelKey, inputs, parameters, horizonYears }) {
     Object.entries(parameters).map(([k, v]) => [k, toNumber(v)])
   );
 
-  return model({ inputs, parameters: numericParams, horizonYears });
+  const result = model({ inputs, parameters: numericParams, horizonYears });
+
+  /*
+   * Every year is still returned, including the impossible ones.
+   *
+   * Truncating here was the first instinct and it is wrong. The caller cannot
+   * explain what it is not showing if it never receives it, and "the projection
+   * stops at year three" is a much weaker thing to tell a reader than "at this
+   * size the model puts unemployment at −0.7% in year four". The engine's job is
+   * to say what the equations produced and whether it can exist; hiding the
+   * evidence for its own verdict would make that verdict unauditable.
+   */
+  return { ...result, validity: checkRange(result.years) };
 }
 
 /** Which parameters a model needs — used by the seed checker and the tests. */
@@ -533,5 +681,8 @@ export const __testing = {
   REQUIRED_PARAMS,
   MULTIPLIER_PROFILE,
   MAX_HORIZON_YEARS,
+  UNEMPLOYMENT_MIN_PCT,
+  UNEMPLOYMENT_MAX_PCT,
+  checkRange,
   round,
 };

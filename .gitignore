@@ -43,3 +43,7 @@ landing/.content-applied
 # for a public audience, so they stay untracked rather than on the repo.
 CONCEPT-GRILL-LOG.md
 STATUS.md
+
+# Python bytecode from the landing build scripts.
+__pycache__/
+*.pyc

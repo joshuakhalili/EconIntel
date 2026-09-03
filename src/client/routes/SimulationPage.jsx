@@ -69,6 +69,30 @@ const SERIES_OPTIONS = [
   },
 ];
 
+/**
+ * The chart's own title has to agree with the chart.
+ *
+ * "Unemployment, projected 5 years" over a two-year line is the same false
+ * claim the refusal was added to stop, just in smaller type — and it is the
+ * version that survives, because a title is read as a label rather than as an
+ * assertion and nobody checks it against the axis. So when a run leaves the
+ * range where its coefficients mean anything, the count here is the number of
+ * years actually drawn.
+ *
+ * A missing `validity` is treated as a run that passed, matching
+ * `SimulationChart`: absent is "not checked", never "failed".
+ */
+function chartTitle(run, option) {
+  if (run.validity?.ok !== false) {
+    return `${option.label}, projected ${run.horizon_years} years`;
+  }
+
+  const drawn = run.validity.first_invalid_year - 1;
+  return drawn > 0
+    ? `${option.label}, projected ${drawn} of ${run.horizon_years} years`
+    : `${option.label}, not projected at this size`;
+}
+
 export default function SimulationPage() {
   const { slug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -235,7 +259,7 @@ export default function SimulationPage() {
             <ErrorBlock error={runError} what="this run" />
           ) : run ? (
             <ChartCard
-              title={`${option.label}, projected ${run.horizon_years} years`}
+              title={chartTitle(run, option)}
               caption={
                 run.shock
                   ? `A ${run.shock.sustained ? 'sustained' : 'one-off'} injection of ` +
@@ -249,13 +273,30 @@ export default function SimulationPage() {
                 years={run.years}
                 series={[option]}
                 baseline={run.baseline?.[option.baselineKey]}
+                /* Whether the run produced something that can exist. The chart
+                   stops where it stops — see the note at the top of that file. */
+                validity={run.validity}
               />
             </ChartCard>
           ) : (
             <LoadingBlock rows={2} />
           )}
 
-          <NarrationBlock narration={run?.narration} />
+          {/*
+            No paragraph about numbers the chart refused to draw.
+
+            Narrations are written offline, for the default slider position
+            only, so in practice this never fires — the flagship's default is
+            well inside the model's range. It is here because "in practice" is
+            doing load-bearing work in that sentence: a default that moves, or a
+            country added with different coefficients, would put prose asserting
+            a negative unemployment rate directly under a panel explaining that
+            a negative unemployment rate cannot happen. The prose would win. It
+            reads as a conclusion and the panel reads as a disclaimer.
+          */}
+          <NarrationBlock
+            narration={run?.validity?.ok === false ? null : run?.narration}
+          />
         </section>
       </div>
 

@@ -63,27 +63,6 @@ const landingDir = path.resolve(here, '../../landing');
 
 const app = express();
 
-/**
- * CORS is open on purpose, and it is safe to be open only because of what this
- * API is: read-only public data, no authentication, no cookies, no session.
- * There is nothing a cross-origin caller can do that curl cannot, and letting
- * researchers query it from their own pages is a stated goal of the project.
- *
- * That stops being true the moment any endpoint accepts a credential. If auth
- * is ever added, this must become an allowlist and `credentials` must stay off
- * — an open CORS policy plus cookie auth is how a read API becomes a CSRF hole.
- */
-/*
- * CORS was deliberately wide open while the API was anonymous and read-only —
- * a cross-origin caller could do nothing `curl` could not. A session cookie
- * changes that completely: open CORS plus credentials is the textbook CSRF
- * hole, and STATUS.md has carried that warning since before there was auth to
- * make it real.
- *
- * So it is now an allowlist whenever sign-in is configured. Same-origin
- * requests carry no Origin header and are unaffected; this only governs who
- * may call the API from another site.
- */
 /*
  * Gzip, before anything that can produce a body — but only on the host that
  * needs it.
@@ -121,6 +100,48 @@ if (!process.env.VERCEL) {
   app.use(compression());
 }
 
+/**
+ * CORS, which follows sign-in rather than being a fixed policy.
+ *
+ * This was wide open, and the comment above it argued the case well: read-only
+ * public data, no authentication, no cookies, no session, so a cross-origin
+ * caller could do nothing `curl` could not — and letting researchers query the
+ * API from their own pages is a stated goal of the project. That comment ended
+ * by naming the exact condition under which it would stop being true: "if auth
+ * is ever added, this must become an allowlist".
+ *
+ * Auth was added. The policy changed with it and the comment did not, so the
+ * file carried a paragraph asserting there were no cookies directly above the
+ * allowlist that exists because there are. Same orphaning as the /healthz note
+ * that used to sit above the auth routes describing Render. Both blocks are now
+ * this one.
+ *
+ * WHAT IT ACTUALLY DOES, IN THE ORDER THE CALLBACK DECIDES
+ *
+ *   no Origin header      always allowed. That is same-origin navigation, curl,
+ *                         and anything server-to-server. A browser omits the
+ *                         header entirely rather than sending an empty one, so
+ *                         this is not a hole a page can climb through.
+ *
+ *   sign-in not configured   still wide open, and `credentials` is off. With no
+ *                         session there is no credential to ride along on a
+ *                         cross-site request, the original argument holds in
+ *                         full, and the open API researchers were promised is
+ *                         the one they get.
+ *
+ *   sign-in configured    ALLOWED_ORIGINS only, with `credentials` on. Open CORS
+ *                         plus a session cookie is the textbook way a read-only
+ *                         API becomes a CSRF hole, which STATUS.md warned about
+ *                         from before there was any auth to make it real.
+ *
+ * An empty ALLOWED_ORIGINS with sign-in on refuses every cross-origin caller
+ * rather than admitting all of them. A deployment that forgot to set the list
+ * should lose third-party access, not its session protection.
+ *
+ * `credentials` is tied to the same `isConfigured()` the allowlist is, so the
+ * two can never disagree — the mode where cookies are permitted from anywhere
+ * is not reachable from any environment.
+ */
 app.use(
   cors({
     credentials: auth.isConfigured(),

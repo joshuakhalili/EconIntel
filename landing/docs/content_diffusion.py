@@ -677,16 +677,54 @@ WORDMARK_VIEWBOX = {
 # The template author's own links go too. They are hidden by content.css so
 # hydration does not break, but the hrefs are still in the markup and still
 # resolve, so they are repointed as well rather than merely covered up.
+#
+# WHY THE LINKS INTO THE APP ARE ABSOLUTE URLS AND NOT PATHS
+#
+# This is the one decision in this file that looks wrong and is not, so it is
+# written down rather than left to be rediscovered.
+#
+# Framer's client router resolves EVERY href beginning with "/", "." or "#"
+# against its own route table, and an unmatched path does not fall through — it
+# falls back to the home route (`Si()` in framer.*.mjs ends `let f=i['/']; if(f)
+# return {routeId:f.routeId…}`). So an anchor written href="/login" is rendered
+# as href="./" and the sign-in link lands on the front page. The router knows
+# only "/", "/waitlist", "/thanks", "/legal/:slug" and "/404"; nothing else can
+# be expressed as a path.
+#
+# A previous attempt at this fix put "/login" here. It rebuilt cleanly, the
+# static HTML was correct, and the link still went to "/" in a browser, because
+# the check read the markup and the router rewrites on mount. An absolute URL on
+# another origin is the only shape the router leaves alone — which is exactly
+# why the template's author reached for absolute URLs in the first place.
+#
+# The cost is that the production domain is named here. assets/js/nav.js pays it
+# back: it catches the click and re-issues it against whatever origin the page
+# is being served from, so localhost and production behave identically and only
+# a reader with JavaScript disabled is sent to the absolute URL.
+
+APP_ORIGIN = "https://trydiffusion.vercel.app"
+
+# Every app path the landing page links into. nav.js is generated from this list,
+# so the two cannot drift.
+APP_PATHS = ("/login", "/overview")
 
 LINKS = {
-    # The primary CTA. Reading requires an account — free, but a login — so it
-    # points at the sign-in page rather than straight at the data.
-    '"/waitlist"': '"/login"',
+    # The primary CTA in the SSR markup. Only half the fix: the same buttons are
+    # re-rendered from the chunk as a page link rather than a URL, which is what
+    # CHUNK_PATCHES deals with. Kept because the markup is what a reader without
+    # JavaScript, and every crawler, actually gets.
+    '"/waitlist"': '"' + APP_ORIGIN + '/login"',
 
+    # The footer's "Project" column. The template author's four personal socials
+    # were relabelled in FOOTER as the project's own links, but only two of them
+    # became external links; "Sign in" and "The lenses" name pages of this site
+    # and have to arrive there. That they all pointed at the source repository
+    # was the single worst thing on the front page: the primary sign-in
+    # affordance opened someone's source code.
+    "https://www.instagram.com/liana.tudakova/": APP_ORIGIN + "/login",
+    "https://www.threads.com/@liana.tudakova": APP_ORIGIN + "/overview",
     "https://x.com/liana_tme": "https://github.com/joshuakhalili/EconIntel",
-    "https://www.threads.com/@liana.tudakova": "https://github.com/joshuakhalili/EconIntel",
     "https://www.linkedin.com/in/liana-tme/": "https://www.linkedin.com/in/joshuakhalili/",
-    "https://www.instagram.com/liana.tudakova/": "https://github.com/joshuakhalili/EconIntel",
     "https://lunaui.co": "https://github.com/joshuakhalili/EconIntel",
 
     # The footer's "Email" link. FOOTER replaces the visible address, but the
@@ -700,6 +738,12 @@ LINKS = {
     # attribution: it carried the template author's Google Ads campaign ids and
     # a gclid, so every click credited someone else's ad spend and handed
     # Google a referral from this site.
+    #
+    # BOTH SPELLINGS ARE NEEDED. The markup escapes the separators as &amp;; the
+    # chunk that re-renders the same anchor on mount writes raw &. Only the
+    # escaped one was here, so the pass fixed the HTML and the ads URL came
+    # straight back on hydration — visible in the DOM, invisible to any check
+    # that reads the built file.
     "https://www.framer.com/?utm_source=google&amp;utm_medium=adwords"
     "&amp;utm_campaign=22283959360_172357934061"
     "&amp;utm_content=746821181196_framer_e_c_g&amp;gad_source=1"
@@ -707,17 +751,77 @@ LINKS = {
     "&amp;gbraid=0AAAAAC3AKQU5Xc1UzR3PUe2mHBnm_iGbp"
     "&amp;gclid=CjwKCAjwrNrQBhBjEiwAoR4VOw9CRaI3zfldSqN_asliID8KFd4DeJWbDvOy3KKKZLqIZCBOrcWv6RoCw-YQAvD_BwE":
         "https://www.framer.com",
+    "https://www.framer.com/?utm_source=google&utm_medium=adwords"
+    "&utm_campaign=22283959360_172357934061"
+    "&utm_content=746821181196_framer_e_c_g&gad_source=1"
+    "&gad_campaignid=22283959360"
+    "&gbraid=0AAAAAC3AKQU5Xc1UzR3PUe2mHBnm_iGbp"
+    "&gclid=CjwKCAjwrNrQBhBjEiwAoR4VOw9CRaI3zfldSqN_asliID8KFd4DeJWbDvOy3KKKZLqIZCBOrcWv6RoCw-YQAvD_BwE":
+        "https://www.framer.com",
 }
 
-# Anchors in the template's own nav, repointed at real routes. Kept apart from
-# LINKS because these are in-page hashes in the source and become real
-# navigation here.
-NAV_LINKS = {
-    # The header's own nav anchors. `/overview` and not `/login`: these are the
-    # quiet text links, not the call to action, and a reader who is already
-    # signed in should land on the page rather than on a form.
-    '"#3356954461"': '"/overview"',
-    '"#1175957644"': '"/data"',
+# WHY THERE IS NO LONGER A NAV_LINKS TABLE
+#
+# It held two entries, '"#3356954461"' -> '"/overview"' and '"#1175957644"' ->
+# '"/data"', described as the header's own nav anchors. They were not anchors.
+# Both ids are SVG symbol references — <use href="#3356954461"/> — and the pass
+# rewrote them into <use href="/overview"/>, which asks the browser to fetch an
+# external SVG document from an app route. The result was two icons that failed
+# to resolve until hydration replaced them, and a 404 on /overview and /data on
+# every single page load, sitting in the console next to the real errors.
+#
+# The header's actual nav anchors are Home, The data, Lenses and FAQ, and they
+# are in-page hashes on the landing page itself. They were never touched by this
+# table and do not need to be.
+NAV_LINKS = {}
+
+# ---------------------------------------------------------------------------
+# Edits to Framer's own bundle, as opposed to its content
+# ---------------------------------------------------------------------------
+#
+# These are code, not copy, and they exist because the thing they fix cannot be
+# reached from the HTML. Applied to assets/js/*.mjs only, and EVERY ONE MUST
+# MATCH — the build fails if one does not. That rule is the point of the table:
+# the previous version of this file carried a link entry that read correctly and
+# silently matched nothing for weeks, and a content map that can no-op quietly
+# is worse than no content map.
+#
+# Both keys contain minified identifiers. If Framer's bundler renames one,
+# the build will stop and say which key went stale; re-derive it by searching
+# assets/js/script_main.*.mjs for the surrounding text quoted in each comment.
+
+CHUNK_PATCHES = {
+    # The three "Sign in to read" buttons. In the markup they are an href that
+    # LINKS can reach; in the chunk they are a page link — a webPageId resolved
+    # against the route table on mount, which is why they came back as
+    # ./waitlist however the HTML was written, and went to the reader through
+    # the 302 that exists to catch old bookmarks. e63xbjJOI is the retired
+    # waitlist page. The other occurrences of that id are scopeIds and the route
+    # table itself, so the whole link literal is matched, not the id.
+    "{href:{webPageId:`e63xbjJOI`},implicitPathVariables:void 0}":
+        "{href:`" + APP_ORIGIN + "/login`,implicitPathVariables:void 0}",
+
+    # Framer's on-page editor bootstrap, left in the clone. It resolves an
+    # EditorBar component by importing https://framer.com/edit/init.mjs on every
+    # page load, which then imports a chunk from app.framerstatic.com.
+    #
+    # It had been written off as harmless because it was seen failing. Checked on
+    # 3 Sep 2026 it does not fail: both URLs answer 200, so this was two requests
+    # to a third party and their code running on the front page of a site whose
+    # whole claim is that you can see where everything came from. Whether it
+    # errors on any given day is not the point.
+    #
+    # detach.py claims this in its docstring and only removes the localStorage
+    # hook in the markup; the import is in the chunk. Fixed here rather than
+    # there because detach.py runs before the pristine-mirror baseline, so a fix
+    # in it would only take effect on a full re-mirror, while this pass runs
+    # after every reset.
+    #
+    # Turning the ternary's test into a constant leaves the IIFE in the branch
+    # that is never taken, so the import is never evaluated and nothing is cut
+    # out of the middle of minified code. detach.py neutralises the badge loader
+    # the same way, with `false&&`.
+    "EditorBar:T===void 0?void 0:": "EditorBar:!0?void 0:",
 }
 
 # ---------------------------------------------------------------------------
@@ -770,3 +874,58 @@ img[src*="DFzG1yXny0N4VBIJify9JjzxUVE"] {
   display: none !important;
 }
 """
+
+# ---------------------------------------------------------------------------
+# The other half of the absolute-URL decision
+# ---------------------------------------------------------------------------
+#
+# Appended to assets/js/nav.js by the build rather than written into it, because
+# nav.js is harden.py's file and lives in the pristine-mirror commit: reset.sh
+# restores it from that commit, so anything hand-added to it disappears on the
+# next rebuild. Same reasoning as legal/index.html and sitemap.xml further down
+# build-diffusion.py.
+#
+# Appended rather than given its own file so that all of this page's click
+# handling is in one place, and so there is no second request and no question
+# about which of two capture-phase listeners registered first.
+
+NAV_APP_LINKS_JS = """
+
+/* Appended by docs/build-diffusion.py.
+
+   Framer's router cannot express a link to a page it does not own, so the
+   links into the app carry an absolute production URL — see the long note in
+   docs/content_diffusion.py above LINKS. That is right for a reader with no
+   JavaScript and wrong for everyone else: on localhost it would leave the
+   machine, and on any preview deployment it would jump to production. So the
+   click is caught here and re-issued against whatever origin is actually
+   serving the page.
+
+   This handler deliberately claims links marked target="_blank", which the one
+   above skips. The footer component opens external links in a new tab, and
+   these stopped being external the moment they started pointing at our own app;
+   a sign-in link that opens a second tab is a bug, not a preference. A modified
+   click is still left alone, so cmd-click opens the absolute URL — production —
+   which is correct there and merely surprising on localhost. */
+var APP_ORIGIN = "%(origin)s";
+var APP_PATHS = %(paths)s;
+
+document.addEventListener("click", function (e) {
+  if (e.defaultPrevented || e.button !== 0) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  var a = e.target && e.target.closest && e.target.closest("a[href]");
+  if (!a) return;
+  var url;
+  try {
+    url = new URL(a.getAttribute("href"), location.href);
+  } catch (err) { return; }
+  if (url.origin !== APP_ORIGIN && url.origin !== location.origin) return;
+  if (APP_PATHS.indexOf(url.pathname) === -1) return;
+  e.stopPropagation();
+  e.preventDefault();
+  window.location.assign(url.pathname + url.search + url.hash);
+}, true);
+""" % {
+    "origin": APP_ORIGIN,
+    "paths": "[" + ", ".join('"%s"' % p for p in APP_PATHS) + "]",
+}

@@ -47,11 +47,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from content_diffusion import (  # noqa: E402
     REPLACEMENTS, HIDE_CSS, WORDMARK_VIEWBOX, LINKS, NAV_LINKS,
+    CHUNK_PATCHES, NAV_APP_LINKS_JS,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
 MARKER = ROOT / ".content-applied"
 HIDE_CSS_PATH = ROOT / "assets/css/content.css"
+NAV_JS_PATH = ROOT / "assets/js/nav.js"
 
 GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
 
@@ -150,15 +152,47 @@ def main():
     # plain replacement of the quoted value, which is why LINKS keys carry
     # their own quotes — an unquoted "/waitlist" would also match the string
     # inside a route table and break navigation.
+    #
+    # HITS ARE COUNTED PER KEY, AND A KEY THAT MATCHED NOTHING IS AN ERROR.
+    # `'"/waitlist"': '"/login"'` sat here reading perfectly and matching nothing
+    # for weeks, because the anchors it was meant to fix are page links resolved
+    # from the chunk rather than hrefs in the markup. A silent no-op in a link
+    # table is the worst kind of bug in this build: it looks like the fix.
+    all_links = {**LINKS, **NAV_LINKS}
+    link_hits = {k: 0 for k in all_links}
     link_fixes = 0
     for path in [p for p in targets() if p.suffix in {".html", ".mjs"}]:
         text = path.read_text(encoding="utf-8", errors="surrogateescape")
         before = text
-        for old_href, new_href in {**LINKS, **NAV_LINKS}.items():
+        for old_href, new_href in all_links.items():
+            link_hits[old_href] += text.count(old_href)
             text = text.replace(old_href, new_href)
         if text != before:
             path.write_text(text, encoding="utf-8", errors="surrogateescape")
             link_fixes += 1
+
+    # Code edits in Framer's own bundle. Same rule, enforced harder: these are
+    # the fixes that cannot be expressed as content, so if one stops matching
+    # the build has no business succeeding.
+    chunk_hits = {k: 0 for k in CHUNK_PATCHES}
+    chunk_fixes = 0
+    for path in sorted((ROOT / "assets/js").glob("*.mjs")):
+        text = path.read_text(encoding="utf-8", errors="surrogateescape")
+        before = text
+        for old, new in CHUNK_PATCHES.items():
+            chunk_hits[old] += text.count(old)
+            text = text.replace(old, new)
+        if text != before:
+            path.write_text(text, encoding="utf-8", errors="surrogateescape")
+            chunk_fixes += 1
+
+    # The app-link click handler, appended to harden.py's nav.js. See the note
+    # on NAV_APP_LINKS_JS: nav.js is restored from the pristine-mirror commit by
+    # reset.sh, so this has to be written by the build, not committed into it.
+    if NAV_JS_PATH.exists():
+        nav = NAV_JS_PATH.read_text(encoding="utf-8")
+        if "APP_ORIGIN" not in nav:
+            NAV_JS_PATH.write_text(nav + NAV_APP_LINKS_JS, encoding="utf-8")
 
     # The wordmark's viewBox is the old word's advance width; a longer word
     # clips against it. See the note in content_diffusion.py.
@@ -222,7 +256,22 @@ def main():
           f"across {touched} files {DIM}({sum(counts.values())} substitutions){RESET}")
     print(f"{GREEN}✓{RESET} content.css written and linked into {linked} pages")
     print(f"{GREEN}✓{RESET} wordmark viewBox refitted in {wordmark_fixes} file(s)")
-    print(f"{GREEN}✓{RESET} links repointed in {link_fixes} file(s)")
+    print(f"{GREEN}✓{RESET} links repointed in {link_fixes} file(s) "
+          f"{DIM}({sum(link_hits.values())} hrefs){RESET}")
+    print(f"{GREEN}✓{RESET} bundle patched in {chunk_fixes} chunk(s) "
+          f"{DIM}({sum(chunk_hits.values())} sites){RESET}")
+    print(f"{GREEN}✓{RESET} app-link handler appended to assets/js/nav.js")
+
+    dead = ([("link", k) for k, n in link_hits.items() if not n]
+            + [("bundle", k) for k, n in chunk_hits.items() if not n])
+    if dead:
+        print(f"\n{RED}✗ {len(dead)} link/bundle key(s) matched nothing{RESET}")
+        for kind, k in dead:
+            print(f"  {RED}{kind:6}{RESET} {DIM}{k[:96]}{RESET}")
+        print(f"{DIM}An entry that matches nothing is not a fix. Either the "
+              f"template moved the string, or it was never there. Reset before "
+              f"retrying.{RESET}")
+        return 1
 
     if missed:
         # A key that matched nothing is usually a typo against the template, or
@@ -243,11 +292,16 @@ def main():
     # into "p. 221Channel". The page still served 200 and still looked like a
     # page. Nothing but the browser console said otherwise.
     #
-    # So every chunk is parsed before this build is allowed to succeed.
+    # So every chunk is parsed before this build is allowed to succeed. nav.js is
+    # in the list too, because this pass now appends to it: a handler that does
+    # not parse takes every link on the site with it, and silently, since the
+    # page still renders.
     import subprocess
 
     broken = []
-    for chunk in sorted((ROOT / "assets/js").glob("*.mjs")):
+    for chunk in sorted((ROOT / "assets/js").glob("*.mjs")) + [NAV_JS_PATH]:
+        if not chunk.exists():
+            continue
         r = subprocess.run(["node", "--check", str(chunk)],
                            capture_output=True, text=True)
         if r.returncode != 0:

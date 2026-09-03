@@ -32,6 +32,17 @@ PORT = 8511
 HOPS = sys.argv[1:] or [r.strip("/") for r in CFG["pages"]
                         if r not in ("/", "/404")]
 
+# Pages of the mirror that this site deliberately no longer links to. They stay
+# in clone.json because that file records what was cloned, and they stay on disk
+# because Express redirects both to /login for the sake of old bookmarks — but
+# nothing on the site should offer them any more.
+#
+# Without this the check graded the fix as the failure: once the calls to action
+# stopped going to /waitlist, the /waitlist hop found no link and counted itself
+# wrong, on a site that was finally correct. A retired route is checked the other
+# way round — an unlinked one passes, and a link to one is the failure.
+RETIRED = {"waitlist", "thanks"}
+
 
 def main():
     srv = subprocess.Popen(["node", str(ROOT / "docs/serve.mjs"), str(PORT)],
@@ -65,9 +76,17 @@ def main():
                     link = pg.locator(
                         f'a[href$="{hop}"], a[href$="{hop}/"]').filter(
                         visible=True).first
-                    if link.count() == 0:
+                    if link.count() == 0 and hop not in RETIRED:
                         link = pg.get_by_text(hop, exact=False).filter(
                             visible=True).first
+                    if hop in RETIRED:
+                        linked = link.count() > 0
+                        failures += 1 if linked else 0
+                        verdict = ("STILL LINKED" if linked else "retired ok  ")
+                        note = (f"something on {origin} still offers it" if linked
+                                else "nothing links here, as intended")
+                        print(f"  {verdict} {hop:27} -> {note}")
+                        continue
                     if link.count() == 0:
                         failures += 1
                         print(f"  NOLINK {hop:33} -> nothing on {origin} links here")
