@@ -505,6 +505,58 @@ jobs:
           # Reported, not raised. The step below applies it.
           exit 0
 
+      # The palette gate, in the same place and for the same reason as the one
+      # above: it reads the database, so a front-end CI job with no DATABASE_URL
+      # cannot run it, and the moment it can go wrong is the moment the data
+      # changes.
+      #
+      # What it catches is a chart that a reader meets as a bordered grey box.
+      # `ChartGroup` refuses to draw more series than there are colour-blind-safe
+      # hues, which is the right behaviour and the wrong outcome — the refusal is
+      # honest and the page is still missing its evidence. A seed that adds a
+      # ninth country to a group silently blanks a published page, and that is
+      # exactly how the eight-country youth-unemployment chart broke without
+      # anyone noticing: only the adoption panel was ever written down.
+      #
+      # Reported rather than raised, like `check:data`, so one red thing does not
+      # hide another. The policy step below decides.
+      - name: Chart forms
+        id: charts
+        if: always()
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          npm run check:charts 2>&1 | tee check-charts.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+          if [ "$status" = "0" ]; then
+            echo "check:charts passed."
+            exit 0
+          fi
+
+          {
+            echo "### ❌ Chart forms gate failed"
+            echo ""
+            echo "A chart group holds more series than there are validated hues and has no"
+            echo "declared form, so the page carrying it renders a refusal box instead of"
+            echo "its evidence. Either give the group a row in \`chart_forms\` naming a form"
+            echo "that does not encode by colour, or split it to at most six members."
+            echo ""
+            echo '```'
+            sed 's/\x1b\[[0-9;]*m//g' check-charts.log | tail -n 40
+            echo '```'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error title=Chart forms::npm run check:charts exited $status"
+
+          # Reported, not raised. The step below applies it.
+          exit 0
+
       # LAST, so everything above has already been written to the summary.
       - name: Apply the failure policy
         if: always()
@@ -512,9 +564,11 @@ jobs:
           VERDICT: ${{ steps.policy.outputs.verdict }}
           REASON: ${{ steps.policy.outputs.reason }}
           DATA_STATUS: ${{ steps.data.outputs.status }}
+          CHARTS_STATUS: ${{ steps.charts.outputs.status }}
         run: |
           echo "ingestion  — $VERDICT — $REASON"
           echo "check:data — exit ${DATA_STATUS:-'(never reported)'}"
+          echo "check:charts — exit ${CHARTS_STATUS:-'(never reported)'}"
 
           failed=0
           if [ "$VERDICT" != "pass" ]; then failed=1; fi
@@ -522,5 +576,6 @@ jobs:
           # Unset means the data step never reached its own reporting line — it
           # crashed, or the job was cut short. An absent answer is not a pass.
           if [ "${DATA_STATUS:-1}" != "0" ]; then failed=1; fi
+          if [ "${CHARTS_STATUS:-1}" != "0" ]; then failed=1; fi
 
           exit "$failed"

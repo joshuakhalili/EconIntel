@@ -389,3 +389,79 @@ describe('check:vercel — the committed config against the HTML being served', 
     assert.equal(status, 1);
   });
 });
+
+/*
+ * check:charts — the palette ceiling.
+ *
+ * This gate is the one the brief asks for by name: "a new gate that fails when
+ * any chart_group exceeds SERIES_COLORS.length". It had no mutation test, which
+ * on a gate is the same as having no gate — `check-routes` shipped for months
+ * unable to see a double-quoted route, and `check-contrast` unable to see a
+ * seventh hue, both while passing.
+ *
+ * It queries the database at import, so it cannot simply be imported here. The
+ * decision itself is a pure exported function with no dependencies, so it is
+ * lifted out of the SHIPPED SOURCE and evaluated — the logic under test is the
+ * logic that runs, not a copy of it that can drift.
+ */
+describe('check:charts — a chart may not hold more series than there are hues', () => {
+  const source = readFileSync(
+    new URL('../../scripts/check-chart-groups.js', import.meta.url),
+    'utf8'
+  );
+
+  const classifyGroups = (() => {
+    const start = source.indexOf('export function classifyGroups');
+    assert.ok(start !== -1, 'classifyGroups is gone — the gate has been rewritten');
+    const body = source.slice(start).replace('export function', 'function');
+    const end = body.indexOf('\n}\n');
+    assert.ok(end !== -1, 'could not bound classifyGroups');
+    // eslint-disable-next-line no-new-func
+    return new Function(`${body.slice(0, end + 2)}\nreturn classifyGroups;`)();
+  })();
+
+  test('the ceiling is derived from the palette, never written down twice', () => {
+    assert.match(
+      source,
+      /import \{[^}]*SERIES_COLORS[^}]*\} from '\.\.\/src\/client\/lib\/format\.js'/,
+      'the gate must read the palette rather than restate its size'
+    );
+    assert.match(
+      source,
+      /const MAX_SERIES = SERIES_COLORS\.length/,
+      'a literal ceiling drifts away from the palette the moment a hue is added ' +
+        'or removed, and then the gate is guarding a number nobody uses'
+    );
+    assert.doesNotMatch(source, /const MAX_SERIES = \d/);
+  });
+
+  test('a group over the ceiling with no declared form is caught', () => {
+    const { over, exempt } = classifyGroups(
+      [{ chart_group: 'ai-adoption-panel', members: 16, form: null }],
+      6
+    );
+    assert.equal(over.length, 1, 'sixteen series against six hues must be reported');
+    assert.equal(exempt.length, 0);
+  });
+
+  test('a group at the ceiling is not caught — the boundary is > and not >=', () => {
+    const { over } = classifyGroups([{ chart_group: 'six', members: 6, form: null }], 6);
+    assert.equal(over.length, 0, 'six series in six hues is exactly drawable');
+  });
+
+  test('a declared non-colour form is exempt, because colour stops encoding', () => {
+    const { over, exempt } = classifyGroups(
+      [{ chart_group: 'ai-adoption-panel', members: 44, form: 'ranked-bars' }],
+      6
+    );
+    assert.equal(over.length, 0, 'ranked bars use one hue, so the ceiling does not apply');
+    assert.equal(exempt.length, 1, 'and it is still reported, as an exemption rather than silence');
+  });
+
+  test('an absent form means a line chart, not an exemption', () => {
+    // The dangerous default is the other way round: treating "no ruling" as
+    // "someone must have decided" is how a blanked page ships unnoticed.
+    const { over } = classifyGroups([{ chart_group: 'g', members: 8 }], 6);
+    assert.equal(over.length, 1);
+  });
+});
