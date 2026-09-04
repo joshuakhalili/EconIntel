@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { PreferencesProvider } from '@/lib/preferences';
 import { ContextDrawerProvider } from '@/components/chrome/ContextDrawer';
 import AppShell from '@/components/chrome/AppShell';
@@ -36,6 +36,7 @@ const IndicatorPage = lazy(() => import('@/routes/IndicatorPage'));
 const NewsPage = lazy(() => import('@/routes/NewsPage'));
 const PipelinePage = lazy(() => import('@/routes/PipelinePage'));
 const SimulationPage = lazy(() => import('@/routes/SimulationPage'));
+const NotFoundPage = lazy(() => import('@/routes/NotFoundPage'));
 
 /*
  * The Suspense boundary these need lives in `AppShell`, wrapped around the
@@ -82,10 +83,20 @@ const router = createBrowserRouter([
       { path: 'news', element: <NewsPage /> },
       { path: 'pipeline', element: <PipelinePage /> },
       { path: 'simulate/:slug', element: <SimulationPage /> },
-      // An unknown path lands on the overview rather than a lens, so a stale
-      // or mistyped link explains where it has arrived instead of dropping a
-      // reader into the middle of an argument.
-      { path: '*', element: <Navigate to="/" replace /> },
+      // An unknown path gets a page that SAYS it is unknown.
+      //
+      // This was `<Navigate to="/" replace />`, which rendered the overview
+      // instead — the URL changed under the reader and they were shown a page
+      // that looked correct, so a mistyped link read as the sender being wrong
+      // about the content rather than about the address. A silent redirect to
+      // something plausible is worse than an error, because there is nothing
+      // to notice.
+      //
+      // The status code is a separate problem and is fixed on the server side:
+      // an unknown /q/:slug is resolved against the database in api/index.js
+      // and answered 404, because a rewrite that serves the shell tells every
+      // link checker and archive that a dead page is live.
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]);

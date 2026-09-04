@@ -41,6 +41,20 @@
 -- 2021. It cannot show a smooth global diffusion curve and nothing built on it
 -- should imply one. Anything that animates between these values is showing
 -- interpolation between four surveys, and has to say so.
+--
+-- HOW IT IS DRAWN, AND WHERE THAT IS RECORDED
+--
+-- Sixteen series cannot be told apart by six validated hues, so this group did
+-- not draw at all for as long as it existed: ChartGroup refused it and
+-- /q/adoption rendered a grey "Not drawn" box where its evidence should be.
+--
+-- db/seeds/037_chart_form.sql now rules it a RANKED HORIZONTAL BAR CHART — one
+-- bar per country in one hue, sorted by the latest reading — and splits it into
+-- the two panels the paragraph above argues for, so a Eurostat reading is never
+-- ranked against an OECD one. Every bar carries its own period, which is what
+-- keeps the United States' 2021 reading from being read as a 2025 one beside
+-- Denmark's. The form lives in `chart_forms` rather than in this file so that
+-- one table answers "how does this group draw" for every group.
 
 INSERT INTO indicators (
   id, name, description, pillar, quantity_kind, cadence, confidence_tier,

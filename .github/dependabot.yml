@@ -1,0 +1,61 @@
+# Routine dependency updates.
+#
+# WHY THIS EXISTS
+#
+# The repository has automated security fixes enabled, which produces a PR only
+# when GitHub raises an advisory. Nothing produced a PR for ordinary version
+# drift, so the lockfile aged silently between whatever day someone last ran
+# `npm install` and now — and the two open `qs` advisories showed why that
+# matters: they cannot be fixed inside express 4 at all (express 4.22.2 pins
+# `qs: ~6.15.1`, the fix landed in 6.16.0), so waiting for a security PR that
+# can never arrive is the whole failure.
+#
+# Weekly, not daily. A PR every morning is a PR nobody reads, which is the same
+# disease as a workflow that is red every morning.
+version: 2
+
+updates:
+  # The Actions themselves. Cheap to keep current, and a pinned-by-major action
+  # (actions/checkout@v4) silently stops receiving fixes once a v5 exists.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Deliberately low. This project has one maintainer; a queue longer than
+    # this is a queue that gets closed unread rather than reviewed.
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
+    # GROUPED, because 40-odd separate PRs is how a dependency bot gets muted.
+    #
+    # Patch and minor updates travel together and are safe to merge on a green
+    # CI run — which now exists (`.github/workflows/ci.yml`), and is the thing
+    # that makes accepting a grouped bump reasonable rather than hopeful.
+    # Majors stay separate: each one needs reading.
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Express 4 → 5 is a deliberate migration, not a bump: the `app.get('*')`
+      # wildcards in src/server/app.js become `'/*splat'` and `res.sendfile` is
+      # gone. It should arrive as planned work, not as an overnight PR.
+      - dependency-name: express
+        update-types:
+          - version-update:semver-major

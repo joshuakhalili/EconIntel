@@ -100,9 +100,15 @@ export default function CircularFinancing({ accent }) {
             reader meets the claim and its standing in the same breath — putting
             it below the cards means it is read after the arrangements have
             already been believed. */}
+        {/* "not the same as WHAT happened". This read "not the same as as
+            happened" — a doubled word and no object — in the amber warning on
+            the one section of the site that makes an accusation-shaped claim
+            about named companies. A broken sentence there reads as
+            carelessness at exactly the moment the page is asking to be
+            trusted. */}
         <p className="prose-measure mt-3 text-body-regular leading-relaxed text-warn">
           {verified === 0
-            ? `Every one of these ${edges.length} deals is drawn from public reporting and none has been checked by a person. Amounts and dates are as announced, which is not the same as as happened.`
+            ? `Every one of these ${edges.length} deals is drawn from public reporting and none has been checked by a person. Amounts and dates are as announced, which is not the same as what happened.`
             : `${verified} of these ${edges.length} deals have been checked by a person against their sources; the remaining ${edges.length - verified} are drawn from public reporting as announced.`}
         </p>
 
@@ -204,11 +210,75 @@ function Leg({ label, amountUsd, legs, accent, reversed = false }) {
             {' · '}
             {leg.kind.replace(/_/g, ' ')}
             {leg.amount_usd ? ` · ${usd(Number(leg.amount_usd))}` : ' · amount not disclosed'}
+            <Citations citations={leg.citations} />
           </li>
         ))}
       </ul>
     </div>
   );
+}
+
+/**
+ * The source behind one deal, when the payload carries it.
+ *
+ * WHY THIS IS DEFENSIVE RATHER THAN REQUIRED
+ *
+ * `investment_edges` today exposes `citation_count` — a number — and not the
+ * citations themselves, so a reader is told a deal has two sources and given no
+ * way to open either. The URLs exist: `event_citations` holds url, publisher,
+ * is_primary, publisher_class and http_status per event. Adding them to the
+ * payload is a server change owned elsewhere; this renders them the moment they
+ * arrive and renders nothing until then.
+ *
+ * EXPECTED SHAPE, so the two halves cannot be built past each other:
+ *
+ *   edge.citations = [{ url, publisher, is_primary }]   (a leg carries the same)
+ *
+ * `url` is the only required field. `publisher` becomes the link text and falls
+ * back to the URL's host, so a payload that omits it still reads as a source
+ * rather than as a bare address. `is_primary` sorts the filing above the news
+ * write-up, which is the order this project's own decisions file argues for.
+ * Anything else on the row is ignored rather than assumed.
+ *
+ * Two links, not all of them: this sits inside a caption line under a figure,
+ * and a row that wraps to four lines of URLs stops being a ledger.
+ */
+function Citations({ citations }) {
+  if (!Array.isArray(citations) || citations.length === 0) return null;
+
+  const usable = citations.filter((c) => typeof c?.url === 'string' && /^https?:\/\//.test(c.url));
+  if (usable.length === 0) return null;
+
+  const ordered = [...usable].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
+  const shown = ordered.slice(0, 2);
+
+  return (
+    <>
+      {shown.map((citation) => (
+        <span key={citation.url}>
+          {' · '}
+          <a
+            href={citation.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="tint text-signal hover:text-text-primary"
+          >
+            {citation.publisher || hostOf(citation.url)}
+          </a>
+        </span>
+      ))}
+      {ordered.length > shown.length ? ` · +${ordered.length - shown.length} more` : ''}
+    </>
+  );
+}
+
+/** The host, for a citation that arrived without a publisher name. */
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return 'source';
+  }
 }
 
 /**
@@ -229,10 +299,30 @@ function Ledger({ edges }) {
   return (
     <div className="mt-10 border-t border-border-button-default pt-6">
       <h3 className="text-title-3-medium text-text-primary">Every deal held</h3>
+      {/* NO HARDCODED COUNTS HERE.
+          This read "Nine more were found and rejected — six of them because the
+          source URL was dead". Both numbers were true when written and both are
+          fixed strings: the rejection ledger is docs/financing/decisions.json,
+          which grows every time the research table is re-run, and nothing in
+          this component reads it. A sentence that silently stops matching its
+          own evidence is worse than one that does not count.
+          "The reasons are recorded in the repository" also pointed a reader at
+          a Git repository as if that were a citation. It is now a link to the
+          file, at /blob/HEAD/ so it resolves whatever the default branch is
+          called. */}
       <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
-        All {edges.length}, circular or not. Nine more were found and rejected —
-        six of them because the source URL was dead — and the reasons are
-        recorded in the repository.
+        All {edges.length}, circular or not. Deals that were found and rejected
+        — most often because the source link was dead — are listed with their
+        reasons in{' '}
+        <a
+          href="https://github.com/joshuakhalili/EconIntel/blob/HEAD/docs/financing/decisions.json"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="tint text-signal hover:text-text-primary"
+        >
+          the public decisions file
+        </a>
+        , one entry per row, each naming which source failed and how.
       </p>
 
       <ul className="mt-5 flex flex-col">
@@ -251,6 +341,7 @@ function Ledger({ edges }) {
             </span>
             <span className="text-caption-1-regular text-text-tertiary">
               {edge.kind.replace(/_/g, ' ')}
+              <Citations citations={edge.citations} />
             </span>
             <span className="figure w-24 shrink-0 text-right text-caption-1-regular text-text-primary">
               {edge.amount_usd ? usd(Number(edge.amount_usd)) : '—'}

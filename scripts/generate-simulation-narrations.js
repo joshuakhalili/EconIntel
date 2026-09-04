@@ -27,13 +27,34 @@
  * than an exact position, so more of it is covered — changes what `input_hash`
  * means and is deliberately not done here.)
  *
- * WHY THE GROUNDING IS THE RUN, VERBATIM
+ * WHY THE GROUNDING IS SERIES ROWS AND NOT THE RUN VERBATIM
  *
- * `runSimulation()` already returns the numbers the page will draw. Handing the
- * model anything else — a re-derived summary, a pre-computed change — would
- * mean the prose describes figures that no chart shows, which is the exact
- * failure the lens generator's `decimals` note was written about. So the run's
- * own output is the grounding, unmodified.
+ * It used to be the run object, unmodified — `{scenario, country, shock,
+ * baseline, years}` — on the reasoning that anything else would be a re-derived
+ * summary describing figures no chart shows. The reasoning is right; the shape
+ * was wrong, in two ways that were only visible from the reader's side.
+ *
+ * `NarrationBlock` on the client reads `grounding.series`. That object has no
+ * `series` key, so the disclosure button rendered "Show the 0 figures it was
+ * given" and expanding it printed "This is the whole of what the model
+ * received. It was permitted to write these numbers and no others…" above an
+ * EMPTY LIST. That paragraph is the component's entire reason for existing, and
+ * a page claiming a complete audit trail while showing nothing is worse than a
+ * page that claims nothing.
+ *
+ * The gate could not read it either. `wrongDirection()` finds the movements a
+ * grounding asserts, and a run object states them structurally rather than as
+ * `previous`/`latest` — so it found none, gave up, and every simulation
+ * narration went out with the direction check inert. It has since been taught
+ * the projection shape as well (see `lib/narration.js`), so the check now works
+ * on both; this end is fixed too because one shape serving both readers is
+ * better than two ends that have to be kept agreeing.
+ *
+ * So: SERIES ROWS, exactly the shape a lens builds, and nothing else in the
+ * grounding but the scenario's name and the country's code. Every number the
+ * model may write is a row the reader can see, and every row is a figure the
+ * page itself draws. That last clause is the constraint that decides what goes
+ * in — see `SERIES` below.
  *
  *     node scripts/generate-simulation-narrations.js                 all published
  *     node scripts/generate-simulation-narrations.js --force         regenerate
@@ -46,9 +67,13 @@ import {
   getScenario,
   runSimulation,
   narrationScope,
+  pruneStaleRuns,
 } from '../src/server/repositories/simulations.js';
-import { narrate, PROMPT_VERSION } from '../src/server/lib/narration.js';
-import { runHash } from '../src/server/lib/simulation.js';
+import {
+  narrate,
+  buildSimulationGrounding,
+  PROMPT_VERSION,
+} from '../src/server/lib/narration.js';
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -76,8 +101,9 @@ const INSTRUCTION = [
   'Describe what this economic model projects, in two sentences.',
   'These are MODELLED projections, not measurements and not a forecast of what',
   'will happen. Say so. Refer to periods as "year one", "year five" and so on —',
-  'never as calendar years. Compare the projected path against the baseline',
-  'given below, which is where the model says things sit with no injection.',
+  'never as calendar years. Each figure below is given as its no-injection',
+  'baseline followed by its projected value at the end of the horizon; say which',
+  'way each one moved.',
 ].join(' ');
 
 const scenarios = only
@@ -131,28 +157,43 @@ for (const { slug } of scenarios) {
     }
 
     /*
-     * The grounding is the run's own numbers, and NOTHING ELSE.
+     * A run the page refuses to draw must not be narrated.
      *
-     * `years`, `baseline` and `shock` are exactly what the page draws. The
-     * narration cache is keyed on the same hash the run cache uses, so the
-     * page can find this row again from the inputs alone.
+     * `validity.ok` is false when the equations left the range where a result
+     * can exist — negative unemployment, most often — and `SimulationChart`
+     * then draws only up to the first impossible year, or nothing. Prose written
+     * about numbers the reader is not being shown is unauditable by
+     * construction, and prose written about an impossible number is worse than
+     * that. The default position of the shipped scenario is well inside the
+     * range; this is here so that a default moved later cannot quietly start
+     * narrating a refusal.
      */
-    const grounding = {
-      scenario: scenario.name,
-      country,
-      shock: run.shock,
-      baseline: run.baseline,
-      years: run.years,
-    };
+    if (run.validity && run.validity.ok === false) {
+      console.log(
+        `  ${RED}range${RESET} ${label.padEnd(24)} the model leaves the possible range at year ` +
+          `${run.validity.first_invalid_year} — the page refuses to draw it, so nothing is narrated`
+      );
+      skipped += 1;
+      continue;
+    }
+
+    const grounding = buildSimulationGrounding(scenario.name, country, run);
 
     const result = await narrate({
       scope: narrationScope(slug, country),
       grounding,
       instruction: INSTRUCTION,
       force,
-      /* The hash must match what `runSimulation()` looks up, or the page will
-         never find what this script writes. Same function, same inputs. */
-      inputHash: runHash({ scenarioId: scenario.id, countryIso3: country, inputs: defaults }),
+      /*
+       * The hash `runSimulation()` itself used, handed back by it.
+       *
+       * This used to recompute it here — "same function, same inputs" — which
+       * was true until `runHash` started keying on the coefficients as well, at
+       * which point a recomputation from `defaults` alone would have written
+       * every narration under a hash the page never looks up. One computation,
+       * no second place to keep in step.
+       */
+      inputHash: run.input_hash,
     });
 
     if (!result) {
@@ -175,6 +216,24 @@ console.log(
   `\n${written} written · ${cached} already cached · ${rejected} rejected by the gate` +
     (skipped ? ` · ${skipped} skipped` : '')
 );
+
+/*
+ * Housekeeping, here because here is where it is always due.
+ *
+ * A MODEL_VERSION bump invalidates every cached run, and the prose describing
+ * those runs has to be rewritten against the new numbers — so this script is
+ * what runs after a bump, every time. The rows it removes were already
+ * unreachable before it started (`model_version` is in the cache key), and the
+ * ones the v2 → v3 bump left behind are the pre-fix numbers that drew negative
+ * unemployment. Reported rather than silent: a delete nobody sees is how a
+ * table quietly loses something it needed.
+ */
+const pruned = await pruneStaleRuns();
+if (pruned > 0) {
+  console.log(
+    `${DIM}${pruned} cached run(s) from a superseded model version removed.${RESET}`
+  );
+}
 
 /* Exit 0 on a rejection — the gate working is not the run failing. See the
    note at the bottom of generate-narrations.js. */

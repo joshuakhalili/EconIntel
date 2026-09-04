@@ -38,9 +38,28 @@ const source = readFileSync(APP_JSX, 'utf8');
  * source rather than an import: importing App.jsx pulls in React, every route
  * component and the whole client bundle, which a build gate has no business
  * doing.
+ *
+ * ALL THREE QUOTE STYLES, and that is not decoration.
+ *
+ * This matched `'([^']+)'` — single quotes only — for its whole life, which
+ * meant the one thing it exists to catch was invisible to it in the form it is
+ * most likely to arrive in. A route written `{ path: "methodology" }` was not
+ * read out of App.jsx at all, so it could not be compared against the rewrite
+ * list, so the gate printed a tick and the deep link 404d in production.
+ * Verified: with a double-quoted route inserted, the old regex still reported
+ * `✓ every app route has a deploy rewrite (10 routes)`.
+ *
+ * Which quote a route is written with is a formatting accident — a paste, a
+ * different editor, a Prettier config — not a decision anyone makes, so a gate
+ * that depends on it is a gate that fails at random.
+ *
+ * The capture group is back-referenced so the closing quote must match the
+ * opening one; a template literal carrying `${…}` is captured verbatim and
+ * will not match any rewrite, which fails the gate loudly rather than
+ * silently ignoring a route nobody can resolve statically.
  */
-const declared = [...source.matchAll(/\bpath:\s*'([^']+)'/g)]
-  .map(([, value]) => value)
+const declared = [...source.matchAll(/\bpath:\s*(['"`])([^'"`\n]+)\1/g)]
+  .map(([, , value]) => value)
   // `*` is the client-side not-found redirect. It cannot be a rewrite: naming
   // it would claim every path on the domain, landing page included.
   //

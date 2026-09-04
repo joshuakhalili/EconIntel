@@ -8,10 +8,25 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { fmt, fmtDate } from '@/lib/format';
+import { fmtDate } from '@/lib/format';
 import { useSeriesPalette, colorAt } from './palette';
+import {
+  buildChartModel,
+  projectedKey,
+  readProjectedKey,
+  describeSeriesChart,
+  seriesTableModel,
+} from './chartModel';
 import ChartTooltip from './ChartTooltip';
+import ChartDataTable from './ChartDataTable';
 import SeriesLegend from './SeriesLegend';
+
+/*
+ * The thirteen chart honesty behaviours this project treats as non-negotiable
+ * are written down once, next to this file, in HONESTY.md — with the file and
+ * line implementing each, and which of them a test can reach. Six of them are
+ * in this component. Read it before changing anything here.
+ */
 
 /**
  * The line chart.
@@ -37,22 +52,13 @@ import SeriesLegend from './SeriesLegend';
  *     splitProjected.
  */
 
-/**
- * Row key for the dashed projected half of a series.
- *
- * A suffix rather than a parallel structure because Recharts addresses data by
- * string key, and ChartTooltip has to be able to get back to the series it
- * belongs to — see readProjectedKey.
+/*
+ * Re-exported rather than moved outright: ChartTooltip imports
+ * `readProjectedKey` from this module, and the pair reads as part of the chart
+ * even though it now lives in chartModel.js so a test can reach it.
  */
-export function projectedKey(label) {
-  return `${label} (projected)`;
-}
+export { projectedKey, readProjectedKey };
 
-/** The series label behind a projected key, or null if this is not one. */
-export function readProjectedKey(key) {
-  const suffix = ' (projected)';
-  return typeof key === 'string' && key.endsWith(suffix) ? key.slice(0, -suffix.length) : null;
-}
 export default function LineChart({
   series = [],
   cadence = 'monthly',
@@ -113,6 +119,20 @@ export default function LineChart({
           Axis does not start at 0 — index scale
         </p>
       )}
+      {/*
+        Recharts renders bare SVG: no role, no label, no text alternative. To a
+        screen reader every chart on this site was silence, on a site whose
+        whole argument is that you should check the working. `role="img"` plus
+        a label built from the same points the lines are drawn from is the
+        equivalent of glancing at it; the table below is the equivalent of
+        reading it. The legend stays OUTSIDE the wrapper, because role="img"
+        makes everything inside it one opaque graphic and its buttons have to
+        stay reachable.
+      */}
+      <div
+        role="img"
+        aria-label={describeSeriesChart(series, { cadence, unit, indexed })}
+      >
       <ResponsiveContainer width="100%" height={height}>
         <RLineChart
           data={rows}
@@ -211,6 +231,12 @@ export default function LineChart({
           })}
         </RLineChart>
       </ResponsiveContainer>
+      </div>
+
+      <ChartDataTable
+        model={seriesTableModel(series, { cadence })}
+        caption={`Every point in this chart as numbers: ${series.length} series by period.`}
+      />
 
       {/* A legend is always present for two or more series, so identity is
           never carried by colour alone. */}
@@ -233,144 +259,4 @@ export default function LineChart({
       )}
     </div>
   );
-}
-
-/**
- * Turn the API's per-series point lists into the row-per-date shape Recharts
- * wants, and work out the axis ticks.
- *
- * A missing date for a series becomes null rather than a skipped key, which is
- * what lets connectNulls={false} break the line at a real gap.
- */
-function buildChartModel(series, cadence, indexed) {
-  const dates = [
-    ...new Set(series.flatMap((s) => s.points.map((p) => p.date))),
-  ].sort();
-
-  // Detected rather than resolved. Collapsing duplicates here would hide a
-  // missing filter behind a plausible-looking line.
-  const duplicateDates = series.some((s) => {
-    const seen = new Set();
-    return s.points.some((p) => p.value != null && (seen.has(p.date) || !seen.add(p.date)));
-  });
-
-  // Which series carry projections, and which of their dates belong to the
-  // dashed line — worked out once rather than per row.
-  const splits = new Map(series.map((s) => [s.label, splitProjected(s.points)]));
-  const projected = new Set(
-    series.filter((s) => splits.get(s.label).projectedDates.size > 0).map((s) => s.label)
-  );
-
-  const rows = dates.map((date) => {
-    const row = { date };
-    for (const s of series) {
-      const point = s.points.find((p) => p.date === date);
-      const split = splits.get(s.label);
-      const value = point?.value ?? null;
-
-      // A projected value is withheld from the solid line entirely, so the
-      // measured line stops where the measurements stop.
-      row[s.label] = split.projectedDates.has(date) ? null : value;
-
-      if (projected.has(s.label)) {
-        row[projectedKey(s.label)] =
-          split.projectedDates.has(date) || split.bridgeDates.has(date) ? value : null;
-      }
-    }
-    return row;
-  });
-
-  const values = series
-    .flatMap((s) => s.points.map((p) => p.value))
-    .filter((v) => v != null && Number.isFinite(v));
-
-  const min = values.length ? Math.min(...values) : 0;
-  const max = values.length ? Math.max(...values) : 1;
-  const range = max - min || Math.abs(max) || 1;
-
-  // Zero is included whenever the data already sits near it OR the chart is
-  // not an index scale — a raw-unit chart floors at zero (or at the true
-  // negative minimum) by default, full stop. A padded floor below the
-  // observed minimum is a real trend-exaggeration technique, so it is only
-  // permitted for an index that moves in a tight band around 100, where
-  // forcing zero would flatten the whole shape into a line at the top of the
-  // frame — and even then it says so on the chart (see axisTruncated below).
-  const nearZero = min >= 0 && min < range * 0.35;
-  const floor = nearZero ? 0 : indexed ? niceFloor(min, range) : Math.min(0, min);
-
-  return {
-    rows,
-    duplicateDates,
-    ticks: pickTicks(dates),
-    domain: [floor, 'auto'],
-    axisTruncated: floor > 0,
-    projected,
-    tickFormatter: (value) => fmt(value, precisionFor(range)),
-  };
-}
-
-/**
- * Which dates of a series are projections, and which measured points have to
- * be repeated on the dashed line so it joins the solid one.
- *
- * Judged PER POINT from `value_status`, not as "everything after the first
- * projection". The two agree for what is marked today — seed 029 keys on a
- * future period, so projections are always a tail — but a source that revises
- * a forecast year into an outturn would leave a measured point after a
- * projected one, and inferring a tail would then draw that measurement as a
- * forecast. Reading each point's own status cannot make that mistake; it
- * breaks the dashed line at the seam instead, which is what happened.
- */
-function splitProjected(points) {
-  const projectedDates = new Set();
-  const bridgeDates = new Set();
-
-  points.forEach((p, i) => {
-    if (p.value == null || p.value_status !== 'projected') return;
-    projectedDates.add(p.date);
-    // The measured point immediately before is drawn on both lines: without
-    // it the forecast floats detached from the history it continues.
-    const previous = points[i - 1];
-    if (previous && previous.value != null && previous.value_status !== 'projected') {
-      bridgeDates.add(previous.date);
-    }
-  });
-
-  return { projectedDates, bridgeDates };
-}
-
-/** Pad the low end so the lowest point is not welded to the axis. */
-function niceFloor(min, range) {
-  return min - range * 0.08;
-}
-
-/**
- * How many decimals a Y tick needs, from the range being shown.
- *
- * A fixed format renders a series that moves between 0.2 and 0.9 as "0, 0, 1".
- */
-function precisionFor(range) {
-  if (range >= 100) return 0;
-  if (range >= 10) return 1;
-  if (range >= 1) return 2;
-  return 3;
-}
-
-/**
- * Choose x labels that will not collide.
- *
- * Strided from the END, so the most recent period always gets a label — that
- * is the one a reader is looking for, and striding from the start drops it
- * whenever the count is not an exact multiple.
- */
-function pickTicks(dates, maxLabels = 6) {
-  if (dates.length <= maxLabels) return dates;
-  const stride = Math.ceil(dates.length / maxLabels);
-  const kept = [];
-  for (let i = dates.length - 1; i >= 0; i -= stride) kept.unshift(dates[i]);
-  // The first label is worth having when it does not crowd the second.
-  if (kept[0] !== dates[0] && dates.indexOf(kept[0]) > stride / 2) {
-    kept.unshift(dates[0]);
-  }
-  return kept;
 }

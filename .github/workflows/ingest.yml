@@ -45,6 +45,62 @@ concurrency:
   group: ingest
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
+env:
+  # JOBS ALLOWED TO FAIL WITHOUT PAINTING THE RUN RED.
+  #
+  # Whitespace- or comma-separated job ids, exactly as the runner prints them
+  # on a `FAIL` line. Empty means "any failure is fatal", which is where this
+  # started and is the correct default for anything not listed.
+  #
+  # WHY THIS LIST EXISTS AT ALL
+  #
+  # The runner sets a non-zero exit code if ANY job fails — one indicator out
+  # of roughly 160 is enough. GDELT's host refuses connections from GitHub's
+  # runners (ECONNRESET) while working from a home machine, so the workflow
+  # went red every single morning for a reason that was neither new nor
+  # actionable. A red X that is red every day carries no information: the owner
+  # learns to ignore it, and the day a real failure arrives — a wrong
+  # DATABASE_URL, a schema drift, half the indicators failing — it looks
+  # exactly like yesterday.
+  #
+  # WHY ONLY GDELT IS ON IT
+  #
+  # Measured, not assumed. Over the ten days to 2026-09-03 the ingestion_runs
+  # table holds 31 failures: 13 are derived.ai_news_volume (GDELT), 2 are
+  # derived.sec_ai_mention_rate, and the remaining 16 are one-offs spread
+  # across dbnomics, fred and epoch that have not repeated. Only the first is
+  # a standing condition. Adding the SEC job here would hide a second real
+  # problem behind the first, which is the failure this whole mechanism is
+  # meant to stop.
+  #
+  # The list is deliberately about JOBS, not about "some failures are fine".
+  # A job named here is one that is known to be broken and is being tracked;
+  # anything else failing still stops the run.
+  #
+  # WHERE THE RULE ITSELF LIVES: `classifyOutcome()` in
+  # src/server/ingestion/runner.js, which reads this variable out of its own
+  # environment and exits accordingly. It used to live only in the shell below,
+  # re-derived by grepping the log, which meant the only way to find out what
+  # the nightly run would exit was to wait for 05:40 UTC and read the email.
+  # Two waves of work shipped "the failure policy" without ever demonstrating
+  # its exit code and the workflow stayed red both times. It is now driven with
+  # stubbed job results in runner.test.js and asserted both ways.
+  #
+  # AND IT CANNOT EXCUSE A REGRESSION.
+  #
+  # The runner compares every job against its own previous run and prints a
+  # `REGRESSION` line for two things: a job that succeeded last night and failed
+  # tonight, and a job that succeeded while returning zero rows having returned
+  # some last night. Neither is a standing condition, so neither is what this
+  # list is for — a source is tolerated here on the understanding that it stays
+  # broken, and the day it works and breaks again the list would be hiding a
+  # live failure. The policy step below therefore treats a REGRESSION as
+  # blocking whatever this list says.
+  INGEST_ALLOW_FAIL: 'derived.ai_news_volume'
+
 jobs:
   ingest:
     runs-on: ubuntu-latest
@@ -66,6 +122,7 @@ jobs:
       - run: npm ci
 
       - name: Run ingestion
+        id: ingest
         env:
           # NODE_ENV=production is here for ONE reason: it decides whether a
           # missing DATABASE_URL is an error or a silent fallback.
@@ -89,11 +146,240 @@ jobs:
           # ceiling to sit under, unlike the web deployment.
           DB_STATEMENT_TIMEOUT_MS: '120000'
           DB_POOL_MAX: '4'
+
+          # THE DISPATCH INPUTS, THROUGH THE ENVIRONMENT AND NOT THE SCRIPT.
+          #
+          # This step used to run:
+          #
+          #   npm run ingest -- ${{ inputs.source }} ${{ inputs.force && '--force' || '' }}
+          #
+          # Actions substitutes `${{ }}` into the script text before bash ever
+          # sees it, so a dispatch value of `fred; curl … | sh` is not an
+          # argument, it is a second command — and this step holds
+          # DATABASE_URL, FRED_API_KEY, SEC_USER_AGENT and CENSUS_API_KEY in
+          # its environment. Only a collaborator with write access can dispatch
+          # a workflow, so the hole is not anonymous; it is the difference
+          # between a compromised collaborator token costing the repository and
+          # costing the production database.
+          #
+          # Through `env:` the value arrives as data. Bash expands it into one
+          # argument and never parses it as syntax.
+          SOURCE: ${{ inputs.source }}
+          FORCE: ${{ inputs.force }}
         run: |
-          npm run ingest -- ${{ inputs.source }} ${{ inputs.force && '--force' || '' }}
+          # An ARRAY, so an empty SOURCE contributes no argument at all.
+          #
+          # `npm run ingest -- "$SOURCE"` would pass an empty STRING, and the
+          # runner reads its source id as `args.find(a => !a.startsWith('--'))`
+          # — '' does not start with '--', so the source id would be '' rather
+          # than null, and `dueIndicators` would match no indicator. The run
+          # would report "Nothing due" and write nothing, successfully.
+          args=()
+          if [ -n "$SOURCE" ]; then
+            args+=("$SOURCE")
+          fi
+          # `if`, not `[ … ] && …`: Actions runs this with `-e`, and a one-line
+          # `&&` whose test is false returns 1 and would abort the step.
+          if [ "$FORCE" = "true" ]; then
+            args+=("--force")
+          fi
+
+          # The exit code is CAPTURED rather than allowed to fail the step, so
+          # the policy below can decide what it means. `tee` keeps the log
+          # readable in the Actions UI while also writing the file the policy
+          # step parses; PIPESTATUS takes the runner's code, not tee's.
+          set +e
+          npm run ingest -- "${args[@]}" 2>&1 | tee ingest.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "The runner exited $status."
+
+      # FIRST in the summary, because a failure is the thing worth reading and
+      # the ingestion figures below are not.
+      #
+      # This step decides the verdict and reports it; it never fails the job
+      # itself, so the summary is always fully written before anything exits.
+      - name: Sort the failures
+        id: policy
+        if: always()
+        env:
+          RUNNER_STATUS: ${{ steps.ingest.outputs.status }}
+        run: |
+          set -u
+
+          if [ ! -f ingest.log ]; then
+            {
+              echo "### Ingestion did not run"
+              echo ""
+              echo "No \`ingest.log\` was produced — the run failed before the"
+              echo "ingestion step, most likely in checkout or \`npm ci\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "verdict=fail" >> "$GITHUB_OUTPUT"
+            echo "reason=ingestion never started" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The runner prints `  FAIL  <job id padded>  <first line of error>`.
+          failed=$(grep -E '^[[:space:]]+FAIL[[:space:]]' ingest.log | awk '{print $2}' | sort -u || true)
+
+          # And `  REGRESSION  <job id padded>  <what changed>` for a job that
+          # is WORSE than its own last run. Collected separately because the
+          # allow list must not be able to excuse one — see INGEST_ALLOW_FAIL.
+          regressed=$(grep -E '^[[:space:]]+REGRESSION[[:space:]]' ingest.log | awk '{print $2}' | sort -u || true)
+
+          # An ABORT is never excusable. The runner exits 1 for two different
+          # reasons — some jobs failed, or the whole run threw before it could
+          # start — and they print differently. Treating an abort as "no FAIL
+          # lines, therefore nothing failed" would make a wrong DATABASE_URL
+          # the greenest run of the week.
+          aborted=$(grep -c '^Ingestion aborted:' ingest.log || true)
+
+          allowed=""
+          blocking=""
+          for job in $failed; do
+            hit=0
+            for ok in $(echo "$INGEST_ALLOW_FAIL" | tr ',' ' '); do
+              if [ "$job" = "$ok" ]; then hit=1; fi
+            done
+            if [ "$hit" = "1" ]; then
+              allowed="$allowed $job"
+            else
+              blocking="$blocking $job"
+            fi
+          done
+
+          verdict=pass
+          reason="every job succeeded"
+          if [ "$aborted" != "0" ]; then
+            verdict=fail
+            reason="the run aborted before finishing"
+          elif [ -n "$regressed" ]; then
+            # BEFORE the allow-list branch, deliberately. A job on the list that
+            # regressed must still fail the run, and testing this second would
+            # let "only known-degraded jobs failed" swallow it.
+            verdict=fail
+            reason="job(s) worse than their own last run: $(echo "$regressed" | tr '\n' ' ')"
+          elif [ -n "$blocking" ]; then
+            verdict=fail
+            reason="failures outside the allow-to-fail list:$blocking"
+          elif [ -n "$allowed" ]; then
+            verdict=pass
+            reason="only known-degraded jobs failed:$allowed"
+          elif [ "$RUNNER_STATUS" != "0" ]; then
+            # Non-zero with nothing to explain it. Never silently pass this.
+            verdict=fail
+            reason="the runner exited $RUNNER_STATUS with no FAIL line to explain it"
+          fi
+
+          # ── THE RUNNER DECIDES; THE PARSE ABOVE IS A SECOND OPINION ────────
+          #
+          # `classifyOutcome()` in src/server/ingestion/runner.js applies the
+          # same rule in a place where it can be tested, and the runner prints
+          # its conclusion as `VERDICT <pass|fail> — <reason>`. That is the
+          # verdict this job uses.
+          #
+          # The shell parse above is not deleted, because the summary below
+          # needs the blocking/allowed split to render anyway — so keeping the
+          # comparison costs nothing and buys a real check: if the two ever
+          # disagree, one of them is wrong about a live run and neither is safe
+          # to trust. That is blocking, in the fail-safe direction.
+          runner_verdict=$(grep -E '^VERDICT (pass|fail) ' ingest.log | tail -n 1 | awk '{print $2}')
+
+          if [ -z "$runner_verdict" ]; then
+            verdict=fail
+            reason="the runner printed no VERDICT line and exited $RUNNER_STATUS — it died before it could decide"
+          elif [ "$runner_verdict" != "$verdict" ]; then
+            # Built before the assignment, or the message would report the
+            # value it has just overwritten and read "fail … says 'fail'".
+            reason="the runner said '$runner_verdict' and this log parse says '$verdict' — they must agree"
+            verdict=fail
+          fi
+
+          {
+            if [ "$verdict" = "fail" ]; then
+              echo "### ❌ Ingest failed — $reason"
+            elif [ -n "$allowed" ]; then
+              echo "### ⚠️ Ingest passed with known failures"
+            else
+              echo "### ✅ Ingest clean"
+            fi
+            echo ""
+            if [ -n "$regressed" ]; then
+              echo "**Worse than the last run — not excused by the allow list**"
+              echo ""
+              echo '```'
+              grep -E '^[[:space:]]+REGRESSION[[:space:]]' ingest.log || true
+              echo '```'
+              echo ""
+            fi
+            if [ -n "$blocking" ]; then
+              echo "**Blocking failures**"
+              echo ""
+              echo '```'
+              for job in $blocking; do
+                # awk with an exact field comparison, not grep: a job id like
+                # `derived.ai_news_volume` is a regex whose dots match anything.
+                awk -v j="$job" '$1 == "FAIL" && $2 == j' ingest.log || true
+              done
+              echo '```'
+              echo ""
+            fi
+            if [ -n "$allowed" ]; then
+              echo "**Known-degraded, allowed to fail** (\`INGEST_ALLOW_FAIL\` in \`.github/workflows/ingest.yml\`)"
+              echo ""
+              echo '```'
+              for job in $allowed; do
+                awk -v j="$job" '$1 == "FAIL" && $2 == j' ingest.log || true
+              done
+              echo '```'
+              echo ""
+              echo "These do not fail the run. Remove a job from the list the moment it is fixed —"
+              echo "an allow list nobody prunes is the same silence a permanently red X produces."
+              echo ""
+            fi
+            echo "<details><summary>Last 30 lines of the run</summary>"
+            echo ""
+            echo '```'
+            tail -n 30 ingest.log
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Annotations, so the verdict is visible from the run list without
+          # opening the summary.
+          if [ -n "$allowed" ]; then
+            echo "::warning title=Known-degraded sources failed::$(echo "$allowed" | sed 's/^ //')"
+          fi
+          if [ -n "$blocking" ]; then
+            echo "::error title=Ingest failed::$(echo "$blocking" | sed 's/^ //')"
+          fi
+          if [ -n "$regressed" ]; then
+            echo "::error title=Worse than the last run::$(echo "$regressed" | tr '\n' ' ')"
+          fi
+
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "$verdict — $reason"
 
       # Runs even when ingestion failed, because a failed run is exactly the
       # one whose summary is worth reading.
+      #
+      # AND IT CANNOT FAIL THE JOB. This step is a REPORT.
+      #
+      # It used to be a bare `run: node scripts/ingestion-summary.js >> …` under
+      # the default `bash -e`, so a throw inside it — a dropped connection, a
+      # column renamed out from under a query — painted the job red from outside
+      # the failure policy entirely, with `Process completed with exit code 1` on
+      # a step called "Summarise what actually changed" and no verdict attached.
+      # That is the same defect the step below documents fixing for `check:data`,
+      # left in place one step above it.
+      #
+      # Nothing is lost by making it non-blocking: this script only reads. If it
+      # failed because the database is unreachable, `check:data` needs the same
+      # database and blocks on its own, so the serious case still goes red — it
+      # just goes red on the step that means it.
       - name: Summarise what actually changed
         if: always()
         env:
@@ -101,4 +387,140 @@ jobs:
           # when a wrong-database fallback would be most misleading.
           NODE_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: node scripts/ingestion-summary.js >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          set +e
+          node scripts/ingestion-summary.js > ingestion-summary.md 2> ingestion-summary.err
+          status=$?
+          set -e
+
+          if [ "$status" = "0" ]; then
+            cat ingestion-summary.md >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "### ⚠️ Could not summarise the run"
+            echo ""
+            echo "\`scripts/ingestion-summary.js\` exited $status. The ingestion verdict"
+            echo "above and the data gate below are unaffected — this step only reads."
+            echo ""
+            echo '```'
+            tail -n 20 ingestion-summary.err
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::warning title=Run summary unavailable::scripts/ingestion-summary.js exited $status"
+
+      # THE DATA GATE, HERE AND NOT IN ci.yml.
+      #
+      # `check:data` is the only check that would notice the database drifting
+      # away from what the routes need — a series holding another country's
+      # rows, a route shipped with no rows behind it, a simulation model
+      # missing a coefficient. It needs a reachable database, which is why it
+      # is deliberately not in `npm run build`: a front-end build that fails
+      # when Postgres is asleep is a build people learn to skip.
+      #
+      # Immediately after ingestion is the moment the data actually changes,
+      # so it is the moment the check can catch something. `if: always()`
+      # because a partial ingest still wrote rows.
+      #
+      # DOES IT BLOCK THE INGEST JOB? YES — BUT THROUGH THE VERDICT, NOT AROUND IT.
+      #
+      # It used to be a bare `run: npm run check:data` with no
+      # `continue-on-error`, which meant it painted the job red entirely
+      # outside the failure policy above. That is the second reason this
+      # workflow was still red after the allow-to-fail list landed, and it is
+      # the same defect the allow list was written to cure: a red X that says
+      # `Process completed with exit code 1` on a step called "Data integrity",
+      # with the actual violations only in the raw log and nothing in the job
+      # summary, is a red X nobody reads.
+      #
+      # It still blocks, because the alternative is a gate with no consequence
+      # and nothing else in this project can notice a wrong base year or a
+      # cadence that has drifted from the data. What changes is that it reports
+      # first: the violations go into the summary, the annotation names the
+      # step, and the verdict is applied once, at the end, alongside the
+      # ingestion verdict. The distinction that matters to whoever opens the
+      # failure email is "the fetch broke" against "the fetch worked and the
+      # catalogue is now wrong about it", and only the summary can carry it.
+      #
+      # THE CASE FOR TAKING IT OUT WAS PUT AND MEASURED, AND IT LOSES.
+      #
+      # The argument against blocking is that `check:data` reads a repository
+      # condition an ingestion run cannot cause, so the nightly job would be
+      # reporting something it neither creates nor can fix. That is checkable,
+      # and it is false. `scripts/check-data.js:150` holds twelve checks and
+      # several of them measure the OBSERVATIONS a run has just written, not the
+      # seeded catalogue: `country attribution` (a series holding another
+      # country's rows), `observation grain`, `routes with nothing behind them`,
+      # `index base years` — whose one live violation is an upstream rebasing
+      # its index, fred.RTFPNAUSA632NRUG reading 0.9534 where its unit claimed
+      # 1 — and `declared cadence`, measured as the modal gap between
+      # consecutive observations. A provider that rebases an index or halves its
+      # publication frequency breaks those on the night it does it, and the
+      # fetch succeeds. That is a worse outcome than a failed fetch, and this is
+      # the only thing in the project that would notice.
+      #
+      # What is actually wrong today is not the gate. Run on 2026-09-04 it
+      # reports 2 of 12 checks failing on 5 violations — one base year and four
+      # cadences — and every one of the five is already corrected in
+      # db/seeds/004_indicators.sql and db/seeds/036_vintage_cadence_and_
+      # citation_dates.sql and merely not applied. The database is behind the
+      # repository. `npm run db:seed` closes it; nothing in this file does.
+      - name: Data integrity
+        id: data
+        if: always()
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          npm run check:data 2>&1 | tee check-data.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+          if [ "$status" = "0" ]; then
+            echo "check:data passed."
+            exit 0
+          fi
+
+          {
+            echo "### ❌ Data integrity gate failed"
+            echo ""
+            echo "\`npm run check:data\` exited $status. This is about what the database now"
+            echo "SAYS, not about whether the fetch ran — read the ingestion verdict above"
+            echo "before going looking for a broken feed."
+            echo ""
+            echo '```'
+            # check-data.js colours its output for a terminal. Left alone, the
+            # escape sequences render as literal `[31m` inside the summary.
+            sed 's/\x1b\[[0-9;]*m//g' check-data.log | tail -n 40
+            echo '```'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error title=Data integrity::npm run check:data exited $status"
+
+          # Reported, not raised. The step below applies it.
+          exit 0
+
+      # LAST, so everything above has already been written to the summary.
+      - name: Apply the failure policy
+        if: always()
+        env:
+          VERDICT: ${{ steps.policy.outputs.verdict }}
+          REASON: ${{ steps.policy.outputs.reason }}
+          DATA_STATUS: ${{ steps.data.outputs.status }}
+        run: |
+          echo "ingestion  — $VERDICT — $REASON"
+          echo "check:data — exit ${DATA_STATUS:-'(never reported)'}"
+
+          failed=0
+          if [ "$VERDICT" != "pass" ]; then failed=1; fi
+
+          # Unset means the data step never reached its own reporting line — it
+          # crashed, or the job was cut short. An absent answer is not a pass.
+          if [ "${DATA_STATUS:-1}" != "0" ]; then failed=1; fi
+
+          exit "$failed"

@@ -97,11 +97,25 @@ INSERT INTO indicators (
  TRUE, TRUE, FALSE, FALSE, INTERVAL '1 day'),
 
 -- [UNVERIFIED] Penn World Table series codes are long and easily mistyped.
+--
+-- BASE YEAR CORRECTED 2026-09-03. This carried 'index_2017=1' from the day it
+-- was added. The series says otherwise: 2021 is exactly 1.000000 and 2017 is
+-- 0.953378. FRED serves the Penn World Table 10.01 series rebased to 2021 = 1.
+--
+--   select to_char(period_start,'YYYY'), value from observations
+--    where indicator_id = 'fred.RTFPNAUSA632NRUG' and period_start >= '2015-01-01';
+--   → 2017 0.953378140926361 … 2021 1 … 2023 0.992998480796814
+--
+-- An index is meaningless without its base, and `displayUnit()` puts this
+-- string on the axis verbatim, so the wrong base was being read by anyone
+-- looking at the chart: told 2017 = 1, a reader takes 0.993 in 2023 for a fall
+-- when it is 4.2% ABOVE 2017 and 0.7% below 2021. `check:data` now asserts the
+-- base for every indicator whose unit names one.
 ('fred.RTFPNAUSA632NRUG',
  'US Total Factor Productivity',
  'Total factor productivity at constant national prices. TFP is the residual after accounting for labour and capital inputs — conceptually the closest thing economics has to "technological progress", and therefore the series where a genuine AI effect should eventually appear.',
  'adoption', 'index', 'annual', 'official',
- 'index_2017=1', NULL, 3, 'fred', 'RTFPNAUSA632NRUG',
+ 'index_2021=1', NULL, 3, 'fred', 'RTFPNAUSA632NRUG',
  'https://fred.stlouisfed.org/series/RTFPNAUSA632NRUG',
  TRUE, TRUE, FALSE, FALSE, INTERVAL '7 days'),
 
@@ -182,10 +196,15 @@ INSERT INTO indicators (
  'https://epoch.ai/data',
  NULL, TRUE, FALSE, FALSE, INTERVAL '7 days'),
 
+-- CADENCE CORRECTED 2026-09-03: was 'monthly'. The register aggregates to one
+-- point per country per year — the modal gap between consecutive non-null
+-- observations is 365 days over 160 gaps — and this is the hero series on
+-- `building`, so a reader was told to expect twelve points a year on a chart
+-- that has one. Measured by the cadence check in scripts/check-data.js.
 ('derived.datacentre_capacity_mw',
  'Announced Data Centre Capacity',
  'Sum of announced and operational data centre capacity in megawatts, aggregated from the assets table. Megawatts rather than floor area because power is the binding constraint on AI compute and the link to energy economics.',
- 'infrastructure', 'magnitude', 'monthly', 'derived',
+ 'infrastructure', 'magnitude', 'annual', 'derived',
  'megawatts', 'MW', 0, 'epoch_ai', NULL,
  NULL,
  NULL, TRUE, FALSE, FALSE, INTERVAL '1 day'),
@@ -235,18 +254,28 @@ INSERT INTO indicators (
 -- PILLAR: EFFECTS — corporate and market signals
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- CADENCE CORRECTED 2026-09-03: was 'quarterly'. It scans ANNUAL filings and
+-- stores one point a year — modal gap 365 days over 11 gaps — and it is the
+-- hero series on `adoption`, where "quarterly" promised four points a year on
+-- a chart that has one.
 ('derived.sec_ai_mention_rate',
  'Share of Filings Mentioning AI',
  'Percentage of scanned SEC annual filings containing AI-related terms. IMPORTANT: this measures discussion, not spending. Companies do not tag AI capital expenditure as a distinct accounting line, so no dollar figure can be derived from filings — treat this as an attention proxy only.',
- 'effects', 'rate', 'quarterly', 'derived',
+ 'effects', 'rate', 'annual', 'derived',
  'percent', '%', 1, 'sec_edgar', NULL,
  'https://efts.sec.gov',
  NULL, FALSE, TRUE, FALSE, INTERVAL '7 days'),
 
+-- CADENCE CORRECTED 2026-09-03: was 'daily', which was the ingestion interval
+-- rather than the grain of what is stored. Every row spans a calendar month
+-- (period_start to period_end), the modal gap is 31 days over 115 gaps, seed
+-- 033 describes the series as "116 monthly observations" and the caption it
+-- placed on `productivity` says "monthly". The metadata was the only thing
+-- still saying daily.
 ('derived.ai_news_volume',
  'AI Economic News Volume',
  'Share of worldwide news coverage matching an AI-economics query, from GDELT''s index of global media. A measure of ATTENTION, included as a deliberate contrast to the hard indicators — divergence between attention and measured productivity is itself the finding. Expressed as a share of all monitored coverage rather than a raw count, so it cannot rise merely because GDELT indexed more outlets.',
- 'effects', 'count', 'daily', 'news_derived',
+ 'effects', 'count', 'monthly', 'news_derived',
  'articles', NULL, 0, 'gdelt', NULL,
  NULL,
  NULL, TRUE, TRUE, FALSE, INTERVAL '1 hour')

@@ -419,6 +419,32 @@ const MODELS = {
  * So the engine reports the structurally impossible and stays quiet about the
  * merely improbable. The page carries `scenario.caveat` for the rest, which is
  * where a judgement belongs — written by a person, in prose, over a signature.
+ *
+ * AND THE ZONE IN BETWEEN IS NOT LEFT SILENT, IT IS LEFT TO ARITHMETIC.
+ *
+ * Refusing a floor left a cliff: every path down to 0.00% drew as an ordinary
+ * projection with nothing said about it, and one hundredth of a point further
+ * the chart truncated with four paragraphs of explanation. Six drawn years
+ * across the slider's own $10bn steps sit at exactly 0.00% — USA sustained
+ * $930bn year three, ITA one-off $690bn year three, and JPN one-off at $450bn
+ * year five, $500bn year four, $670bn year three and $920bn year two — and none
+ * of them trips this check, because 0 is a rate that exists.
+ *
+ * The answer is not a threshold here. It is two facts stated on the chart, both
+ * subtraction over figures already on the page, neither of them an opinion:
+ * how far the model moved the rate from its own baseline, and the largest move
+ * of that many years the MEASURED series has ever made. France at the default
+ * with the injection repeated reads "moves at most 6.06 percentage points below
+ * its measured baseline of 7.4%" beside "the largest 5-year move in the
+ * measured record — 2000 to 2025 — is 2.53 points, between 2008 and 2013. This
+ * run moves unemployment further than that." Absurdity becomes legible without
+ * anybody here having to say where it begins. See `deviationText`, `largestMove`
+ * and `recordText` in `routes/SimulationPage.jsx`.
+ *
+ * That is also why nothing below should be "improved" into a soft floor. The
+ * only version that would not be an invention is a looked-up one — OECD and IMF
+ * both publish structural-unemployment estimates per country — and that is an
+ * ingestion task with a citation, not a constant.
  */
 const UNEMPLOYMENT_MIN_PCT = 0;
 const UNEMPLOYMENT_MAX_PCT = 100;
@@ -665,14 +691,75 @@ export function requiredParameters(modelKey) {
  * `?shock_usd_bn=50` and `?shock_usd_bn=50.0` — the same run, arriving as
  * different strings from a URL — do not become two cache entries carrying two
  * separately generated narrations of identical numbers.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * A RUN'S IDENTITY IS ITS INPUTS *AND* ITS COEFFICIENTS. IT USED NOT TO BE.
+ *
+ * This took `{scenarioId, countryIso3, inputs}` and nothing else, so the cache
+ * key fingerprinted the slider and not one of the thirteen numbers the model
+ * actually multiplies by. Correct a coefficient in `db/seeds/034`, re-seed, and
+ * every slider position a reader had already visited went on returning the
+ * stored PRE-CORRECTION numbers indefinitely — while the "Every coefficient,
+ * and its source" panel directly beneath the chart showed the new value. The
+ * chart would have disagreed with the citation printed under it, silently and
+ * permanently, on the one page whose argument is that its numbers are
+ * checkable. This project's answer to an error is a documented correction, and
+ * a correction that cannot reach the reader is not one.
+ *
+ * The whole parameter set is hashed, not the subset the model reads, and that
+ * is deliberate. Hashing only `REQUIRED_PARAMS` would mean a corrected row that
+ * this model happens not to use leaves the cache untouched — right today, wrong
+ * the moment a model starts reading it, and wrong in the invisible direction. A
+ * spurious cache miss costs microseconds of arithmetic; a spurious cache HIT
+ * costs a reader the corrected number.
+ *
+ * `MODEL_VERSION` is in the digest too, which is what makes a version bump
+ * reach the NARRATION as well as the run. `simulation_runs` already keys on
+ * `model_version` directly, but `narrations` has no such column — it keys on
+ * (scope, input_hash, prompt_version) — so bumping the version invalidated the
+ * runs and kept the prose written about the old ones. That is precisely the
+ * failure MODEL_VERSION's own docblock says it exists to prevent. Folding it in
+ * here fixes both with one key and no migration. (A `model_version` column on
+ * `narrations` would be the tidier expression of the same rule; it needs a
+ * migration, so it is the owner's call.)
+ *
+ * `parameters` is REQUIRED rather than optional. An optional argument that
+ * silently reverts to the old behaviour when a caller forgets it is this bug
+ * with a longer fuse.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * @param {object} options
+ * @param {string} options.scenarioId
+ * @param {string} options.countryIso3
+ * @param {object} options.inputs      slider values
+ * @param {object} options.parameters  flat {param_key: value}, as `getParameters` returns
+ * @param {string} [options.modelVersion] defaults to MODEL_VERSION; an argument
+ *   only so a test can prove a bump changes the hash without editing the constant
  */
-export function runHash({ scenarioId, countryIso3, inputs }) {
+export function runHash({ scenarioId, countryIso3, inputs, parameters, modelVersion = MODEL_VERSION }) {
+  if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
+    throw new Error(
+      'runHash requires the parameter set. A run cached without it survives a ' +
+        'corrected coefficient, and the reader keeps the old number.'
+    );
+  }
+
   const canonical = Object.keys(inputs)
     .sort()
     .map((key) => `${key}=${Number(inputs[key])}`)
     .join('&');
+
+  /* `toNumber`, not `Number`: `Number(null)` is 0, so a NULL coefficient and a
+     coefficient of nought would hash identically — the same collision the
+     engine's own coercion note is about. NaN is fine as a digest token; a run
+     with one never gets past `runScenario`. */
+  const coefficients = Object.keys(parameters)
+    .sort()
+    .map((key) => `${key}=${toNumber(parameters[key])}`)
+    .join('&');
+
   return createHash('sha256')
-    .update(`${scenarioId}|${countryIso3}|${canonical}`)
+    .update(`${scenarioId}|${countryIso3}|${modelVersion}|${canonical}|${coefficients}`)
     .digest('hex');
 }
 

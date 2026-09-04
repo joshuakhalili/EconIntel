@@ -23,6 +23,7 @@
 import { config } from '../../config.js';
 import { fetch as undiciFetch } from 'undici';
 import { HttpError, SLOW_CONNECT } from '../../lib/http.js';
+import { USER_AGENT } from './user-agent.js';
 
 const BASE = 'https://api.gdeltproject.org/api/v2/doc/doc';
 
@@ -85,8 +86,7 @@ async function fetchTimeline(url) {
   try {
     response = await undiciFetch(url, {
       headers: {
-        'User-Agent':
-          'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion; joshuakhalili20@gmail.com)',
+        'User-Agent': USER_AGENT,
       },
       signal: AbortSignal.timeout(240_000),
       // The whole reason this adapter was broken. See SLOW_CONNECT in

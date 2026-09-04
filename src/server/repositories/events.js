@@ -120,6 +120,52 @@ export async function financingGraph() {
   );
 
   /*
+   * THE EVIDENCE, WHICH NOTHING HAS EVER SELECTED.
+   *
+   * `event_citations` holds a URL, a publisher, the HTTP status when the link
+   * was last fetched and whether a person has checked it. Migration 0020 goes
+   * as far as a trigger — `event_citations_evidence_required` — making it
+   * impossible to store an event with no evidence at all, and its comment says
+   * outright that "evidence_count is what a reader should be shown". Until now
+   * `grep -rIn event_citations src scripts` found not one SELECT: this query
+   * took the COUNT and left the links in the table.
+   *
+   * That made the financing section the one editorial feature on the site with
+   * no visible source, while every chart carries its publisher and its licence
+   * — and it makes specific claims about named companies and dollar amounts.
+   * Six of the original 33 deals were rejected for dead source URLs; none of
+   * that diligence reached anybody.
+   *
+   * `publisher_class` rides along because it is the distinction the column was
+   * added to allow: a company's own 8-K and a newsletter summarising it are not
+   * equal evidence, and a reader should be able to see which they are being
+   * offered without following the link.
+   *
+   * One query for all of them rather than one per edge. The whole citation
+   * table is smaller than the edge list it belongs to, so a round trip per edge
+   * would cost more in latency than the rows weigh.
+   */
+  const { rows: citationRows } = await query(
+    `SELECT event_id, url, publisher, publisher_class, is_primary,
+            http_status, is_checked, checked_at
+       FROM event_citations
+      WHERE event_id = ANY($1::bigint[])
+      ORDER BY event_id, is_primary DESC, publisher`,
+    [edges.map((edge) => edge.event_id)]
+  );
+
+  const citationsByEvent = new Map();
+  for (const citation of citationRows) {
+    const key = String(citation.event_id);
+    if (!citationsByEvent.has(key)) citationsByEvent.set(key, []);
+    const { event_id: _eventId, ...withoutKey } = citation;
+    citationsByEvent.get(key).push(withoutKey);
+  }
+  for (const edge of edges) {
+    edge.citations = citationsByEvent.get(String(edge.event_id)) ?? [];
+  }
+
+  /*
    * WHAT MAKES A PAIR CIRCULAR, AND WHY IT IS NOT "MONEY BOTH WAYS"
    *
    * The obvious test is that A paid B and B paid A. It finds four pairs here

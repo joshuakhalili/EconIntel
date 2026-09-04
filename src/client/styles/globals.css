@@ -213,15 +213,38 @@ input[type="search"]::-webkit-search-cancel-button {
 
 /* Recharts' accessibility layer makes the chart surface and its shapes
  * (bars, sectors, dots) keyboard-focusable, and Chrome paints the UA focus
- * outline around whichever one you click - a blue box around a ring segment
- * or a bar. Every chart card drives its own focus feedback (hover darkening,
- * headline swap), so the outline is noise: hide it across every Recharts
- * chart. Keyboard users still get the cards' own active states. */
+ * outline around whichever one you CLICK - a blue box around a ring segment
+ * or a bar. That is the case this rule was written for, and hiding it is
+ * right: a mouse user already knows where they are, and the card drives its
+ * own hover feedback.
+ *
+ * :focus-visible IS NOT THAT CASE, AND WAS BEING HIDDEN TOO.
+ *
+ * The justification above says "every chart card drives its own focus
+ * feedback (hover darkening, headline swap)" — but those are HOVER states,
+ * driven by mouse events, and a keyboard user produces none of them. So
+ * tabbing into a chart moved focus through bars and dots that gave no signal
+ * whatever, on the site's most important interaction: clicking a point opens
+ * the context drawer. That is a WCAG 2.4.7 failure.
+ *
+ * :focus keeps outline:none, which is the mouse case. :focus-visible — the
+ * selector the browser only matches for keyboard and other non-pointer input
+ * — gets a real ring. --color-signal is #7da0ff, measured at 8.29:1 on the
+ * page (#010101), 7.72:1 on a panel (#0d0d0d) and 7.32:1 on a raised card
+ * (#141414), so it is visible on every surface a chart sits on. The offset
+ * keeps it clear of the mark itself rather than repainting its edge. */
 .recharts-wrapper:focus,
-.recharts-wrapper:focus-visible,
-.recharts-wrapper :focus,
-.recharts-wrapper :focus-visible {
+.recharts-wrapper :focus {
   outline: none;
+}
+
+.recharts-wrapper:focus-visible,
+.recharts-wrapper :focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+  /* SVG shapes honour `outline` but not always `outline-offset`; the drop
+   * shadow is a second, geometry-independent signal for those. */
+  filter: drop-shadow(0 0 2px var(--color-signal));
 }
 
 /* Landing hero widget marquee. The track holds TWO copies of the card set,
@@ -1155,5 +1178,215 @@ input[type="search"]::-webkit-search-cancel-button {
   .bui-composer-mic-bar {
     animation: none;
     transform: scaleY(0.7);
+  }
+}
+
+/* ── The two Google faces, self-hosted ───────────────────────────────────
+
+   PROJECT-OWNED. Nothing below comes from BoardUI.
+
+   Trispace carries the uppercase eyebrow labels; Fragment Mono the figures and
+   timestamps. Both used to arrive at RUNTIME from fonts.googleapis.com, via a
+   <link> in index.html, while the landing page served the identical faces from
+   its own origin. Two things followed from that split.
+
+   Crossing from / into /overview re-downloaded typefaces the reader already
+   had, so every eyebrow and every figure flashed its fallback on arrival — a
+   visible seam between two halves deliberately built to share one typographic
+   system.
+
+   And it sent every reader's IP address to Google, on an app whose sign-in
+   copy promises "No tracking, no read history, no IP logging". The privacy
+   policy disclosed it in a line that can now go.
+
+   These are the exact woff2 files the landing page already serves — copied,
+   not re-subsetted, so the two halves cannot drift — and the unicode-range is
+   Google's own latin subset, verbatim, so which glyphs fall back to the system
+   stack is unchanged. Trispace is one VARIABLE file covering wght 100-800
+   (confirmed with fontTools: fvar wght 100-800), which is why one @font-face
+   serves every weight the app asks for.
+
+   These sit here rather than beside Inter Display in atmos.css only because
+   this file is the one the change was allowed to touch; atmos.css:29-37 still
+   describes the <link> that has been deleted. */
+
+@font-face {
+  font-family: 'Trispace';
+  src: url('/fonts/trispace-var-latin.woff2') format('woff2');
+  font-weight: 100 800;
+  font-stretch: 100%;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fragment Mono';
+  src: url('/fonts/fragment-mono-400-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ── Print ───────────────────────────────────────────────────────────────
+
+   PROJECT-OWNED. Nothing below comes from BoardUI.
+
+   There were no print styles at all, and two things made a printed page worse
+   than an empty one.
+
+   1. EVERY SECTION BELOW THE FOLD PRINTS BLANK. `useReveal` holds a section at
+      `opacity-0` until an IntersectionObserver fires, and print does not
+      scroll — so on /q/entry-level all three evidence bands ("The chart this
+      rests on", "Supporting series", "From the reports") printed as empty
+      rectangles under their own headings. The page a reader is most likely to
+      print or save as PDF is exactly the page that lost its evidence.
+
+   2. THE TEXT IS WHITE. This app is dark-only by design, and browsers drop
+      background colours when printing. White type on the paper's white is
+      invisible, so "fixing" the opacity alone would have produced a page that
+      is still blank, for a different reason.
+
+      So print re-points the ramp rather than forcing backgrounds on: paper is
+      white, ink is black, and the reader gets an annotatable page instead of a
+      near-black one that empties a cartridge. Only the ends of the ramp move —
+      the mid greys (400-700) already read on both. The six chart hues are NOT
+      touched: they are validated in a fixed order and a print-only palette
+      would be a seventh set nobody has checked.
+
+   `html:root` / `html.dark` rather than `:root` / `.dark`: atmos.css is
+   imported after this file and sets the same tokens at the same specificity,
+   so it would otherwise win. The element selector is what carries this. */
+
+@media print {
+  html:root,
+  html.dark {
+    --color-page: #ffffff;
+    --color-panel: #ffffff;
+    --color-raised: #ffffff;
+    --color-deep: #ffffff;
+
+    /* The dark end of the ramp is the page and its cards. */
+    --color-neutral-800: #ffffff;
+    --color-neutral-900: #ffffff;
+    --color-neutral-925: #ffffff;
+    --color-neutral-950: #ffffff;
+
+    /* The light end is the type. */
+    --color-neutral-50: #000000;
+    --color-neutral-100: #111111;
+    --color-neutral-200: #333333;
+    --color-neutral-300: #555555;
+
+    --color-text-primary: #000000;
+    --color-text-secondary: #333333;
+    --color-text-tertiary: #555555;
+    --color-foreground-icon-secondary: #555555;
+    --color-foreground-icon-tertiary: #767676;
+
+    /* Hairlines are white-at-alpha on screen, which is nothing on paper. */
+    --color-border-button-default: #00000033;
+    --color-border-secondary: #00000022;
+    --color-border-table: #00000022;
+
+    /* #7da0ff measures 2.52:1 on white — the eyebrow above every section would
+       be unreadable. --color-mid is the same accent's dark step and measures
+       6.44:1, so the accent keeps its identity and gains its contrast. */
+    --color-signal: #3156c4;
+    --color-signal-soft: #3156c4;
+
+    /* Text on a filled card, and black because the fill does NOT survive.
+       Chrome prints background colours only when the reader ticks "Background
+       graphics", so the electric-blue question card arrives as bare paper and
+       white on it would take the question with it. Measured, printing this
+       file's own probe page: black text on the unpainted card renders
+       rgb(0,0,0) on rgb(255,255,255), 21:1. The line below covers the reader
+       who does tick the box. */
+    --color-on-fill: #000000;
+
+    /* The filled surface itself, repointed for the same reason from the other
+       side: black on #2f61f7 is 4.17:1, under the 4.5 floor and worse than the
+       5.03:1 white has on screen, so a reader printing backgrounds would get a
+       card less legible than the screen it came from. White surface, black
+       text, right either way — at the cost of the card's shape, which the
+       default print had already dropped.
+
+       This reaches every surface that names the token: PageHero's gradient and
+       the pills in ExplorePage, PipelinePage and SimulationPage. It does NOT
+       reach QuestionCard, which paints the same blue from a literal in
+       lib/lensAccent.js through an inline style — that one card still prints
+       its text at 4.17:1 when backgrounds are on, and the fix is a class rather
+       than an inline style. Nothing here uses --color-electric as ink or as a
+       border, so whitening it cannot hide text. */
+    --color-electric: #ffffff;
+
+    --color-stat-card-icon-background: #f2f2f2;
+  }
+
+  /* INVERTED INK, WHICH PAPER HAS NO INVERSE FOR.
+     The pill buttons on /login and in the error screen are `bg-white` with
+     `text-page`: a white pill labelled in the colour of the page behind it,
+     which is near-black on screen. Print makes the page white — and `bg-white`
+     is Tailwind's own #ffffff, which nothing above repoints — so both halves
+     became the same colour. Measured under @media print in Chrome:
+     rgb(255,255,255) on rgb(255,255,255), 1.00:1. The label was simply gone.
+     (TopNav's copy of the same button already carries `print:hidden`.)
+
+     --color-page cannot be repointed to fix it: on paper --color-page IS the
+     paper. Only the utility can move, and only the utility does. */
+  .text-page {
+    color: #000000 !important;
+  }
+
+  /* (1). The reveal is decoration; the content is not.
+
+     Scoped away from <svg>, because `opacity-0` is not only the reveal: the
+     external-link arrows in NewsList and Reading sit at `opacity-0` until the
+     row is hovered, and they mean "hover me to see where this goes". Forcing
+     those on printed an arrow beside every headline, promising an interaction
+     the paper cannot honour. Every element useReveal holds is a <section> or a
+     <div>; both hover icons are <svg>. */
+  :not(svg).opacity-0 {
+    opacity: 1 !important;
+  }
+
+  .rise,
+  .rise-sm,
+  .stagger > *,
+  .sheet-in,
+  .sheet-up,
+  .marquee-track,
+  .animate-landing-marquee,
+  .animate-number-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* A chart is the point of the page; it must not be split across a break. */
+  .recharts-wrapper,
+  figure,
+  table {
+    break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  /* A URL a reader can type. Scoped to the article body and to external links:
+     printing "(/lens/labour)" after every nav item is noise, and the footer's
+     own links are already spelled out. */
+  main a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
   }
 }

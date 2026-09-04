@@ -17,6 +17,23 @@
  * Both surfaces are tested, because a step that passes on white can fail on
  * the dark card, and dark mode was never an automatic flip of light.
  *
+ * AND THE PALETTE'S OWN INTEGRITY, WHICH NOTHING USED TO CHECK
+ *
+ * "Six CVD-validated hues in a fixed order" is a stated non-negotiable, and
+ * until 3 September 2026 nothing enforced any part of it. This file listed
+ * ['--c1'…'--c6'] by hand, so a `--c7` added to charts.css and appended to
+ * SERIES_COLORS was simply not looked at — the contrast run stayed green and
+ * `exceedsPalette()`, the runtime guard that makes ChartGroup refuse to draw,
+ * silently permitted one more series whose separation was never measured.
+ * Swapping two hues passed too: nothing compared them against anything.
+ *
+ * So the list below is DERIVED from SERIES_COLORS rather than restated, and
+ * both the count and the exact hex of every step are asserted against the
+ * validated set recorded in charts.css. Reordering repaints every chart on the
+ * site — green stops meaning one country and starts meaning another, across
+ * pages, with no version marker — which is invisible to a reviewer looking at
+ * a green build. It is not invisible to this.
+ *
  *     npm run check:contrast
  *
  * Exit code is non-zero on any failure, so it can gate a deploy.
@@ -25,6 +42,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SERIES_COLORS } from '../src/client/lib/format.js';
 
 const STYLES = join(fileURLToPath(new URL('..', import.meta.url)), 'src/client/styles');
 
@@ -113,10 +131,110 @@ function tokens() {
     return resolve(map, map.get(name) ?? light.get(name));
   };
 
-  return { read };
+  return { read, css };
 }
 
-const { read } = tokens();
+const { read, css } = tokens();
+
+/**
+ * The categorical palette as it was validated, checked in.
+ *
+ * These are not preferences and they are not derived from the CSS — that would
+ * make the check circular, passing whatever charts.css happens to say today.
+ * They are the hexes the dataviz validator scored, in the order it scored them
+ * in, recorded in the header of styles/charts.css along with the separation
+ * numbers (light re-validated 2026-08-26: worst adjacent CVD c6<->c5 dE 10.8
+ * deutan; dark needed its own steps for c1, c2 and c4 because BoardUI's dark
+ * card is lighter than the surface the originals were measured against).
+ *
+ * CHANGING ANY OF THESE MEANS RE-RUNNING THE VALIDATOR, not editing this list.
+ * Adjacency is what CVD separation is measured on, so a reorder is a real
+ * change to what a reader with deuteranopia can tell apart — and it silently
+ * repaints every chart on the site, so the same green line means one country
+ * on Monday and another on Tuesday.
+ */
+const VALIDATED_SERIES = [
+  { token: '--c1', light: '#1F7A4D', dark: '#2E9160' },
+  { token: '--c2', light: '#2563C9', dark: '#4680E0' },
+  { token: '--c3', light: '#C2570B', dark: '#C2570B' },
+  { token: '--c4', light: '#7C3AED', dark: '#9061F0' },
+  { token: '--c5', light: '#0891B2', dark: '#0891B2' },
+  { token: '--c6', light: '#C93A6E', dark: '#C93A6E' },
+];
+
+/**
+ * Six. Not "however many are defined" — the number is the non-negotiable.
+ *
+ * A seventh hue means a chart can draw a seventh series whose colour-vision
+ * separation against the other six was never measured, and every runtime guard
+ * that asks `palette.length` quietly permits it.
+ */
+const REQUIRED_HUES = 6;
+
+const paletteProblems = [];
+
+if (SERIES_COLORS.length !== REQUIRED_HUES) {
+  paletteProblems.push(
+    `SERIES_COLORS holds ${SERIES_COLORS.length} hues, not ${REQUIRED_HUES} ` +
+      `(${SERIES_COLORS.join(', ')}). The palette is six validated hues; a seventh ` +
+      'has to be scored by the dataviz validator against all six before it exists.'
+  );
+}
+
+if (VALIDATED_SERIES.length !== REQUIRED_HUES) {
+  paletteProblems.push(
+    `VALIDATED_SERIES in this file holds ${VALIDATED_SERIES.length} entries, not ${REQUIRED_HUES}.`
+  );
+}
+
+for (const [i, expected] of VALIDATED_SERIES.entries()) {
+  const actual = SERIES_COLORS[i];
+  if (actual !== expected.token) {
+    paletteProblems.push(
+      `SERIES_COLORS[${i}] is ${actual ?? '(missing)'}, expected ${expected.token}. ` +
+        'The hue ORDER is fixed — see the note in styles/charts.css.'
+    );
+    continue;
+  }
+  for (const mode of ['light', 'dark']) {
+    const hex = read(expected.token, mode);
+    if (!hex) {
+      paletteProblems.push(`${expected.token} does not resolve to a hex in ${mode} mode.`);
+    } else if (hex.toUpperCase() !== expected[mode].toUpperCase()) {
+      paletteProblems.push(
+        `${expected.token} is ${hex} in ${mode} mode, expected ${expected[mode]}. ` +
+          'A hue that moved was not re-scored; two hues that swapped repaint every chart.'
+      );
+    }
+  }
+}
+
+/*
+ * The other half of the same mistake: a hue defined in the stylesheet but not
+ * in SERIES_COLORS. It draws nothing today, and it is one line in format.js
+ * away from drawing a seventh series — so it is caught where it is cheap.
+ */
+const definedHues = [
+  ...new Set([...css.matchAll(/(--c\d+)\s*:/g)].map(([, name]) => name)),
+].sort();
+const allowedHues = VALIDATED_SERIES.map((s) => s.token);
+const strayHues = definedHues.filter((name) => !allowedHues.includes(name));
+if (strayHues.length > 0) {
+  paletteProblems.push(
+    `the stylesheets define ${strayHues.join(', ')}, which is not in the validated set ` +
+      `(${allowedHues.join(', ')}). Delete it, or score it and add it here.`
+  );
+}
+
+console.log(`\n${DIM}categorical palette${RESET}`);
+if (paletteProblems.length === 0) {
+  console.log(
+    `  ${GREEN}✓${RESET} ${SERIES_COLORS.length} hues, in order, at their validated values ` +
+      `${DIM}(${SERIES_COLORS.join(' ')})${RESET}`
+  );
+} else {
+  for (const problem of paletteProblems) console.log(`  ${RED}✗${RESET} ${problem}`);
+}
 
 /**
  * What actually has to be legible.
@@ -140,7 +258,10 @@ const CHECKS = [
   { cssVar: '--color-pos', role: 'positive delta text', min: TEXT },
   { cssVar: '--color-neg', role: 'negative delta text', min: TEXT },
   { cssVar: '--color-warn', role: 'caveat / warning', min: TEXT },
-  ...['--c1', '--c2', '--c3', '--c4', '--c5', '--c6'].map((cssVar) => ({
+  // Derived, never restated. A seventh hue appended to SERIES_COLORS is
+  // checked here the moment it exists — and rejected by the palette
+  // integrity block above, which is where the count is the point.
+  ...SERIES_COLORS.map((cssVar) => ({
     cssVar,
     role: 'chart series',
     min: UI,
@@ -165,7 +286,7 @@ const CHECKS = [
    * Checked here rather than written in a comment, so changing the fill hex
    * turns the build red instead of turning the card unreadable.
    */
-  { cssVar: '--color-on-fill', role: 'text on a filled card', min: TEXT, surfaces: ['fill', 'fill-hover'] },
+  { cssVar: '--color-on-fill', role: 'text on a filled card', min: TEXT, surfaces: ['fill', 'fill-hover', 'band'] },
 ];
 
 /**
@@ -194,6 +315,19 @@ const SURFACES = [
   ['panel', '#0D0D0D'],
   ['fill', '#2F61F7'],
   ['fill-hover', '#2B59E3'],
+  // `.gradient-band` (atmos.css) sits behind every lens, question and login hero.
+  // It composites a radial gradient over a linear one, and its BRIGHTEST point is
+  // the radial centre at 50% 100%, where #2f61f7 is fully opaque — so the band
+  // peaks at exactly the same colour as the question card, and inherits exactly
+  // the same zero headroom. Measured against the real tokens:
+  //     --color-on-fill        #ffffff   5.03:1   passes
+  //     --color-text-secondary #d1d1d1   3.29:1   FAILS
+  //     text-white/90          #e6ebfd   4.23:1   FAILS
+  // Only pure white is permitted on this band. It is listed separately from
+  // `fill` even though the literal is identical, because the failure it guards
+  // against is a different one: nobody puts secondary text on a question card,
+  // and everybody is tempted to put it on a hero.
+  ['band', '#2F61F7'],
 ];
 
 let failed = 0;
@@ -227,13 +361,25 @@ for (const [label, surface] of SURFACES) {
   }
 }
 
-if (failed > 0) {
-  console.error(
-    `\n${RED}✗ ${failed} of ${checked} contrast checks failed${RESET}\n` +
-      `${DIM}A colour below its floor is unreadable for someone, and nothing in the ` +
-      `build will tell you.${RESET}`
-  );
+if (failed > 0 || paletteProblems.length > 0) {
+  if (failed > 0) {
+    console.error(
+      `\n${RED}✗ ${failed} of ${checked} contrast checks failed${RESET}\n` +
+        `${DIM}A colour below its floor is unreadable for someone, and nothing in the ` +
+        `build will tell you.${RESET}`
+    );
+  }
+  if (paletteProblems.length > 0) {
+    console.error(
+      `\n${RED}✗ ${paletteProblems.length} palette integrity problem(s)${RESET}\n` +
+        `${DIM}Six CVD-validated hues in a fixed order is a non-negotiable. Re-run the ` +
+        `dataviz validator before changing any of them — see styles/charts.css.${RESET}`
+    );
+  }
   process.exit(1);
 }
 
-console.log(`\n${GREEN}✓${RESET} all ${checked} contrast checks pass ${DIM}(WCAG AA)${RESET}`);
+console.log(
+  `\n${GREEN}✓${RESET} all ${checked} contrast checks pass ${DIM}(WCAG AA)${RESET}, ` +
+    `and the palette is its ${SERIES_COLORS.length} validated hues in order`
+);

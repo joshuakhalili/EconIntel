@@ -2,11 +2,9 @@
   "source": "https://atmos-system.framer.website",
   "pages": [
     "/",
-    "/thanks",
     "/legal/privacy-policy",
     "/legal/terms-of-service",
-    "/404",
-    "/waitlist"
+    "/404"
   ],
   "extra_hosts": [],
   "unmirrored_hosts": [
@@ -19,5 +17,6 @@
     "www.linkedin.com",
     "www.threads.com",
     "x.com"
-  ]
+  ],
+  "_note": "/thanks and /waitlist were removed with the Framer form that posted reader addresses to the template author account. This list is what the site HAS, because docs/verify-nav.py walks it."
 }

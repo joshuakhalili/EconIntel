@@ -98,10 +98,16 @@
 --      has not moved before rewriting any of them.
 --
 --   3. UK TOTAL FACTOR PRODUCTIVITY CARRIES FORECASTS. AMECO publishes
---      projections in the same series as outturns: 2025, 2026 and 2027 in
---      `dbn.AMECO.ZVGDF.GBR.…` are European Commission forecasts, not
---      measurements. `total-factor-productivity` says so. If that series is
---      ever used on another page, it has to say so there too.
+--      projections in the same series as outturns, and does not say which of
+--      its own releases a figure came from. Revised 2026-09-03: this note used
+--      to assert that 2025, 2026 and 2027 in `dbn.AMECO.ZVGDF.GBR.…` were all
+--      Commission forecasts. Two of the three can be established — 2026 and
+--      2027 have not happened, so nothing about them can be an outturn, and
+--      seed 036 marks them `value_status = 'projected'`. The 2025 figure
+--      cannot: it depends on the release vintage, which is not stored and
+--      which DBnomics does not return. `total-factor-productivity` now says
+--      exactly that. If the series is ever used on another page, it has to say
+--      it there too.
 --
 -- Per-question checks are in the comment above each question.
 -- ============================================================================
@@ -127,9 +133,11 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 -- GROWTH & PRODUCTIVITY
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Figures read 2026-08-30:
---   US TFP (index 2017=1, annual): 0.809 (1990), 0.964 (2019), 1.000 (2021),
+-- Figures read 2026-08-30, base year re-read 2026-09-03:
+--   US TFP (index 2021=1, annual): 0.809 (1990), 0.964 (2019), 1.000 (2021),
 --     0.984 (2022), 0.993 (2023) — series ends 2023 (fred.RTFPNAUSA632NRUG)
+--     The base is 2021, not 2017: 2021 reads exactly 1 and 2017 reads 0.9534.
+--     The unit said 2017 until 2026-09-03; see the note in seed 004.
 --   UK TFP (index 2020=100, annual): 93.31 (2007), 95.69 (2019), 100.0 (2020),
 --     94.50 (2021), 97.24 (2022), 96.10 (2024), 95.96 (2025), 96.29 (2026),
 --     96.77 (2027)                    (dbn.AMECO.ZVGDF.GBR.3.0.0.0.ZVGDF)
@@ -137,14 +145,16 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 --     select date_trunc('year', period_start)::date yr, avg(value)
 --       from observations where indicator_id = '…' group by 1 order by 1;
 --
--- CHECK BEFORE ACTIVATING: that 2025-2027 in the AMECO series are still
--- forecasts and not yet outturns. The whole point of including the UK is that
--- its TFP has not moved; if the forecast years are replaced by measurements
--- that show movement, this page changes.
+-- CHECK BEFORE ACTIVATING: that 2026 and 2027 in the AMECO series are still
+-- unfinished years carrying Commission forecasts rather than outturns, and
+-- that 2025 has not moved. The whole point of including the UK is that its TFP
+-- has not moved; if the forecast years are replaced by measurements that show
+-- movement, this page changes. Seed 036 marks the unfinished years projected
+-- and explains why 2025 cannot be classified either way.
 ('total-factor-productivity', 'total-factor-productivity',
  'Is there anything left over?',
  'Total factor productivity, where a general-purpose technology should appear',
- 'Not yet, and the two series that could show it both stop short. Total factor productivity is what is left after more workers and more machines have been accounted for — the part of growth that comes from using the same inputs better, which is exactly what a general-purpose technology is supposed to deliver. US total factor productivity was 0.964 in 2019 and 0.993 in 2023 on an index where 2017 is 1, a rise of three per cent over four years, and the series ends there. UK total factor productivity was 95.7 in 2019 and 96.0 in 2025 on a 2020 base — no growth in six years — and its last three values are European Commission projections rather than measurements. Output per hour has risen much faster than either, which is what more capital per worker looks like rather than what better use of it looks like.',
+ 'Not yet, and the two series that could show it both stop short. Total factor productivity is what is left after more workers and more machines have been accounted for — the part of growth that comes from using the same inputs better, which is exactly what a general-purpose technology is supposed to deliver. US total factor productivity was 0.964 in 2019 and 0.993 in 2023 on an index where 2021 is 1, a rise of three per cent over four years, and the series ends there. UK total factor productivity was 95.7 in 2019 and 96.0 in 2025 on a 2020 base — no growth in six years — and the two points after it, 2026 and 2027, are European Commission projections rather than measurements, because neither year has ended. AMECO mixes forecasts into the same column as outturns and publishes no release vintage, so whether the 2025 figure is already a forecast is not something this database can tell you. Output per hour has risen much faster than either, which is what more capital per worker looks like rather than what better use of it looks like.',
  'Two national total factor productivity series from two statistical traditions — Penn World Table for the United States via FRED, AMECO for the United Kingdom — each on its own chart, because they have different base years and different base values and nothing is gained by forcing them together. US output per hour and the OECD''s PPP-converted level of GDP per hour sit alongside as the labour-productivity comparison, which is the measure that moves when capital deepens. The method''s central weakness is the residual itself: total factor productivity is not measured, it is computed as whatever growth the measured inputs do not explain, so every error in the capital stock enters it with the opposite sign. Reading a flat residual as evidence of no technological effect assumes the inputs were counted correctly, and in an intangible-heavy boom that is the assumption most likely to fail.',
  'Total factor productivity absorbs mismeasurement. If firms are buying capital the national accounts capitalise incompletely — models, data, trained staff — the measured capital stock is too small, and the residual that is supposed to capture the technology gets attributed to capital instead. That biases this page towards finding nothing, and it biases it in exactly the period where the claim is being made. The 2020 and 2021 values in both series are also dominated by pandemic composition rather than by technology: low-productivity jobs disappearing raises measured productivity, and any window spanning those years inherits that.',
  'Every other productivity measure in this dashboard can be raised by simply using more of something. Output per hour rises when a firm buys machines; value added rises when a sector sells more. Total factor productivity is the residual designed to strip those out — it is the number that moves only when the same labour and the same capital start producing more. It is the strictest available test of whether a technology has changed anything, and it is the number the Solow paradox was originally about.',
@@ -284,7 +294,7 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 ('orders-and-output', 'orders-and-output',
  'Are the factories busy?',
  'Orders and production for computers and electronics',
- 'Production yes, orders less so. US industrial production of computers and electronic products rose from an index of 110.3 in 2021 to 135.4 over the first seven months of 2026, while total US industrial production went from 99.3 to 102.2 on the same base — the sector grew by roughly a quarter while American manufacturing as a whole grew by three per cent. New orders are flatter: they averaged $29.6bn a month in the first half of 2026 against $36.3bn a month in 2000, and those are nominal dollars twenty-six years apart, so in real terms the order book for American computer and electronics manufacturing has not been back to its dot-com peak at any point in this boom.',
+ 'Production yes, orders less so. US industrial production of computers and electronic products rose from an index of 110.3 in 2021 to 135.4 over the first seven months of 2026, while total US industrial production went from 99.3 to 102.2 on the same base — the sector grew by roughly a quarter while American industry as a whole, manufacturing and mining and utilities together, grew by three per cent. New orders are flatter: they averaged $29.6bn a month in the first half of 2026 against $36.3bn a month in 2000, and those are nominal dollars twenty-six years apart, so in real terms the order book for American computer and electronics manufacturing has not been back to its dot-com peak at any point in this boom.',
  'Two US series on separate charts because one is an index and the other is dollars: the Federal Reserve''s industrial production index for computer and electronic product manufacturing, read against total industrial production on the same base, and Census new orders for the same industry, monthly and nominal. The producer price index for semiconductors sits alongside as the price counterpart. The geographic limitation is the one that matters: an American industrial production index measures what is made in America, and most of the semiconductors in an American data centre are not. Taiwanese and Korean fabrication does not appear anywhere in this page, which means a rising line here is consistent with the US share of the industry falling.',
  'The industry classification is far broader than anything that could be called AI hardware — phones, medical devices, navigation and defence electronics all sit inside it. The orders series is nominal and undeflated, which is why the comparison with 2000 is made in the direction that survives it. And industrial production indices are constructed from a mix of physical output and deflated value, so in an industry whose product doubles in capability without doubling in price, the index depends heavily on quality adjustments the published series does not expose.',
  'A boom in demand for computing hardware should be visible in the factories that make it before it is visible anywhere else. Orders lead production, production leads shipments, and both are measured monthly by agencies with no interest in the outcome. If the capital being announced is real, this is where it becomes physical — and if orders were rolling over while announcements continued, that gap would be the earliest available warning.',
@@ -362,6 +372,17 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 --   Documented US large GPU clusters: 12 (2020), 20 (2021), 11 (2022),
 --     18 (2023), 31 (2024), 5 (2025)      (epoch.gpu_cluster_count, USA)
 --
+-- GROWTH RATES RECOMPUTED 2026-09-03, because the answer was quoting a rate its
+-- own two endpoints do not produce. Compounded between the named observations,
+-- exact dates from the table above:
+--   2022-03-15 → 2025-07-09: 1,212 days (3.318 y), ×193.95 → 4.89 a year
+--   2018-05-02 → 2022-03-15: 1,413 days (3.869 y), ×294.83 → 4.35 a year
+-- The answer said "roughly four and a half times a year" for the first of those
+-- and called the second "the same pace". It is 4.89 against 4.35 — the later
+-- window is about 12 per cent faster per year. The finding survives (a tenth
+-- faster is a continuation, not an acceleration) but the numbers had to change
+-- to state it. Recompute with the dates above if either endpoint moves.
+--
 -- CHECK BEFORE ACTIVATING: whether Epoch has published anything after
 -- 2025-07-09. A fourteen-month gap at the frontier is either the most
 -- interesting fact on this page or a stale ingestion, and the two are
@@ -370,11 +391,11 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 ('frontier-compute', 'frontier-compute',
  'Are the models still getting bigger?',
  'The largest known training run, and the rate it has grown at',
- 'Yes, and at almost exactly the rate it was already growing at. The largest known training run went from 2.6 × 10^24 floating-point operations in March 2022 to 5.0 × 10^26 in July 2025 — about 190 times in three years and four months, or roughly four and a half times a year. The four years before that ran at the same pace: 8.7 × 10^21 in May 2018 to 2.6 × 10^24 in March 2022 is about 295 times in under four years. So the frontier did not accelerate when the money arrived. It continued. The most recent observation in this series is July 2025, and there is nothing after it — which means either that nothing larger has been trained in over a year or that nobody has said so, and this database cannot tell you which.',
+ 'Yes, and only a little faster than it was already growing. The largest known training run went from 2.6 × 10^24 floating-point operations in March 2022 to 5.0 × 10^26 in July 2025 — about 190 times in three years and four months, which compounds to 4.9 times a year. The three years and ten months before that ran at 4.3 times a year: 8.7 × 10^21 in May 2018 to 2.6 × 10^24 in March 2022 is about 295 times. So the frontier grew roughly twelve per cent faster per year once the money arrived. That is a continuation, not an acceleration — the difference between the two windows is far smaller than the difference in the capital behind them. The most recent observation in this series is July 2025, and there is nothing after it — which means either that nothing larger has been trained in over a year or that nobody has said so, and this database cannot tell you which.',
  'Epoch AI''s estimate of the training compute of the largest known model, plotted against the count of documented large GPU clusters in the United States and against documented US data centre capacity in megawatts. Three charts, three units, and the compute series is on a logarithmic scale by necessity — it spans twenty-five orders of magnitude and cannot be drawn any other way. It is a sequence of record-holders at irregular dates rather than a series with a period, so the growth rates quoted are compound rates between named observations, not annual averages of a continuous measure. The cluster count has a known and severe recency problem: clusters are documented after the fact, so the most recent year is always the most incomplete, and the 2025 figure of five against 31 in 2024 is far more likely to be reporting lag than a collapse in building.',
  'None of these numbers is disclosed by the people who would know. Training compute is reconstructed by Epoch from hardware, run time and published details, and developers have become less forthcoming rather than more as the stakes have risen — so the series is most likely to undercount exactly where it matters most, at the current frontier. The cluster count is documented clusters only. And a record-holder series says nothing about the distribution beneath it: the frontier can stall while total compute spent on training rises, if the spending goes into many models rather than one larger one.',
  'The capital in this boom is being raised against a specific technical bet: that spending more on training a single model keeps making it better. That bet is what turns a research programme into a capital expenditure cycle, and it is testable in a way that most claims here are not. If frontier training compute stopped growing exponentially, the argument for the data centres would have to be made on inference demand instead — a completely different economic case with a completely different cost structure.',
- 'Growth is measured as a compound rate between two named observations at each end of two comparable windows, rather than read off a trend line through irregularly spaced points. The log scale is stated on the chart, because an exponential drawn linearly makes every year before the last one look like nothing happened.',
+ 'Growth is measured as a compound rate between two named observations at each end of two windows of similar but unequal length — three years four months and three years ten months — rather than read off a trend line through irregularly spaced points. The two rates are quoted to one decimal and compared as a ratio, because the whole finding is how close they are. The log scale is stated on the chart, because an exponential drawn linearly makes every year before the last one look like nothing happened.',
  'suggestive', NULL, 'investment', 10, FALSE),
 
 
@@ -483,7 +504,7 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 ('aggregate-unemployment', 'aggregate-unemployment',
  'Has unemployment risen anywhere?',
  'The broadest measure, and why it would be the last to move',
- 'No. World unemployment, as the International Labour Organization models it, was 5.59 per cent in 2019, 6.59 in 2020, and 4.79 per cent in 2025 — the lowest reading in a series that starts in 2000 at 6.11. US non-farm payrolls are at a record 158.7 million over the first seven months of 2026. Japanese employment is at a record 68.4 million. The one number on this page that has risen is US youth unemployment, from 8.4 per cent in 2019 to 9.1 per cent in 2026, and even that is below its 2015 level. This is the weakest possible test and the technology has not failed it — but the reason it is weak is the reason this page exists.',
+ 'No. World unemployment, as the International Labour Organization models it, was 5.59 per cent in 2019, 6.59 in 2020, and 4.79 per cent in 2025 — the lowest reading in a series that starts in 2000 at 6.11. US non-farm payrolls are at a record 158.7 million over the first seven months of 2026. Japanese employment is at a record 68.4 million on the same seven-month basis. The one number on this page that has risen is US youth unemployment, from 8.4 per cent averaged over 2019 to 9.1 per cent averaged over the first seven months of 2026, and even that is below its 2015 level of 11.6. Read as single months rather than as an average the same series stood at 8.5 per cent in July 2026, which is the figure the entry-level page quotes; the difference between the two is the convention, not the data. This is the weakest possible test and the technology has not failed it — but the reason it is weak is the reason this page exists.',
  'World Bank harmonised unemployment for the world aggregate, US non-farm payrolls, Japanese employed persons and US youth unemployment, on four charts because they are two rates and two counts on incompatible scales. The world figure is an ILO model estimate that harmonises labour force surveys of very different quality across countries and is published annually — a resolution far coarser than the effect being looked for, and one that lags by design. The page is constructed as a null result and should be read as one: it establishes that nothing large enough to move a global annual unemployment rate has happened, which is a much smaller statement than "nothing has happened".',
  'The unemployment rate is close to the worst available instrument for this question and would be the last place an effect appeared. A person who stops looking for work is not unemployed; a person whose hours are cut is not unemployed; and a job that is never created generates no unemployment at all, which is precisely the mechanism most of the AI displacement literature actually proposes. Displacement through slower hiring shows up in the vacancy rate, in the hiring rate, and in the entry-level share years before it shows up here, if it shows up here at all.',
  'Every specific claim about AI and employment is a claim about a slice — an occupation, a cohort, a sector. Those slices are where this dashboard spends most of its labour lens, and they are also where a finding is easiest to manufacture by choosing the slice. The aggregate is the discipline on that: if something large is happening to labour demand, it eventually has to appear in the total, and stating plainly that it has not is what makes the narrower findings elsewhere on this site readable as evidence rather than as selection.',
@@ -516,9 +537,9 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 ('chip-prices', 'chip-prices',
  'Have chips stopped getting cheaper?',
  'Thirty years of falling semiconductor prices, and the last five',
- 'They have stopped falling, and the machines that make them have started rising. The US producer price index for semiconductors and related devices was 153 in January 1990 and 30 by 2021 — a fall of about eighty per cent over three decades, and the single price movement that everything else in this dashboard rests on. Since 2021 it has read 30.0, 31.0, 31.7, 31.1, 29.9, 29.9. Five years without a fall, after thirty years of nothing else. Over the same five years the producer price for semiconductor manufacturing machinery rose from 89.9 to 107.5, and Japan''s export price index for the same equipment rose twelve per cent between 2020 and May 2024. The tools got dearer while the chips stopped getting cheaper.',
- 'Two US producer price indices and one Japanese export price index, on three charts. The two American series are not put on one axis despite both being indices, because their base periods are five years apart — one is December 1998 = 100 and the other December 2003 = 100 — and a shared axis would invite a reader to compare a 30 against a 108 as though the levels meant anything against each other. The Japanese series is included because it is constructed by a different statistical office under a different methodology and reaches the same conclusion about equipment, which is worth more than a second American series would be. Quality adjustment is the methodological centre of this page: a chip twice as fast at the same price ought to register as a price fall, and how much of that gets captured depends on matched-model choices the published index does not expose.',
- 'Between 2021 and 2023 the United States had its largest general inflation in forty years, and a nominal price index that merely stops falling through it has still fallen against everything else. This page has no deflator and cannot say by how much, which means "chips stopped getting cheaper" is a statement about the dollar price and not necessarily about the real one. The semiconductor index also covers memory, analogue, discrete and logic devices together, and the AI-relevant part of that basket is a minority of it with a very different price history.',
+ 'They have stopped falling, and the machines that make them have started rising. The US producer price index for semiconductors and related devices was 153 in January 1990 and 30 by 2021 — a fall of about eighty per cent over three decades, and the single price movement that everything else in this dashboard rests on. Since 2021 it has read 30.0, 31.0, 31.7, 31.1, 29.9, 29.9 — annual means, the last of them over the first seven months of 2026 rather than a full year. Five years without a fall, after thirty years of nothing else. Over the same five years the producer price for semiconductor manufacturing machinery rose from 89.9 in 2021 to 107.5 over the first seven months of 2026, and Japan''s export price index for the same equipment rose twelve per cent between 2020 and May 2024, where that series stops. The tools got dearer while the chips stopped getting cheaper.',
+ 'Two US producer price indices and one Japanese export price index, on three charts. The two American series are not put on one axis despite both being indices, because their base periods are five years apart — one is December 1998 = 100 and the other December 2003 = 100 — and a shared axis would invite a reader to compare a 30 against a 108 as though the levels meant anything against each other. The Japanese series is included because it is constructed by a different statistical office under a different methodology and reaches the same conclusion about equipment up to its last reading in May 2024, which is worth more than a second American series would be — though it is two years shorter than the American ones and the chart shows that. Quality adjustment is the methodological centre of this page: a chip twice as fast at the same price ought to register as a price fall, and how much of that gets captured depends on matched-model choices the published index does not expose.',
+ 'Between 2021 and 2023 the United States had its largest general inflation in forty years, and a nominal price index that merely stops falling through it has still fallen against everything else. This page has no deflator and cannot say by how much, which means "chips stopped getting cheaper" is a statement about the dollar price and not necessarily about the real one. The semiconductor index also covers memory, analogue, discrete and logic devices together, and the AI-relevant part of that basket is a minority of it with a very different price history. And the Japanese line is not current: that index stops in May 2024, two years short of the two American series, so it corroborates the equipment story up to 2024 and says nothing about what has happened since.',
  'The falling price of computation is the engine underneath every claim in this dashboard. It is why capital keeps flowing in, why adoption spreads, and why the substitution argument against labour has any force at all. If that decline has genuinely stalled, the economics of the entire build-out change: the returns have to come from using compute better rather than from buying more of it for less, and every projection built on continued price falls is projecting something that stopped.',
  'Two independent constructions of the equipment price, one American and one Japanese, so a methodological artefact in either does not carry the finding. Indices with different base periods are kept on separate axes rather than being drawn together and left for the reader to notice.',
  'suggestive', NULL, 'prices', 5, FALSE),
@@ -745,11 +766,11 @@ INSERT INTO question_indicators
 -- rebase is suppressed for indices, so they are kept apart deliberately.
 ('total-factor-productivity', 'fred.RTFPNAUSA632NRUG', 'hero', 1, NULL, 'USA',
  'US total factor productivity — the part of growth that is not explained by more workers or more machines. It rose three per cent between 2019 and 2023, and the series stops there.',
- 'Penn World Table total factor productivity at constant national prices, index 2017 = 1, annual to 2023. A residual rather than a measurement: it is whatever growth the measured inputs fail to explain, so every error in the capital stock enters it with the opposite sign.'),
+ 'Penn World Table total factor productivity at constant national prices, index 2021 = 1, annual to 2023. A residual rather than a measurement: it is whatever growth the measured inputs fail to explain, so every error in the capital stock enters it with the opposite sign.'),
 
 ('total-factor-productivity', 'dbn.AMECO.ZVGDF.GBR.3.0.0.0.ZVGDF', 'supporting', 2, NULL, 'GBR',
- 'The same idea for the UK, where it has gone nowhere for six years — 95.7 in 2019 against 96.0 in 2025. Note that the last three points are forecasts, not measurements.',
- 'AMECO total factor productivity, total economy, index 2020 = 100. The European Commission publishes projections in the same series as outturns: 2025 to 2027 are projections. The 2020 base year is itself a pandemic year, which is a poor choice of base for any series affected by composition.'),
+ 'The same idea for the UK, where it has gone nowhere for six years — 95.7 in 2019 against 96.0 in 2025. The dashed tail, 2026 and 2027, is forecast rather than measurement.',
+ 'AMECO total factor productivity, total economy, index 2020 = 100. The European Commission publishes projections in the same series as outturns and DBnomics returns no release vintage, so the boundary between the two can only be fixed where the calendar fixes it: 2026 and 2027 have not happened and are marked projected; whether 2025 is an outturn or a forecast cannot be established from what the source publishes. The 2020 base year is itself a pandemic year, which is a poor choice of base for any series affected by composition.'),
 
 ('total-factor-productivity', 'fred.OPHNFB', 'supporting', 3, NULL, 'USA',
  'US output per hour over the same period, rising much faster than the residual above. That gap is what buying more capital per worker looks like.',
@@ -998,11 +1019,11 @@ INSERT INTO question_indicators
 -- be drawn raw. Their bases are five years apart, so they are kept apart: a 30
 -- against a 108 is not a comparison.
 ('chip-prices', 'fred.PCU334413334413', 'hero', 1, NULL, 'USA',
- 'US producer prices for semiconductors: 153 in January 1990, 30 by 2021, and 29.9 in 2026. Thirty years of falling, then five years of nothing.',
+ 'US producer prices for semiconductors: 153 in January 1990, 30 by 2021, and 29.9 over the first seven months of 2026. Thirty years of falling, then five years of nothing.',
  'PPI for semiconductor and related device manufacturing, index December 1998 = 100, monthly. Covers memory, logic, analogue and discrete devices together. Quality adjustment is unusually consequential here and the method choices behind it are not exposed by the published series.'),
 
 ('chip-prices', 'fred.PCU333242333242', 'supporting', 2, NULL, 'USA',
- 'The machines that make the chips, going the other way: 89.9 in 2021 to 107.5 in 2026.',
+ 'The machines that make the chips, going the other way: 89.9 in 2021 to 107.5 over the first seven months of 2026.',
  'PPI for semiconductor machinery manufacturing, index December 2003 = 100. Kept off the axis above because the base periods are five years apart and both series are indices, which means nothing would be rebased and the levels would invite a comparison that has no meaning.'),
 
 ('chip-prices', 'dbn.BOJ.CGPI.2300440015', 'supporting', 3, NULL, 'JPN',
@@ -1018,7 +1039,7 @@ INSERT INTO question_indicators
 -- exactly the case for one axis. The US index has its own because its base is
 -- eleven years earlier.
 ('compute-price-abroad', 'fred.PCU518210518210', 'hero', 1, NULL, 'USA',
- 'The US price of data processing and hosting. It rose 11.5 per cent between 2019 and 2026 — as much as in the whole nineteen years before that.',
+ 'The US price of data processing and hosting. It rose 11.5 per cent between 2019 and the first seven months of 2026 — as much as in the whole nineteen years before that.',
  'PPI for data processing, hosting and related services, index December 2000 = 100, monthly. Prices a contract rather than a unit of computation: a customer paying the same for twice the capacity registers as no change.'),
 
 ('compute-price-abroad', 'dbn.BOJ.SPPI.5201450003', 'supporting', 2, 'japan-compute-prices', 'JPN',
@@ -1054,7 +1075,7 @@ INSERT INTO question_indicators
 
 -- ── labour-vs-compute ───────────────────────────────────────────────────────
 ('labour-vs-compute', 'fred.ULCNFB', 'hero', 1, 'us-labour-index', 'USA',
- 'What an hour of American output costs in pay: up 19.5 per cent between 2019 and 2026.',
+ 'What an hour of American output costs in pay: up 19.5 per cent between 2019 and the first half of 2026.',
  'BLS nonfarm business unit labour costs, index 2017 = 100, quarterly. Economy-wide, while the labour AI plausibly substitutes for is a specific and relatively expensive slice — so this is the wrong slice, measured well.'),
 
 ('labour-vs-compute', 'fred.OPHNFB', 'supporting', 2, 'us-labour-index', 'USA',

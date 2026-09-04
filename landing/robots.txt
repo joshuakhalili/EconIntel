@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://diffusion.observer/sitemap.xml
+Sitemap: https://trydiffusion.vercel.app/sitemap.xml

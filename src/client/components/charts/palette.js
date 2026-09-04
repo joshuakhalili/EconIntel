@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { SERIES_COLORS } from '@/lib/format';
 
+/*
+ * The twelve chart honesty behaviours this project treats as non-negotiable
+ * are written down once, next to this file, in HONESTY.md. The one that lives
+ * here is the last: no chart draws more series than there are validated hues.
+ *
+ * The palette itself is enforced by `npm run check:contrast`, which derives
+ * its list from SERIES_COLORS and asserts both the count and the exact hex of
+ * every step — so adding a seventh hue, or swapping two, turns the build red.
+ */
+
 /**
  * Resolve the categorical palette to real hex values.
  *

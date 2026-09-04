@@ -57,8 +57,8 @@ INSERT INTO lenses (id, slug, name, subtitle, thesis_plain, thesis_expert, sort_
 
 ('labour', 'labour', 'Labour Markets',
  'Jobs, pay and who gets hired',
- 'The early signs are small but real. The share of US jobs in the information sector has been falling since 2023 after a decade of rising. UK tech vacancies are below their 2001 level. Young people are the place to watch: if AI takes the bottom rung of a career ladder, it shows there first.',
- 'Identification is by comparison, not level: an AI-exposed group against a control sharing its macro shocks. Information-sector employment as a share of total non-farm payrolls cancels the cycle affecting both. Vacancy series lead employment because hiring intent adjusts before headcount. The youth panel is OECD-harmonised across ten countries. Principal confound: the information sector was consolidating post-2022 for reasons unrelated to AI, chiefly interest rates.',
+ 'The early signs are small but real. The share of US jobs in the information sector peaked in 2000 and has fallen since, apart from a rise between 2019 and 2022; it is now the lowest in a series that starts in 1990. UK tech vacancies are below their 2001 level. Young people are the place to watch: if AI takes the bottom rung of a career ladder, it shows there first.',
+ 'Identification is by comparison, not level: an AI-exposed group against a control sharing its macro shocks. Information-sector employment as a share of total non-farm payrolls cancels the cycle affecting both. Vacancy series lead employment because hiring intent adjusts before headcount. The youth panel is OECD-harmonised across eight countries. Principal confound: the information sector was consolidating post-2022 for reasons unrelated to AI, chiefly interest rates.',
  3, 'users',
  'jobs OR hiring OR layoffs OR redundancies OR employment OR unemployment OR graduates OR wages OR salaries OR recruitment OR "job cuts" OR workforce'),
 
@@ -71,8 +71,8 @@ INSERT INTO lenses (id, slug, name, subtitle, thesis_plain, thesis_expert, sort_
 
 ('regulation', 'regulation', 'Policy & Regulation',
  'What governments are actually doing',
- 'Mostly proposing rather than enacting. US agencies have published roughly a hundred months of AI rules that are genuinely in force, and a similar number of proposals that may never become law. Executive orders move in days and can be undone just as fast.',
- 'Federal Register documents matched on six AI search terms, deduplicated on document_number, split by type. The distinction is load-bearing: a Rule is enforceable, a Proposed Rule carries a comment period and leads a Rule by 12-24 months where it converts, and a Presidential Document is unilateral and reversible. United States only — no comparable machine-readable register exists free for the EU, UK or China, which makes this lens the most geographically incomplete of the five.',
+ 'More is binding than is pending. The Federal Register has published 241 AI-related rules, which are law when they appear, against 223 proposals that may never become law — and rules lead proposals on every window: 189 to 183 from 2020, 152 to 126 from 2023. Executive orders move in days and can be undone just as fast.',
+ 'Federal Register documents matched on six AI search terms, deduplicated on document_number, split by type. The distinction is load-bearing: a Rule is enforceable, a Proposed Rule carries a comment period and leads a Rule by 12-24 months where it converts, and a Presidential Document is unilateral and reversible. A document counts because its text matches a term, not because anyone read it, so the counts before about 2012 are term collisions rather than AI policy. United States only — no comparable machine-readable register exists free for the EU, UK or China, which makes this lens the most geographically incomplete of the five.',
  5, 'landmark',
  'regulation OR regulator OR law OR legislation OR government OR ministers OR antitrust OR lawsuit OR court OR ban OR investigation OR copyright')
 

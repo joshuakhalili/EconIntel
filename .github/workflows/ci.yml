@@ -1,0 +1,104 @@
+# Run the tests and the gates on every change.
+#
+# WHY THIS EXISTS
+#
+# Nothing ran them. The repo had 178 passing tests in 12 files and four check
+# gates, and the only two workflows were Ingest and Smoke — neither of which
+# invokes `npm test`. The pre-commit hook is a secret scanner. Vercel runs
+# `npm run build`, which is tokens + contrast + routes + vite + vercel-config,
+# and does not include the tests or `check:data`.
+#
+# So a commit that broke all 178 tests built green and deployed to production,
+# and the first person to find out was a reader. That is not hypothetical: the
+# header of `smoke.yml` describes two deploys that went out broken while every
+# local gate was green, one of them a syntax error in `app.js` "because no test
+# imported it". The response at the time was to add a post-deploy smoke test.
+# This is the pre-deploy half that was missing.
+#
+# WHAT THIS DOES NOT COVER, stated rather than left to be discovered
+#
+#   * Vercel deploys every push to `main` the moment it lands. This workflow
+#     starts at the same time and cannot block it — on `main` it is a report,
+#     not a gate. The gate is the `pull_request` run, and it is only a gate for
+#     work that actually arrives through a pull request.
+#   * `check:data` is not here. It needs a reachable database, and a front-end
+#     check that fails when Postgres is asleep is a check people learn to skip
+#     — the script's own docblock makes that argument. It runs in `ingest.yml`
+#     instead, immediately after the data changes, which is the moment it can
+#     actually catch something.
+#   * `vite build` is not here either. A broken build fails the Vercel deploy
+#     loudly and on its own; duplicating it would cost a minute per run to
+#     learn the same thing a few seconds later.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# One run per branch, whichever event started it.
+#
+# `head_ref` is the source branch on a pull_request and empty on a push;
+# `ref_name` is the branch on a push. Together they resolve to the SAME string
+# for both events, which is what makes the two runs a pull request produces
+# collapse into one instead of doubling every check.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# Read-only. This workflow builds nothing, publishes nothing and comments on
+# nothing, so it has no business holding a token that could.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # From `.nvmrc`, not a literal. A version pinned in two places drifts,
+      # and the version CI runs on has to be the version the code is written
+      # for — `package.json` declares `engines.node: 24.x` and `.nvmrc` says
+      # 24, so `.nvmrc` is the single source both this and `ingest.yml` read.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      # `npm ci` and not `npm install`: the point of running this at all is to
+      # test the dependency tree that will actually ship, and `npm install` is
+      # free to resolve something newer than the lockfile.
+      - run: npm ci
+
+      # THE TESTS FIRST, because they are the thing that was missing.
+      #
+      # No `--experimental-*` flags and no test runner dependency: this is
+      # `node --test` over `src/**/*.test.js`, the same command the package
+      # already defines, so what CI runs and what a person runs locally cannot
+      # diverge.
+      - name: Tests
+        run: npm test
+
+      # The gates are separate steps rather than one `npm run build`, so a
+      # failure names itself in the job list instead of being buried in a
+      # composite script's output.
+      #
+      # Each of these is a real production incident written down as a check —
+      # undefined Tailwind tokens that rendered as inherited styles for weeks,
+      # a contrast regression on the accent fill that has no headroom, a route
+      # in App.jsx with no rewrite in vercel.json that 404s on a shared link,
+      # and a CSP whose inline-script hashes had silently drifted away from the
+      # HTML. None of them throws. All of them ship green without this.
+      - name: Design tokens are all defined
+        run: npm run check:tokens
+
+      - name: Contrast meets WCAG AA
+        run: npm run check:contrast
+
+      - name: Every app route has a deploy rewrite
+        run: npm run check:routes
+
+      - name: vercel.json matches the built HTML
+        run: npm run check:vercel

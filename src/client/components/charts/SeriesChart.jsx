@@ -4,6 +4,14 @@ import { inferCadence, displayUnit, fmtDate } from '@/lib/format';
 
 const CADENCE_RANK = { daily: 0, weekly: 1, monthly: 2, quarterly: 3, annual: 4 };
 
+/*
+ * The thirteen chart honesty behaviours this project treats as non-negotiable
+ * are written down once, next to this file, in HONESTY.md — with the file and
+ * line implementing each. Three of them are here: the "(raw units)" label, the
+ * cadence-mismatch warning, and the named-and-dated forecast note. Read it
+ * before changing anything.
+ */
+
 /**
  * Adapts an /api/series response to the chart.
  *

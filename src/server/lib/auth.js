@@ -48,9 +48,10 @@ import { query } from '../db/pool.js';
  *    HMAC leaks the correct value a byte at a time to anyone patient.
  *
  * `STATUS.md` records that CORS is wide open *because* there was no auth. That
- * is no longer true, so `index.js` narrows it to an allowlist the moment this
- * is wired in — open CORS plus a cookie is how a read-only API becomes a CSRF
- * hole.
+ * is no longer true, so `app.js` narrows it to an allowlist the moment this is
+ * wired in — open CORS plus a cookie is how a read-only API becomes a CSRF
+ * hole. (This used to name `index.js`, which is 45 lines of listener and has
+ * never contained a CORS call.)
  */
 
 const SESSION_COOKIE = 'diffusion_session';
@@ -382,7 +383,13 @@ export async function currentReader(req) {
  * unparseable response rather than as a clear "you are signed out".
  */
 export function requireReader() {
-  return async (req, res, next) => {
+  // Named rather than anonymous: this is the layer whose POSITION in the
+  // middleware stack is load-bearing — everything registered after it needs an
+  // account and everything before it does not — and a stack of anonymous arrows
+  // can only be identified by guessing at its mount path. A test that has to
+  // guess which layer is the gate is a test that quietly stops checking the
+  // moment another /api middleware is added in front of it.
+  return async function requireReader(req, res, next) {
     // Without credentials configured there is nothing to sign in with, and
     // locking everyone out of a public dashboard is the worse failure.
     if (!isConfigured()) return next();

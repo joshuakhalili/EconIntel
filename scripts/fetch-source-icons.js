@@ -44,9 +44,17 @@ const RESET = '\x1b[0m';
 /** The migration's own ceiling, minus room for the `data:image/...;base64,` prefix. */
 const MAX_DATA_URI = 40_000;
 
-/** Named rather than borrowed: a source should be able to see who asked. */
+/**
+ * Named rather than borrowed: a source should be able to see who asked.
+ *
+ * The contact was the owner's personal Gmail until 4 Sep 2026. A User-Agent is
+ * broadcast to every third-party server this script touches AND this is a public
+ * repository, so that address was published twice over. The repo URL is the
+ * contact route now, matching the four ingestion adapters; the owner's chosen
+ * public contact is https://www.linkedin.com/in/joshuakhalili/ and is on the site.
+ */
 const USER_AGENT =
-  'Diffusion/1.0 (+https://github.com/joshuakhalili/EconIntel; joshuakhalili20@gmail.com)';
+  'Diffusion/1.0 (+https://github.com/joshuakhalili/EconIntel)';
 
 const TIMEOUT_MS = 15_000;
 

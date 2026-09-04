@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { RiArrowLeftSLine, RiArrowRightSLine } from '@remixicon/react';
 import { Chip } from '@/components/base/badges/chip';
 import { withUnit, fmtDate, fmt } from '@/lib/format';
+import { figureDelta, isStale } from '@/components/periodModel';
 import Sheet from '@/components/Sheet';
 
 /**
@@ -16,6 +17,11 @@ import Sheet from '@/components/Sheet';
  * Staleness is shown rather than hidden. A price that stopped updating is a
  * different thing from a price that did not move, and a reader must be able to
  * tell them apart.
+ *
+ * A period still in progress is shown the same way. `change()` and the
+ * partial-period test both live in periodModel.js now, because the overview's
+ * lens rows were doing the same arithmetic differently — see the note at the
+ * top of that file.
  */
 export default function TickerStrip({ tickers }) {
   const [openId, setOpenId] = useState(null);
@@ -75,6 +81,7 @@ export default function TickerStrip({ tickers }) {
   if (!tickers?.length) return null;
 
   const open = tickers.find((t) => t.indicator_id === openId);
+  const openDelta = figureDelta(open);
 
   return (
     <div className="mb-8">
@@ -132,7 +139,7 @@ export default function TickerStrip({ tickers }) {
         >
         {tickers.map((ticker) => {
           const stale = isStale(ticker);
-          const delta = change(ticker);
+          const { delta, toDate } = figureDelta(ticker);
           const isOpen = ticker.indicator_id === openId;
           return (
             <li key={ticker.indicator_id} className="flex">
@@ -175,10 +182,17 @@ export default function TickerStrip({ tickers }) {
                       stale
                     </Chip>
                   )}
+                  {/* "month to date" sits in the same tertiary type as the
+                      period, not in a coloured chip: it qualifies the figure,
+                      it is not something to act on, and the house rule is that
+                      colour is reserved for the latter. It replaces a delta
+                      rather than joining one — figureDelta never returns
+                      both. */}
                   <span className="text-caption-1-regular text-text-tertiary">
                     {ticker.latest_period
                       ? fmtDate(ticker.latest_period.slice(0, 10), 'monthly')
                       : ''}
+                    {toDate ? ` · ${toDate}` : ''}
                   </span>
                 </span>
               </button>
@@ -215,14 +229,23 @@ export default function TickerStrip({ tickers }) {
                 unusable — and a chip that carries direction in its wording is
                 the better version anyway, which is the same argument the chart
                 palette notes make about colour-only encoding. */}
-            {change(open) && (
+            {openDelta.delta && (
               <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/50 px-3 py-1 text-caption-1-medium text-on-fill">
-                <span aria-hidden>{change(open).value >= 0 ? '↑' : '↓'}</span>
+                <span aria-hidden>{openDelta.delta.value >= 0 ? '↑' : '↓'}</span>
                 <span className="figure">
-                  {fmt(Math.abs(change(open).value), 1)}
-                  {change(open).unit}
+                  {fmt(Math.abs(openDelta.delta.value), 1)}
+                  {openDelta.delta.unit}
                 </span>
                 <span>since the previous period</span>
+              </p>
+            )}
+
+            {/* Where the period has not finished, the sentence a reader needs
+                is why there is no comparison, not a comparison. Said in full
+                here because this is the panel with room for it. */}
+            {openDelta.toDate && (
+              <p className="mt-4 inline-flex items-center rounded-full border border-white/50 px-3 py-1 text-caption-1-medium text-on-fill">
+                {openDelta.toDate} — not yet comparable with the period before it
               </p>
             )}
 
@@ -248,43 +271,3 @@ export default function TickerStrip({ tickers }) {
   );
 }
 
-/**
- * A price is stale when it is older than about two of its own periods.
- *
- * The spacing is measured from latest_period to previous_period rather than
- * read from a cadence field, because the ticker payload has no cadence field —
- * and even where one exists it is not trustworthy: several series are annual
- * in fact while declared quarterly. Judged this way an annual figure from
- * January is current in August, while a daily price from January is not.
- */
-function isStale(ticker) {
-  if (!ticker.latest_period) return true;
-  const age = (Date.now() - new Date(ticker.latest_period).getTime()) / 86_400_000;
-  const period = periodDays(ticker);
-  return age > period * 2.2;
-}
-
-function periodDays(ticker) {
-  if (!ticker.previous_period || !ticker.latest_period) return 31;
-  const gap =
-    (new Date(ticker.latest_period).getTime() - new Date(ticker.previous_period).getTime()) /
-    86_400_000;
-  return gap > 0 ? gap : 31;
-}
-
-/**
- * Change since the previous observation.
- *
- * A RATE moves in percentage POINTS. A share going from 49.7% to 60.9% is
- * +11.2 points; reporting it as "+22%" is arithmetically defensible, useless,
- * and reads as a bug.
- */
-function change(ticker) {
-  const { latest_value: to, previous_value: from } = ticker;
-  if (to == null || from == null || !Number.isFinite(to) || !Number.isFinite(from)) return null;
-  if (ticker.quantity_kind === 'rate') {
-    return { value: to - from, unit: 'pp' };
-  }
-  if (!from) return null;
-  return { value: ((to - from) / Math.abs(from)) * 100, unit: '%' };
-}

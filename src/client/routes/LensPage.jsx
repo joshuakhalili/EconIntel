@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { RiArrowRightLine, RiArrowLeftLine } from '@remixicon/react';
-import { useLens, useLensTickers, useLensNews, useLenses } from '@/hooks/queries';
+import { RiArrowRightLine, RiArrowLeftLine, RiFlaskLine } from '@remixicon/react';
+import { useLens, useLensTickers, useLensNews, useLenses, useScenarios } from '@/hooks/queries';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import TickerStrip from '@/components/TickerStrip';
@@ -30,6 +30,26 @@ import { LENS_ACCENT } from '@/lib/lensAccent';
  * hairline, hero wash. It never draws data, because the six chart hues are
  * colourblind-validated and their order is load-bearing.
  */
+
+/**
+ * Which scenarios belong to which lens.
+ *
+ * A LITERAL, AND DELIBERATELY NOT A COUNT OR A GUESS. `/simulate/:slug` had no
+ * inbound link anywhere on the site — not the nav, not a lens, not a question —
+ * so the largest feature in the codebase was reachable only by typing its slug.
+ * The binding it needed is editorial: `ai-capex-dotcom` is about AI capital
+ * spending, so it belongs under Investment & Capital and nowhere else. There is
+ * no join table for that and this is the same shape `SCENARIO_EVIDENCE` uses
+ * server-side for the same kind of decision.
+ *
+ * A scenario absent from this map appears on no lens — which fails the same way
+ * the bug did, so it is stated rather than left to be discovered. A scenario
+ * index behind a nav entry is the real answer and TopNav belongs to another
+ * part of the site.
+ */
+const LENS_SCENARIOS = {
+  investment: ['ai-capex-dotcom'],
+};
 export default function LensPage() {
   const { slug } = useParams();
 
@@ -39,6 +59,7 @@ export default function LensPage() {
   const { data: news, isPending: newsPending } = useLensNews(slug, {
     enabled: lens?.has_news !== false,
   });
+  const { data: scenarios } = useScenarios();
 
   usePageTitle(lens?.name ?? 'Lens', lens?.subtitle);
 
@@ -55,6 +76,8 @@ export default function LensPage() {
   const here = order.findIndex((l) => l.slug === slug);
   const prev = here > 0 ? order[here - 1] : null;
   const next = here >= 0 && here < order.length - 1 ? order[here + 1] : null;
+
+  const lensScenarios = scenariosForLens(scenarios, lens.id, LENS_SCENARIOS);
 
   return (
     <article>
@@ -111,9 +134,21 @@ export default function LensPage() {
 
       {tickers?.length > 0 && (
         <section className="mt-14">
+          {/*
+            The eyebrow is chrome, not a heading, and this section had only the
+            eyebrow — so a reader navigating by heading went straight from "What
+            others have found" into six news H3s further down, with two whole
+            sections invisible in between. Every other section here already
+            pairs the eyebrow with a real H2; these two were the exceptions.
+          */}
           <p className="eyebrow" style={{ color: accent.hex }}>
             The prices underneath
           </p>
+          <h2 className="mt-3 text-title-1-medium text-text-primary">
+            {tickers.length === 1
+              ? 'One price is tracked under this lens'
+              : `${tickers.length} prices are tracked under this lens`}
+          </h2>
           <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
             Each one is here for a reason specific to this lens, not as a market feed. Open any of
             them to see why it is on this page.
@@ -126,7 +161,16 @@ export default function LensPage() {
               exact figures, so a reader meets the numbers first and the
               machine's summary of them second — which is the right order for
               the one paragraph here nobody wrote. */}
-          <NarrationBlock narration={lens.narration} />
+          {/* `tickers` is not decoration here. NarrationBlock computes whether the
+              stored prose has fallen behind the live figures and says so to the
+              reader — and without this prop narrationStaleness gets tickerPeriod
+              null and hardcodes stale=false, so the warning could never fire. It
+              was built in one file and mounted in another, and the seam between
+              them left the safeguard dead. Measured when it was wired: prices
+              (narration 28 Aug against tickers 2 Sep) and regulation (1 Aug
+              against 1 Sep) both go stale — regulation being the exact page the
+              component's docblock was written about. */}
+          <NarrationBlock narration={lens.narration} tickers={tickers} />
         </section>
       )}
 
@@ -149,6 +193,51 @@ export default function LensPage() {
           ))}
         </div>
       </section>
+
+      {/* The scenario, where a reader will actually meet it. See LENS_SCENARIOS. */}
+      {lensScenarios.length > 0 && (
+        <section className="mt-14">
+          <p className="eyebrow flex items-center gap-2" style={{ color: accent.hex }}>
+            <RiFlaskLine className="size-3.5 shrink-0" aria-hidden />
+            Run it forward
+          </p>
+          <h2 className="mt-3 text-title-1-medium text-text-primary">
+            {lensScenarios.length === 1
+              ? 'One scenario extends this lens'
+              : `${lensScenarios.length} scenarios extend this lens`}
+          </h2>
+          <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
+            The only pages on this site whose numbers were not measured. They are arithmetic
+            on published coefficients — every one cited on the page — and each stops at the
+            horizon its sources publish rather than extending a line the paper does not draw.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3">
+            {lensScenarios.map((scenario) => (
+              <Link
+                key={scenario.slug}
+                to={`/simulate/${scenario.slug}`}
+                className="group tint flex flex-col rounded-2xl border border-border-button-default bg-panel p-5 hover:bg-raised"
+              >
+                <span className="text-title-3-medium text-text-primary">{scenario.name}</span>
+                {scenario.subtitle && (
+                  <span className="prose-measure mt-1 text-body-regular text-text-secondary">
+                    {scenario.subtitle}
+                  </span>
+                )}
+                <span className="mt-3 flex items-center gap-1.5 text-caption-1-medium text-text-tertiary">
+                  Modelled, not measured — {scenario.country_count ?? scenario.countries?.length}{' '}
+                  countries, {scenario.horizon_years} years
+                  <RiArrowRightLine
+                    className="size-3.5 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Figures filed against the lens rather than one of its questions — a
           BIS chart on AI capex is about Investment & Capital as a whole. Not
@@ -185,9 +274,12 @@ export default function LensPage() {
           <p className="eyebrow" style={{ color: accent.hex }}>
             Reported on this
           </p>
+          <h2 className="mt-3 text-title-1-medium text-text-primary">What is being reported</h2>
           <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
             Matched by a search stored against this lens — deterministic and editable, not a
-            model&rsquo;s judgement.
+            model&rsquo;s judgement. Each article carries a relevance figure out of 100: a keyword
+            score computed when it was collected. It is shown rather than hidden, but it
+            does filter: articles scoring under 40 never reach this list.
           </p>
           <div className="mt-5">
             {newsPending ? (
@@ -238,4 +330,18 @@ export default function LensPage() {
       </nav>
     </article>
   );
+}
+
+/**
+ * The published scenarios this lens offers, in the order the API returned them.
+ *
+ * Filtered by the editorial map rather than by anything derivable, and it fails
+ * CLOSED: a slug in the map with no published scenario behind it produces
+ * nothing rather than a dead link, which is what happens while a scenario is
+ * still a draft. Exported so `reader-pages.test.js` can hold it without a DOM.
+ */
+export function scenariosForLens(scenarios, lensId, map) {
+  const allowed = map?.[lensId];
+  if (!allowed || !Array.isArray(scenarios)) return [];
+  return scenarios.filter((s) => allowed.includes(s.slug));
 }

@@ -52,7 +52,7 @@ document.addEventListener("click", function (e) {
    click is still left alone, so cmd-click opens the absolute URL — production —
    which is correct there and merely surprising on localhost. */
 var APP_ORIGIN = "https://trydiffusion.vercel.app";
-var APP_PATHS = ["/login", "/overview"];
+var APP_PATHS = ["/login", "/overview", "/data"];
 
 document.addEventListener("click", function (e) {
   if (e.defaultPrevented || e.button !== 0) return;
@@ -69,3 +69,53 @@ document.addEventListener("click", function (e) {
   e.preventDefault();
   window.location.assign(url.pathname + url.search + url.hash);
 }, true);
+
+/* ── "Read it" on the literature card ──────────────────────────────────────
+   M-43 asked for this label to be an anchor to the source URL that already
+   sits in report_figures.source_url. It cannot become one in the markup: the
+   label ships as a bare <p>, and reshaping a node is exactly what HIDE_CSS's
+   header warns against — Framer hydration fails on a DOM that does not match
+   its payload, and a failed hydration reverts the WHOLE page to the template's
+   content. Trading a dead label for an ATMOS page is not a fix.
+
+   So it is wired at runtime, after hydration, where the DOM is already settled
+   and nothing downstream re-reads it. The URL is not a figure — it is the
+   citation stored against
+   report_figures.hai-workforce-reductions-observed-vs-expected, page ref
+   "p. 55 (report p. 225)", read from the database on 4 Sep 2026. */
+var CITATION_URL = "https://hai.stanford.edu/ai-index/2026-ai-index-report/economy";
+
+function wireCitationLink() {
+  var nodes = document.querySelectorAll("p, span, div");
+  for (var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    if (n.children.length !== 0) continue;
+    if ((n.textContent || "").trim() !== "Read it") continue;
+    if (n.dataset && n.dataset.citationWired === "1") continue;
+    if (n.dataset) n.dataset.citationWired = "1";
+    n.setAttribute("role", "link");
+    n.setAttribute("tabindex", "0");
+    n.setAttribute("title", "Stanford HAI, AI Index 2026 — Economy chapter");
+    n.style.cursor = "pointer";
+    n.style.textDecoration = "underline";
+    var go = function (e) {
+      e.preventDefault();
+      window.open(CITATION_URL, "_blank", "noopener,noreferrer");
+    };
+    n.addEventListener("click", go);
+    n.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") go(e);
+    });
+    return true;
+  }
+  return false;
+}
+
+/* Hydration replaces nodes, so try again a few times rather than once. */
+(function () {
+  var tries = 0;
+  var t = setInterval(function () {
+    tries += 1;
+    if (wireCitationLink() || tries > 20) clearInterval(t);
+  }, 250);
+})();

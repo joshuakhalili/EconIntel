@@ -9,10 +9,12 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
 
 import { parsePeriod } from './dbnomics.js';
 import { toFrontierComputeObservations, toClusterCountObservations } from './epoch.js';
 import { toMonthlyCounts } from './federal-register.js';
+import { USER_AGENT } from './user-agent.js';
 
 describe('dbnomics parsePeriod', () => {
   test('expands an annual period to full-year bounds', () => {
@@ -153,5 +155,83 @@ describe('federal register monthly counts', () => {
 
   test('ignores documents with no publication date', () => {
     assert.equal(toMonthlyCounts([{ publishedAt: null }, {}]).length, 0);
+  });
+});
+
+
+/**
+ * The User-Agent every adapter sends.
+ *
+ * WHY THIS IS A TEST AND NOT A CONVENTION
+ *
+ * The string was copied into five adapters. A pass over the repository fixed
+ * four of them and missed the fifth — epoch.js went on sending
+ * `Diffusion/1.0 (research dashboard)`, which identifies a piece of software
+ * and gives an operator no way to reach anyone. Nothing could have noticed:
+ * the miss is invisible in every file that was correct.
+ *
+ * So the constant now lives in `sources/user-agent.js` and this asserts the
+ * two things about it that matter to somebody else's server, plus the rule that
+ * stops a sixth copy appearing.
+ */
+describe('outbound identity', () => {
+  const SOURCES = new URL('.', import.meta.url);
+
+  /** Every adapter, excluding this file's siblings and the constant itself. */
+  function adapterFiles() {
+    return readdirSync(SOURCES)
+      .filter((f) => f.endsWith('.js') && !f.endsWith('.test.js') && f !== 'user-agent.js')
+      .map((f) => [f, readFileSync(new URL(f, SOURCES), 'utf8')]);
+  }
+
+  test('it names the project and a URL a provider can follow', () => {
+    assert.match(USER_AGENT, /^Diffusion\/\d/);
+    // A bare product name is not a contact route. Resolution was checked by
+    // hand on 2026-09-04: /EconIntel 200, /Diffusion 404 — hence this one.
+    assert.match(USER_AGENT, /\(\+https:\/\/github\.com\/[\w-]+\/[\w-]+\)$/);
+  });
+
+  test('it carries no email address', () => {
+    // A personal address in a shipped file is published to every reader of the
+    // repository and lands in every provider log it touches. The two places an
+    // address is genuinely needed — the SEC, and OpenAlex's polite pool — both
+    // read it from the SEC_USER_AGENT secret at runtime.
+    assert.doesNotMatch(USER_AGENT, /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    assert.doesNotMatch(USER_AGENT, /mailto:/i);
+  });
+
+  test('no adapter hard-codes a User-Agent of its own', () => {
+    // The rule that would have caught the fifth copy. A header value may be the
+    // shared constant, the SEC secret, or a template that interpolates one of
+    // them — never a quoted literal.
+    const offenders = [];
+
+    for (const [name, source] of adapterFiles()) {
+      for (const match of source.matchAll(/['"]User-Agent['"]\s*:\s*([^,\n}]+)/g)) {
+        const value = match[1].trim();
+        const ok =
+          value === 'USER_AGENT' ||
+          value === 'config.secUserAgent' ||
+          (value.startsWith('`') && value.includes('${'));
+        if (!ok) offenders.push(`${name}: ${value}`);
+      }
+    }
+
+    assert.deepEqual(offenders, [], `hard-coded User-Agent header(s): ${offenders.join(' · ')}`);
+  });
+
+  test('no adapter contains a literal email address', () => {
+    const offenders = [];
+    for (const [name, source] of adapterFiles()) {
+      for (const line of source.split('\n')) {
+        // sec.js documents the SEC's required FORMAT in its error message.
+        // That is a placeholder, not an address, and it must stay readable.
+        if (line.includes('your@email.com')) continue;
+        if (/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(line)) {
+          offenders.push(`${name}: ${line.trim().slice(0, 70)}`);
+        }
+      }
+    }
+    assert.deepEqual(offenders, [], `literal address(es): ${offenders.join(' · ')}`);
   });
 });

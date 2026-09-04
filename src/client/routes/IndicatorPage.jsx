@@ -6,6 +6,8 @@ import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import ChartCard from '@/components/charts/ChartCard';
 import SeriesChart from '@/components/charts/SeriesChart';
+import { readerDescription } from '@/components/indicatorProse';
+import { isFuturePeriod } from '@/components/periodModel';
 import { fmt, fmtDate, displayUnit } from '@/lib/format';
 
 /**
@@ -20,6 +22,21 @@ import { fmt, fmtDate, displayUnit } from '@/lib/format';
  *
  * It also names the question that argues with this series, because a bare
  * chart is far less legible than one you know the purpose of.
+ *
+ * THE CHART CARRIES NO TITLE HERE, DELIBERATELY — AND IS STILL NAMED.
+ *
+ * ChartCard emits an h3, and this page passed it `indicator.name` — the h1
+ * verbatim. So the outline ran H1 → H3 (the same words again) → H2 "Where this
+ * comes from": a level skipped, a heading duplicated, and a reader navigating
+ * by heading told the page has two titles. There is only one thing this page
+ * is about and the h1 has already said it, so the card is given no title.
+ *
+ * Dropping the title dropped the `<figcaption>` with it, and a `<figure>` with
+ * no figcaption has no accessible name: a screen reader announced "figure" and
+ * left it there, on the one page whose whole subject is that figure. `label`
+ * names it without adding a heading — see ChartCard. The placement caption goes
+ * back above the chart where a caption belongs, and the footer keeps what a
+ * chart footer carries everywhere else in this app: who published the series.
  */
 export default function IndicatorPage() {
   const { id } = useParams();
@@ -37,6 +54,36 @@ export default function IndicatorPage() {
 
   const caption = indicator.caption_plain;
 
+  /* The description column holds build notes as well as reader prose — see
+     indicatorProse.js. Trimmed at render until the column is split. */
+  const description = readerDescription(indicator.description);
+
+  /*
+   * WHERE THE MEASUREMENTS STOP, AND WHERE THE SERIES STOPS.
+   *
+   * They are not the same date for every series. `last_period` on this payload
+   * is the newest period holding a value, and a forecast holds a value: AMECO
+   * publishes European Commission projections inside the same array as UK
+   * productivity history, flagged `projected` per observation. The chart
+   * already dashes that tail. "Covers 1990–2027" beside it said the opposite.
+   *
+   * The per-point flag arrives with the series rather than with the metadata,
+   * so the measured end is known only once the chart data has loaded; until
+   * then the page falls back to what the date itself proves, which is that a
+   * period after today cannot be a measurement.
+   */
+  const points = payload?.series?.[0]?.points ?? [];
+  const measured = points.filter((p) => p.value != null && p.value_status !== 'projected');
+  const measuredEnd = measured.length > 0 ? measured[measured.length - 1].date : null;
+  const coversEnd =
+    measuredEnd ?? (isFuturePeriod(indicator.last_period) ? null : indicator.last_period);
+  const forecastEnd =
+    indicator.last_period && coversEnd && indicator.last_period > coversEnd
+      ? indicator.last_period
+      : isFuturePeriod(indicator.last_period)
+        ? indicator.last_period
+        : null;
+
   return (
     <article className="mx-auto max-w-4xl">
       <Link
@@ -48,22 +95,25 @@ export default function IndicatorPage() {
       </Link>
 
       <h1 className="text-display-4-medium text-text-primary">{indicator.name}</h1>
-      {indicator.description && (
+      {description && (
         <p className="prose-measure mt-2 text-headline-regular text-text-tertiary">
-          {indicator.description}
+          {description}
         </p>
       )}
 
       <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
         <Fact label="Observations" value={fmt(indicator.observation_count ?? 0, 0)} />
         <Fact
-          label="Covers"
+          label="Measured"
           value={
-            indicator.first_period && indicator.last_period
-              ? `${indicator.first_period.slice(0, 4)}–${indicator.last_period.slice(0, 4)}`
+            indicator.first_period && coversEnd
+              ? `${indicator.first_period.slice(0, 4)}–${coversEnd.slice(0, 4)}`
               : '—'
           }
         />
+        {forecastEnd && (
+          <Fact label="Forecast to" value={forecastEnd.slice(0, 7)} title="Published projections, not measurements. The chart draws them dashed." />
+        )}
         <Fact label="Updates" value={indicator.cadence ?? '—'} />
         <Fact
           label="Unit"
@@ -74,7 +124,11 @@ export default function IndicatorPage() {
       </dl>
 
       <div className="mt-6">
-        <ChartCard title={indicator.name} caption={caption} footer={<span>{indicator.source_name}</span>}>
+        <ChartCard
+          label={indicator.name}
+          caption={caption}
+          footer={indicator.source_name}
+        >
           {seriesPending ? (
             <LoadingBlock rows={1} />
           ) : (

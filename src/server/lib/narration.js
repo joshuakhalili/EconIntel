@@ -200,6 +200,235 @@ export function allowedNumbers(grounding) {
   return allowed;
 }
 
+/* ── The shapes a grounding comes in ─────────────────────────────────────── */
+
+/**
+ * WHY THE BUILDERS LIVE HERE AND NOT IN THE SCRIPTS THAT CALL THEM.
+ *
+ * Both of them started in `scripts/`, one per generator, and both moved for the
+ * same reason: what a grounding LOOKS like is not a detail of the script that
+ * happens to write one. Three other things depend on it, and each of them broke
+ * once because the shape was decided somewhere they could not see.
+ *
+ *   `wrongDirection` has to be able to read the movement a grounding asserts.
+ *   When the simulation script invented its own shape, the direction check went
+ *   silently inert for every simulation narration — see `directionPairs`.
+ *
+ *   `NarrationBlock` on the client renders `grounding.series` and tells the
+ *   reader it is showing the whole of what the model received. When the shape
+ *   had no `series` key it rendered an empty list under that sentence.
+ *
+ *   A freshness check needs to rebuild today's grounding and compare its hash
+ *   against the stored one. A builder locked inside a script is not importable
+ *   by the repository that serves the page, so the check cannot be written.
+ *
+ * One exported shape, one place, one set of tests. `series` rows are
+ * `{name, previous, latest, unit, period}` — `previous` may be null for a figure
+ * with no comparison, and the client handles that.
+ */
+
+/**
+ * A lens grounding: the ticker strip, as the site displays it.
+ *
+ * Every value is read from the database and NOT pre-differenced. It would be
+ * easy to hand the model a `change` field and let it describe that, and it
+ * would also mean the number a reader sees was produced here rather than by SQL
+ * over stored observations. The levels and the periods are the facts; if a
+ * change belongs on the page it should become an indicator.
+ *
+ * ROUNDED TO THE INDICATOR'S OWN `decimals`, AND THAT MATTERS
+ *
+ * The first run of the lens generator produced "the price of Copper moved down
+ * from $13552.04090909091" — the raw double, straight out of Postgres. Two
+ * things wrong with that, and the second is the real one:
+ *
+ *   - It is unreadable, and a summary written in sixteen significant figures is
+ *     worse than no summary.
+ *   - It DISAGREES WITH THE PAGE. The ticker beside it renders 13,552.04,
+ *     because `indicators.decimals` says two. A reader seeing two different
+ *     numbers for one price has no way to know which is the real one, and the
+ *     honest answer — they are the same number — is not available to them.
+ *
+ * `decimals` is stored metadata, set per indicator, and it is what every other
+ * surface on the site already formats with. Using it here is not a computation
+ * the model is being spared; it is the grounding speaking the same language as
+ * the chart. The validator accepts a value written to fewer decimals than it was
+ * given, so this narrows what the model may write rather than widening it.
+ *
+ * Capped at six series. The whole point is a summary, and an 8B model handed
+ * fourteen rows writes a list — which the labour lens proved on the first run.
+ */
+export function buildLensGrounding(lens, tickers) {
+  const usable = (tickers ?? [])
+    .filter((t) => Number.isFinite(t.latest_value))
+    .slice(0, 6);
+
+  /** As the site displays it. `decimals` is per-indicator and stored. */
+  const asDisplayed = (value, decimals) => {
+    if (!Number.isFinite(value)) return null;
+    return Number(value.toFixed(decimals ?? 2));
+  };
+
+  return {
+    lens: lens.name,
+    series: usable.map((t) => ({
+      name: t.label ?? t.name,
+      unit: t.unit_symbol ?? t.unit ?? null,
+      latest: asDisplayed(t.latest_value, t.decimals),
+      previous: asDisplayed(t.previous_value, t.decimals),
+      period: t.latest_period ?? null,
+    })),
+  };
+}
+
+/**
+ * The output series a simulation's narration may write about — and no others.
+ *
+ * THE RULE: A FIGURE GOES IN THE GROUNDING ONLY IF THE PAGE DRAWS IT.
+ *
+ * These three are tabs a reader can actually put on the chart —
+ * `SERIES_OPTIONS` in `routes/SimulationPage.jsx`. That list is no longer
+ * identical to this one and this comment used to claim it was: the page added
+ * an Output tab, so it now offers four and these are three of them. The rule
+ * above is a floor, not an equality — the page may draw a figure this file
+ * withholds, but this file must never narrate one the page does not draw. A run
+ * also carries `output_gap_pp`, `unemployment_gap_pp` and `inflation_gap_pp`,
+ * and each is left out on purpose rather than by oversight — see
+ * `SIMULATION_WITHHELD`, which now carries the reason the fourth tab is not the
+ * fourth row here.
+ *
+ * Unemployment and inflation are LEVELS and carry a published baseline; wage
+ * growth is a DEVIATION because nobody publishes trend nominal wage growth and
+ * deriving one would be this project inventing the number it says it never
+ * invents. The labels are the page's labels, so a reader comparing the paragraph
+ * against the chart is reading the same words.
+ */
+const SIMULATION_SERIES = [
+  { key: 'unemployment_pct', label: 'Unemployment', unit: '%' },
+  { key: 'inflation_pct', label: 'Inflation', unit: '%' },
+  { key: 'wage_growth_gap_pp', label: 'Wage growth vs trend', unit: 'pp' },
+];
+
+/**
+ * Run outputs deliberately withheld, and why each one.
+ *
+ * `year` indexes the row. The three `_gap_pp` figures are the same information
+ * as the level beside them — a level IS its baseline plus its gap — so including
+ * them would hand an 8B model two ways to say one thing and a set of small,
+ * similar decimals to confuse with each other, for nothing a reader gains.
+ * `output_gap_pp` is the first link in the chain and genuinely interesting, and
+ * it is still withheld — but NOT for the reason this comment used to give. It
+ * said the page has no tab for it. The page has had one since the Output tab
+ * was added, so that reason is gone and a truer one has to stand in its place,
+ * or the next person reading this adds the row and ships a hole.
+ *
+ * THE REAL REASON: A ROW HERE IS ONLY DIRECTION-CHECKED IF IT HAS A `previous`.
+ *
+ * `directionPairs` builds its pairs from (`previous`, `latest`), and skips any
+ * row whose `previous` is not a finite number — correctly, since `Number(null)`
+ * is 0 and coercing would invent a movement from zero that nothing claimed. A
+ * simulation grounding takes `previous` from `run.baseline`, and the baseline
+ * carries no `output_gap_pp`: the model reports output as a deviation and never
+ * states a no-injection level for it. So an Output row would arrive with
+ * `previous: null`, produce no pair, and `wrongDirection` would decline to look
+ * at any sentence written about it. Measured on the real USA run at the
+ * scenario's default: the grounding holds five series rows and `directionPairs`
+ * returns three — the two shock rows, which also carry `previous: null`, are
+ * the other two it cannot see.
+ *
+ * That is the same silence the wage series was in until the vocabulary was
+ * fixed below, arriving by a different route, and it is why the tidy-looking
+ * change is the wrong one. Making Output narratable means giving the model's
+ * baseline an `output_gap_pp` of zero first — which is a change to the SHAPE of
+ * a run, and therefore a `MODEL_VERSION` bump. Owner's call, not a comment fix.
+ *
+ * Declared as a list rather than simply not selected, so that a metric added to
+ * the model later is neither silently narrated nor silently dropped — see the
+ * unaccounted-key branch below.
+ */
+const SIMULATION_WITHHELD = new Set([
+  'year',
+  'output_gap_pp',
+  'unemployment_gap_pp',
+  'inflation_gap_pp',
+]);
+
+/**
+ * A simulation grounding: the run, as the series rows the client renders and
+ * the gate can read.
+ *
+ * `previous` is the NO-INJECTION baseline and `latest` is the final year of the
+ * horizon, because that pair is the model's actual claim: this is what the shock
+ * did. Both figures are drawn on the page — the baseline as the dashed line, the
+ * final year as the last point of the solid one — so every number the model may
+ * write is one the reader can find on the chart above it.
+ *
+ * Intermediate years are not included, which narrows what the model may say to
+ * the two endpoints. That is a real loss and the right one: the alternative is
+ * fifteen rows in an audit panel and five near-identical decimals per metric for
+ * a two-sentence summary to confuse.
+ *
+ * @param {string} scenarioName
+ * @param {string} countryIso3
+ * @param {{years: object[], baseline: object, shock: object}} run
+ */
+export function buildSimulationGrounding(scenarioName, countryIso3, run) {
+  const last = run.years[run.years.length - 1];
+  const horizon = last.year;
+  /* Digits, not "year five". `allowedNumbers` licenses numbers it can see in the
+     grounding, and the model writes the horizon both ways; spelling it in words
+     here would leave "year 5" as a fabricated figure and reject an otherwise
+     honest sentence. */
+  const period = `no injection → year ${horizon}`;
+
+  const series = [
+    {
+      name: 'New capital spending',
+      previous: null,
+      latest: run.shock.usd_bn,
+      unit: '$bn',
+      /* The flag, in words. `sustained: true` would put a bare 1 or 0 in the
+         grounding and license it as a figure the model may write. */
+      period: run.shock.sustained ? 'repeated every year' : 'one-off, in year one',
+    },
+    {
+      name: 'That spending as a share of output',
+      previous: null,
+      latest: run.shock.share_of_gdp_pct,
+      unit: '%',
+      period: null,
+    },
+  ];
+
+  const baselineOf = (key) =>
+    Number.isFinite(run.baseline?.[key]) ? run.baseline[key] : null;
+
+  for (const { key, label, unit } of SIMULATION_SERIES) {
+    if (!Number.isFinite(last[key])) continue;
+    series.push({ name: label, previous: baselineOf(key), latest: last[key], unit, period });
+  }
+
+  /*
+   * A model output that is in neither list is a mistake somewhere, and the safe
+   * direction is loud. Dropping it silently would rebuild the bug this shape
+   * exists to fix — a number in the model's world that the audit panel does not
+   * show — and narrating it silently would put an unlabelled figure in front of
+   * a reader. So it goes in under its raw key, which is ugly enough to notice.
+   */
+  for (const [key, value] of Object.entries(last)) {
+    if (SIMULATION_WITHHELD.has(key)) continue;
+    if (SIMULATION_SERIES.some((s) => s.key === key)) continue;
+    if (!Number.isFinite(value)) continue;
+    console.warn(
+      `[narration] "${key}" is a model output with no label — add it to ` +
+        'SIMULATION_SERIES or SIMULATION_WITHHELD in lib/narration.js'
+    );
+    series.push({ name: key, previous: baselineOf(key), latest: value, unit: null, period });
+  }
+
+  return { scenario: scenarioName, country: countryIso3, series };
+}
+
 /* ── The gate ────────────────────────────────────────────────────────────── */
 
 /**
@@ -263,8 +492,171 @@ export function validate(body, grounding) {
   return { ok: true };
 }
 
-const FALLING = /\b(decreas\w*|fell|fall\w*|drop\w*|declin\w*|down|lower|shrank|slid)\b/i;
-const RISING = /\b(increas\w*|rose|rise|rising|grew|grow\w*|climb\w*|up|higher|gain\w*|jump\w*)\b/i;
+/*
+ * The direction vocabulary.
+ *
+ * `ris(?:e|es|en|ing)` is spelled out rather than written `ris\w*` for one
+ * reason: `ris\w*` matches "risk", which is a word this prose uses constantly
+ * and which claims no direction at all. Every other verb here can take `\w*`
+ * safely because no unrelated word shares its stem.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * `grow\w*` MATCHED "growth", AND THAT SWITCHED THE CHECK OFF FOR A WHOLE SERIES
+ *
+ * The noun is not a claim about direction; it is part of the NAME of a
+ * measurement. `SIMULATION_SERIES` calls its third row "Wage growth vs trend",
+ * so every clause a model writes about that series carried a rising word before
+ * it said anything at all. Put a falling verb beside it — the ordinary way to
+ * describe a wage path that drops — and the clause holds one word from each
+ * list, which this function treats as undecidable and skips. Measured on the
+ * real USA run at the scenario's default slider position:
+ *
+ *   "Wage growth vs trend falls from 0 with no injection to 0.08 by year five."
+ *     → validate() returned {ok: true}
+ *
+ * Both figures are in the grounding, so the number gate passed it, and 0 → 0.08
+ * is a RISE. The same sentence about unemployment or inflation was rejected. One
+ * of the three series the page draws had no direction gate at all.
+ *
+ * It is not only the simulation. Four active indicators are named "… Growth"
+ * (wb.NY.GDP.MKTP.KD.ZG, "GDP Growth (annual %)", among them) and one of the
+ * five lenses is called "Growth & Productivity" — every one of those names
+ * reaches a grounding, so the lens path had the same hole under different words.
+ *
+ * So the verb forms stay and the noun goes: `grow`, `grows`, `growing`, `grown`
+ * and `grew` all claim a direction, "growth" does not. The cost is a sentence
+ * whose ONLY direction word is that noun — "growth from 4.0 to 5.0" — which is
+ * now read as undecidable and passes unchecked. That is the cheaper mistake by
+ * a distance: it loses a check on one unusual phrasing, where the old spelling
+ * lost every check on any series whose name contains the word.
+ *
+ * THE RULE THIS LEAVES BEHIND, for whoever adds a word here: a term that can
+ * appear in the NAME of a measurement must not be in either list. "fall",
+ * "drop", "decline" and "lower" are all nouns or adjectives too, and none of
+ * them is currently in any indicator name — checked, all 134 active rows — but
+ * the day one is, the same silence comes back on the falling side.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * IT USED TO SAY `rise`, WITH A WORD BOUNDARY, AND SO IT NEVER MATCHED "rises".
+ *
+ * Found while reproducing the simulation gap below: `\brise\b` fails on
+ * "rises" and on "risen", which is the ordinary third person a model writes in
+ * — "Unemployment rises from 4.02 to 3.72" registered as NO direction word at
+ * all, the clause was read as undecidable, and the check declined to look. That
+ * is a hole in the LENS path too, not only the simulation one, and it is the
+ * quietest possible kind: the gate returns "nothing wrong here" rather than
+ * failing.
+ *
+ * `shrink\w*` for the same reason — the list already carried `shrank` and only
+ * `shrank`, so the present tense of a verb it had already decided to cover fell
+ * through.
+ */
+const FALLING =
+  /\b(decreas\w*|fell|fall\w*|drop\w*|declin\w*|down|lower|shrank|shrink\w*|slid)\b/i;
+const RISING =
+  /\b(increas\w*|rose|ris(?:e|es|en|ing)|grew|grow(?:s|n|ing)?|climb\w*|up|higher|gain\w*|jump\w*)\b/i;
+
+/**
+ * Keys in a projection row that index the row rather than measure anything.
+ *
+ * `year` counts 1, 2, 3 … so first-to-last is always "a rise" and always
+ * meaningless. Pairing on it would let a clause about a real fall be matched
+ * against the horizon and rejected, which is a false accusation on a correct
+ * sentence — the one failure a gate this strict cannot afford.
+ */
+const PROJECTION_INDEX_KEYS = new Set(['year', 'period', 't']);
+
+/**
+ * Every (previous, latest) pair the grounding asserts, at any depth.
+ *
+ * TWO SHAPES, BECAUSE THERE ARE TWO KINDS OF GROUNDING AND ONE OF THEM WAS
+ * INVISIBLE HERE.
+ *
+ * A lens grounding states its pairs outright: each series row carries
+ * `previous` and `latest`, so the true sign is written down. That is the shape
+ * this function was built for and it is checked first.
+ *
+ * A simulation grounding states them structurally instead. It carries a
+ * `baseline` — where the model says things sit with no injection — and a
+ * `years` array running the projection forward, and the movement it claims is
+ * the distance between them. Neither object holds a key called `previous` or
+ * `latest`, so the walk found NOTHING, `pairs` came back empty, and
+ * `wrongDirection` returned null before doing any work. `validate()` therefore
+ * returned `{ok: true}` for
+ *
+ *   "Unemployment rises from 4.02 in year one to 3.72 by year five"
+ *
+ * on the real USA run at the default slider position: both figures are in the
+ * grounding, so the number gate passes, and 4.02 → 3.72 is a FALL. An
+ * investment boom raising unemployment is the sign of the model's central
+ * claim reversed, and it would have been stored and shown. The whole reason
+ * this check exists — a measured incident on the labour lens, quoted in the
+ * docblock below — applied to lenses and to nothing else.
+ *
+ * WHICH PAIRS A PROJECTION ASSERTS
+ *
+ *   baseline → final year   what the shock did, which is what the page argues
+ *   first year → final year the shape of the path the chart draws
+ *
+ * Both, because the model is instructed to compare against the baseline and
+ * writes about the path, and a sentence quoting either one honestly must not
+ * be able to reverse it. Intermediate years are deliberately NOT paired
+ * against each other: a five-year horizon would produce twenty pairs whose
+ * numbers start colliding with each other, and a collision here rejects a
+ * correct sentence.
+ *
+ * Exported for the tests, which assert the pairs directly rather than only
+ * through a sentence — a check that silently finds nothing passes every test
+ * written from the accepting side, which is exactly how this went unnoticed.
+ */
+export function directionPairs(grounding) {
+  const pairs = [];
+
+  /* Only a genuine number counts, unchanged from the original walk. `null` is
+     the trap: `Number(null)` is 0, so coercing here would turn a row with no
+     previous value — the shock rows in a simulation grounding — into a pair
+     starting at zero, and invent a movement nothing claimed. */
+  const add = (previous, latest, name) => {
+    if (!Number.isFinite(previous) || !Number.isFinite(latest)) return;
+    if (previous === latest) return;
+    if (pairs.some((p) => p.previous === previous && p.latest === latest && p.name === name)) {
+      return;
+    }
+    pairs.push({ previous, latest, name });
+  };
+
+  const addProjection = (node) => {
+    const years = node.years;
+    if (!Array.isArray(years) || years.length === 0) return;
+
+    const first = years[0];
+    const last = years[years.length - 1];
+    if (!first || typeof first !== 'object' || !last || typeof last !== 'object') return;
+
+    const baseline =
+      node.baseline && typeof node.baseline === 'object' && !Array.isArray(node.baseline)
+        ? node.baseline
+        : null;
+
+    for (const [key, value] of Object.entries(last)) {
+      if (PROJECTION_INDEX_KEYS.has(key)) continue;
+      if (!Number.isFinite(value)) continue;
+      add(first[key], value, key);
+      if (baseline) add(baseline[key], value, key);
+    }
+  };
+
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    add(node.previous, node.latest, node.name);
+    addProjection(node);
+    Object.values(node).forEach(walk);
+  };
+
+  walk(grounding);
+  return pairs;
+}
 
 /**
  * Catch a narration that describes a real movement backwards.
@@ -301,20 +693,30 @@ const RISING = /\b(increas\w*|rose|rise|rising|grew|grow\w*|climb\w*|up|higher|g
  *
  * A clause with two direction words, or none, is left alone. This is a check
  * for the unambiguous case, which is the case the model actually gets wrong.
+ *
+ * WHAT THAT COSTS, MEASURED RATHER THAN GUESSED AT (4 Sep 2026)
+ *
+ * A direction word in one clause and the figures in the next is not checked,
+ * because the clause holding the pair has no direction word of its own. On the
+ * real USA run at the scenario's default position, all three of these are
+ * backwards and all three are accepted:
+ *
+ *   "Unemployment is higher, moving from 4.02 with no injection to 3.72 by year five."
+ *   "Inflation is lower, moving from 2 with no injection to 2.06 by year five."
+ *   "Wage growth vs trend is lower, moving from 0 with no injection to 0.08 by year five."
+ *
+ * It is the SAME gap on each of the three, which is the thing worth knowing:
+ * the shape that once made this check blind on the wage series alone is closed,
+ * and what is left is uniform and structural. Fixing it means letting a clause
+ * borrow the previous clause's verb, and that is the change that reinstates the
+ * false accusation the comma split exists to prevent — "chip prices fell, while
+ * gold rose from 4190.2 to 4218.55" would be rejected. A missed check costs a
+ * paragraph nobody reads; a false rejection on correct prose costs a paragraph
+ * that was right, and it is unexplainable to whoever has to debug it. So this
+ * stays, and it is written down instead.
  */
 export function wrongDirection(body, grounding) {
-  /** Every (previous, latest) pair in the grounding, at any depth. */
-  const pairs = [];
-  const walk = (node) => {
-    if (!node || typeof node !== 'object') return;
-    if (Array.isArray(node)) return node.forEach(walk);
-    const { previous, latest } = node;
-    if (Number.isFinite(previous) && Number.isFinite(latest) && previous !== latest) {
-      pairs.push({ previous: Number(previous), latest: Number(latest), name: node.name });
-    }
-    Object.values(node).forEach(walk);
-  };
-  walk(grounding);
+  const pairs = directionPairs(grounding);
   if (pairs.length === 0) return null;
 
   /*
@@ -332,9 +734,29 @@ export function wrongDirection(body, grounding) {
   const sameNumber = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 1e-9;
 
   const NUM = String.raw`[$£€]?[\d,.]+%?`;
+
+  /*
+   * What may sit between the figure and the preposition that follows it.
+   *
+   * `\s+` alone required them to be adjacent — "from 4.02 to 3.72" and nothing
+   * else. That is not how the sentence gets written. The simulation prompt asks
+   * the model to name periods, so it produces "from 4.02 IN YEAR ONE to 3.72 BY
+   * YEAR FIVE", the pattern found no pair, and the check quietly declined to
+   * look. Same silent shape as the vocabulary gap above.
+   *
+   * Lazy, so it binds to the NEAREST following preposition rather than the
+   * furthest, and NO DIGITS, which is the load-bearing part: allowing a figure
+   * inside the gap would let the pattern skip over one number and pair the two
+   * either side of it, and a mis-paired match can only ever produce a FALSE
+   * ACCUSATION against prose that is correct. Refusing to check "from 30.1 in
+   * 2024 to 29.0" costs a check; pairing 30.1 with something it was never
+   * compared to costs a rejection nobody can explain. Clause punctuation stays
+   * excluded for the reason the clause split exists at all.
+   */
+  const GAP = String.raw`[^.;,\d]*?`;
   const patterns = [
-    { re: new RegExp(String.raw`\bfrom\s+(${NUM})\s+to\s+(${NUM})`, 'gi'), order: 'from-to' },
-    { re: new RegExp(String.raw`\bto\s+(${NUM})\s+from\s+(${NUM})`, 'gi'), order: 'to-from' },
+    { re: new RegExp(String.raw`\bfrom\s+(${NUM})${GAP}\bto\s+(${NUM})`, 'gi'), order: 'from-to' },
+    { re: new RegExp(String.raw`\bto\s+(${NUM})${GAP}\bfrom\s+(${NUM})`, 'gi'), order: 'to-from' },
   ];
 
   /*

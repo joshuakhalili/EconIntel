@@ -72,17 +72,30 @@ describe('app module', () => {
     const stack = app._router?.stack ?? [];
 
     const meIndex = stack.findIndex((l) => l.route?.path === '/api/me');
-    const gateIndex = stack.findIndex(
-      (l) => !l.route && l.regexp && l.regexp.toString().includes('api')
-    );
+
+    /*
+     * The gate is found by NAME, not by guessing at a mount path.
+     *
+     * This used to take "the first non-route layer whose regexp mentions api",
+     * which stopped being the gate the moment a rate limiter was mounted on
+     * /api in front of it — `app.use('/api', apiLimiter)` is registered first,
+     * so the index below pointed at the limiter and the assertion compared
+     * /api/me against the wrong layer while still reporting a tick. Worse, the
+     * whole check sat behind `if (gateIndex >= 0)`, so a guess that found
+     * nothing at all skipped the assertion silently rather than failing.
+     *
+     * `requireReader` is a named function in lib/auth.js for exactly this
+     * reason, and the name is asserted so that renaming it fails here rather
+     * than turning this test off.
+     */
+    const gateIndex = stack.findIndex((l) => !l.route && l.handle?.name === 'requireReader');
 
     assert.ok(meIndex >= 0, '/api/me should be registered');
+    assert.ok(gateIndex >= 0, 'the /api auth gate should be registered and named requireReader');
     // The ordering is load-bearing and invisible in any single file: behind
     // the gate, /api/me 401s and the client can never discover that sign-in
     // exists. It is also the reason the Vercel deploy is one function rather
     // than one per route.
-    if (gateIndex >= 0) {
-      assert.ok(meIndex < gateIndex, '/api/me must come before the /api auth gate');
-    }
+    assert.ok(meIndex < gateIndex, '/api/me must come before the /api auth gate');
   });
 });

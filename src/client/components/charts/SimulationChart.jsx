@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useSeriesPalette, colorAt } from './palette';
+import ChartDataTable from './ChartDataTable';
+import { fmt } from '@/lib/format';
 
 /**
  * A projection, drawn so it can never be mistaken for a measurement.
@@ -85,6 +87,14 @@ export default function SimulationChart({
 
   return (
     <div>
+      {/*
+        Recharts renders bare SVG, which is silence to a screen reader. The
+        label says what the projection does; the table below carries the years
+        themselves. Both are built from `rows` — the same numbers the lines are
+        drawn from — and both say, in words, that none of it was measured. See
+        HONESTY.md behaviour 13.
+      */}
+      <div role="img" aria-label={describeSimulation(rows, series, baseline)}>
       <ResponsiveContainer width="100%" height={height}>
         <RLineChart data={rows} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
           <CartesianGrid strokeDasharray="2 4" vertical={false} className="stroke-border-button-default" />
@@ -162,6 +172,15 @@ export default function SimulationChart({
           ))}
         </RLineChart>
       </ResponsiveContainer>
+      </div>
+
+      <ChartDataTable
+        model={simulationTableModel(rows, series)}
+        caption={
+          'Every year of this projection as numbers. None of these values was measured; ' +
+          'they are what the model computes.'
+        }
+      />
 
       <p className="mt-2 text-caption-1-regular text-text-tertiary">
         Every line is dashed because every value is modelled, not measured.
@@ -248,4 +267,44 @@ function OutOfRange({ validity, drawnYears, horizonYears }) {
       </p>
     </div>
   );
+}
+
+/**
+ * The projection in a sentence, for a reader who cannot see it.
+ *
+ * "Projected" leads, and every value is named as modelled — this chart has no
+ * measured point on it at all, so the strongest thing to say about it is the
+ * first thing said.
+ */
+function describeSimulation(rows, series, baseline) {
+  if (rows.length === 0) return 'Projection with nothing drawn.';
+
+  const head =
+    `Projection, not measurement. Line chart of ${series.length} modelled ` +
+    `${series.length === 1 ? 'measure' : 'measures'} over ${rows.length} ` +
+    `${rows.length === 1 ? 'year' : 'years'}, in percent` +
+    (baseline == null ? '.' : `, against a no-injection baseline of ${fmt(baseline)}%.`);
+
+  const bodies = series.map((s) => {
+    const first = rows[0][s.label];
+    const last = rows.at(-1)[s.label];
+    return `${s.label}: ${fmt(first)}% in ${rows[0].year.toLowerCase()}, ${fmt(last)}% in ${rows
+      .at(-1)
+      .year.toLowerCase()}.`;
+  });
+
+  return [head, ...bodies].join(' ');
+}
+
+/** The modelled years as a table — same rows, addressable. */
+function simulationTableModel(rows, series) {
+  return {
+    columns: ['Year', ...series.map((s) => `${s.label} (modelled)`)],
+    rows: rows.map((row) => ({
+      key: row.year,
+      cells: [row.year, ...series.map((s) => `${fmt(row[s.label])}%`)],
+    })),
+    total: rows.length,
+    truncated: false,
+  };
 }
