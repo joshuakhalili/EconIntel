@@ -28,12 +28,23 @@
 --                         May 2022                    (dbn.ONS.UNEM.JP9P.M)
 --   US youth unemployment 8.5% Jul 2026, peak 27.5% Apr 2020 (fred.LNS14024887)
 --   US graduate unemp.    3.8% Jul 2026                     (fred.CGBD2534)
---   US industrial power   8.6c/kWh Mar 2026, 4.7c Jan 2001
+--   US industrial power   8.61c/kWh mean of 2025 (12 obs) against 5.04c mean
+--                         of 2001 (12 obs), +70.8%. Re-derived 2026-09-03:
+--                         the original note compared the March 2026 month
+--                         (8.58c) with the January 2001 month (4.73c), which
+--                         is a month against a year AND the series' opening
+--                         low against the latest reading. Both ends are now
+--                         full calendar years.
 --                                       (dbn.EIA.ELEC.PRICE.US-IND.M)
 --   Copper                $13,543/t Jul 2026, at the top of its range
 --                                                        (fred.PCOPPUSDM)
 --   Data-processing PPI   124.2 Jul 2026 on Dec 2000 = 100
 --                                                (fred.PCU518210518210)
+--   IMF commodity series  lithium, cobalt AND uranium all end 2025-06; copper,
+--                         aluminium and nickel run to 2026-07. The `materials`
+--                         caveat named two of the three stale series, which
+--                         implicitly certified the third. Corrected 2026-09-03.
+--                         (dbn.IMF.PCPS.{lithium,cobalt,uranium})
 -- ============================================================================
 
 INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert,
@@ -63,22 +74,22 @@ INSERT INTO questions (id, slug, question, subtitle, answer_plain, answer_expert
 ('power', 'power',
  'What is it doing to the price of power?',
  'Electricity, gas and oil',
- 'US industrial electricity costs 8.6 cents a kilowatt-hour, against 4.7 cents in 2001. That is the binding constraint on this build-out: chips can be manufactured to order, and a gigawatt of firm supply in the right place cannot. Where a data centre gets built is now largely a question about the grid.',
+ 'US industrial electricity averaged 8.6 cents a kilowatt-hour across 2025, against 5.0 cents across 2001 — a nominal rise of about 70% over twenty-four years, on twelve months of readings at each end. That is the binding constraint on this build-out: chips can be manufactured to order, and a gigawatt of firm supply in the right place cannot. Where a data centre gets built is now largely a question about the grid.',
  'Industrial retail electricity price is the relevant series rather than wholesale, because it is what a large consumer actually pays including transmission. The European comparison uses the Eurostat non-household band above 150,000 MWh, the closest available equivalent for very large consumers. Gas and oil are included because gas sets the marginal price of US electricity in most hours, so a gas move propagates into the power price with a lag.',
  'None of this movement is attributable to AI. Industrial power prices are driven by fuel costs, grid investment and regulation, and data centres remain a small share of total load in every country here. This page shows the cost environment a build-out faces, not an effect it has caused.',
  'Computation converts electricity into output. If demand for computation rises faster than firm generation can be added — and generation is slow, capital-intensive and locally contested — then power price and availability, rather than chip supply, becomes what limits the build-out.',
  'Industrial retail prices from EIA and Eurostat, which include transmission and are what a large buyer faces, read alongside the fuels that set the marginal price. Prices are nominal.',
- 'consistent', DATE '2026-08-28', 'prices', 2, TRUE),
+ 'consistent', DATE '2026-09-03', 'prices', 2, TRUE),
 
 ('materials', 'materials',
  'What is it doing to the price of the materials?',
  'The metals a data centre is built from',
  'Copper is around $13,500 a tonne, at the top of its historical range. A large data centre needs thousands of tonnes of it for wiring, busbars and transformers, alongside aluminium for racks and heat sinks and nickel for cooling and backup power. These are the physical inputs, and unlike chips they are extracted rather than manufactured, so supply responds in years rather than quarters.',
  'Base metals are grouped on one axis because they share a unit and a supply logic. Precious metals sit apart: gold and silver are genuine electronic inputs, but their prices are dominated by monetary demand, so they read as a sentiment gauge more than an input cost. Lithium, cobalt and uranium cover backup storage and the nuclear agreements several large operators have signed. The all-commodity index on the Prices lens is the control — a copper move that the whole complex shares is not about AI.',
- 'Attribution here is weak and should be treated as such. Data-centre construction is a small share of global copper demand next to construction and the electrical grid generally, and these prices respond to Chinese industrial activity, mine supply and the dollar far more than to anything in this dashboard. Lithium and uranium are also stale after June 2025 — the only free source stops there.',
+ 'Attribution here is weak and should be treated as such. Data-centre construction is a small share of global copper demand next to construction and the electrical grid generally, and these prices respond to Chinese industrial activity, mine supply and the dollar far more than to anything in this dashboard. Lithium, cobalt and uranium all end at June 2025 — the only free source stops there, and it stops for all three, not just the two it is easiest to name. Copper, aluminium and nickel run to July 2026.',
  'A build-out of this scale has a bill of materials, and if it is large enough to matter economically it should be visible in the price of what it consumes. Metals are the test because they are extracted, so supply cannot expand quickly and demand shows up as price.',
  'Grouped by shared unit and shared supply logic rather than by name, and read against a broad commodity index so a general move is not mistaken for a specific one. Prices are nominal and in USD.',
- 'insufficient', DATE '2026-08-28', 'prices', 3, TRUE)
+ 'insufficient', DATE '2026-09-03', 'prices', 3, TRUE)
 
 ON CONFLICT (id) DO UPDATE SET
   slug = EXCLUDED.slug, question = EXCLUDED.question, subtitle = EXCLUDED.subtitle,
@@ -187,7 +198,7 @@ DELETE FROM question_indicators
 UPDATE questions SET
   question = 'Is the exposed sector shrinking?',
   subtitle = 'Employment in information and communication',
-  answer_plain = 'The share of US jobs in the information sector — the part of the economy most exposed to AI — has been falling since 2023, after rising for most of the decade before. It is a small move in a small sector, and it is the clearest compositional signal available.',
+  answer_plain = 'The share of US jobs in the information sector — the part of the economy most exposed to AI — peaked at 2.75% of non-farm payrolls in 2000, fell to 1.90% by 2019, recovered to 2.01% by 2022, and has fallen every year since, to 1.76% across the first seven months of 2026. It is a small move in a small sector, and it is the clearest compositional signal available.',
   strength = 'suggestive',
   -- Leads its lens: composition is the broad picture the other two narrow.
   sort_order = 1

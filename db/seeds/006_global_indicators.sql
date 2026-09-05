@@ -513,7 +513,88 @@ INSERT INTO indicators (
  'effects', 'currency', 'monthly', 'official',
  'Millions of Dollars', NULL, 2, 'fred', 'A34SNO',
  'https://fred.stlouisfed.org/series/A34SNO',
- NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA')
+ NULL, TRUE, FALSE, FALSE, INTERVAL '1 day', 'USA'),
+
+-- ── World Bank, added 2026-09-04 — the cheapest country depth on the site ───
+--
+-- WHY THESE FOUR AND NOT A NEW ADAPTER
+--
+-- `ingestWorldBankIndicator` takes whatever code sits in `source_series_code`
+-- and fetches it for every ISO3 in `countries` (runner.js:130-160). It already
+-- runs on every ingest. Six World Bank series were seeded — GDP growth, R&D,
+-- high-tech exports, internet users, unemployment, GDP per capita, all defined
+-- in db/seeds/004_indicators.sql, not here — and none of them is about AI.
+-- Adding a seventh is one INSERT. There is no engineering constraint and has
+-- not been for some time; the work is picking the right code.
+--
+-- EVERY CODE BELOW WAS FETCHED BEFORE IT WAS WRITTEN, on 2026-09-04:
+--
+--     curl 'https://api.worldbank.org/v2/country/all/indicator/<CODE>
+--           ?format=json&per_page=20000&date=2000:2025&source=2'
+--
+-- A wrong World Bank code does not error. It returns a 200 with a `message`
+-- array in the first element, which the adapter turns into a thrown error, or —
+-- worse — a valid-looking empty series. The row counts quoted per series are
+-- what actually came back, counted over non-null values, and the entity counts
+-- include the supranational aggregates the API mixes in through the same
+-- endpoint (`countries.is_aggregate` exists for that reason).
+--
+-- Licence: CC BY 4.0, no key. Attribution is on the `worldbank` source row.
+--
+-- THE WIDENED COUNTRY LIST WAS LOAD-TESTED, NOT ASSUMED
+--
+-- db/seeds/002 grows the `countries` table to 105 rows, and the adapter joins
+-- every ISO3 in it into one request path. All four codes were fetched with the
+-- full post-seed list on 2026-09-04 to prove that still works:
+--
+--     419-character country path, per_page=20000, date=2000:2026
+--     → HTTP 200, 2,704 rows, ONE page, for every code.
+--
+-- Two entities never return a value for any of the four and that is expected,
+-- not a fault: TWN, because the World Bank does not publish Taiwan, and HIC
+-- ("High income"), which is in the table as an aggregate. Beyond those, 101 to
+-- 104 of the 105 carry data.
+--
+-- THE CADENCE WARNING IS PART OF THE DATA, NOT A FOOTNOTE
+--
+-- All four are annual and all four lag. The most recent year in each is thin
+-- and fills in over the following two years, so the last point on any of these
+-- charts is a partial year, not a fall. That is stated in each description
+-- because `description` is where a reader meets the series; `cadence` is what
+-- the catalogue, the indicator page and /api/indicators report, and
+-- scripts/check-data.js now polices it against the observed modal gap.
+
+('wb.NE.GDI.FTOT.ZS',
+ 'Gross Fixed Capital Formation (% of GDP)',
+ 'What share of a country''s output goes into fixed investment — buildings, machinery, and the data centres among them. This is the denominator the question "is this bigger than the last computing boom?" needs, and outside the United States the site could not previously supply it for anywhere. ANNUAL, AND IT LAGS: 5,363 values across 219 entities for 2000-2025, but 212 entities report 2023 against only 153 for 2025. The final year on the chart is incomplete reporting, not a collapse in investment.',
+ 'infrastructure', 'rate', 'annual', 'official',
+ 'Percentage of GDP', '%', 1, 'worldbank', 'NE.GDI.FTOT.ZS',
+ 'https://data.worldbank.org/indicator/NE.GDI.FTOT.ZS',
+ NULL, TRUE, FALSE, FALSE, INTERVAL '7 days', NULL),
+
+('wb.EG.USE.ELEC.KH.PC',
+ 'Electric Power Consumption (kWh per person)',
+ 'Electricity consumed per head of population. The prices lens is otherwise entirely US series and world commodity prices; this is the only cross-country power measure available at all without a key, and it is the physical counterpart to the price question — a data centre buys kilowatt-hours before it buys anything else. ANNUAL, AND IT LAGS HARDEST OF THE FOUR: 4,656 values across 189 entities for 2000-2024, with 191 entities reporting 2023 and only 51 reporting 2024. Read it as structural context, not as a current signal.',
+ 'infrastructure', 'magnitude', 'annual', 'official',
+ 'Kilowatt-hours per person per year', NULL, 0, 'worldbank', 'EG.USE.ELEC.KH.PC',
+ 'https://data.worldbank.org/indicator/EG.USE.ELEC.KH.PC',
+ NULL, TRUE, FALSE, FALSE, INTERVAL '7 days', NULL),
+
+('wb.BX.GSR.CCIS.ZS',
+ 'ICT Service Exports (% of service exports)',
+ 'The share of a country''s service exports that are computer, communications and information services. It is the closest balance-of-payments answer to "is the AI sector itself getting bigger?" outside the US national accounts, and it is the most current of the four — the world figure runs to 2025. ANNUAL, AND IT LAGS: 5,291 values across 233 entities for 2000-2025, with 204 entities reporting 2024 and 124 reporting 2025.',
+ 'effects', 'rate', 'annual', 'official',
+ 'Percentage of service exports', '%', 1, 'worldbank', 'BX.GSR.CCIS.ZS',
+ 'https://data.worldbank.org/indicator/BX.GSR.CCIS.ZS',
+ NULL, TRUE, FALSE, FALSE, INTERVAL '7 days', NULL),
+
+('wb.TX.VAL.ICTG.ZS.UN',
+ 'ICT Goods Exports (% of total goods exports)',
+ 'The goods half of the same question, and the one that locates the hardware: which economies actually ship computers, components and communications equipment rather than consuming them. Read alongside ICT service exports it separates the countries that make the machines from the countries that sell the work done on them. ANNUAL, AND IT LAGS: 4,974 values across 234 entities for 2000-2024, with 200 entities reporting 2023 and 154 reporting 2024.',
+ 'effects', 'rate', 'annual', 'official',
+ 'Percentage of total goods exports', '%', 1, 'worldbank', 'TX.VAL.ICTG.ZS.UN',
+ 'https://data.worldbank.org/indicator/TX.VAL.ICTG.ZS.UN',
+ NULL, TRUE, FALSE, FALSE, INTERVAL '7 days', NULL)
 
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name, description = EXCLUDED.description,

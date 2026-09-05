@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { RiGithubFill, RiArrowRightLine } from '@remixicon/react';
 import { useMe } from '@/hooks/queries';
+import { safeNextPath } from '@/lib/api';
 import { usePageTitle } from '@/components/chrome/AppShell';
 
 /**
@@ -30,6 +31,15 @@ export default function LoginPage() {
   const reader = data?.reader;
   const error = formError ?? params.get('error');
 
+  /*
+   * Where the reader was before the 401 sent them here — see `safeNextPath`
+   * in lib/api.js, which is also what wrote this parameter. Anything that is
+   * not a same-site path falls back to the overview rather than being
+   * followed, so a crafted `?next=//somewhere-else` cannot use this page as a
+   * redirector.
+   */
+  const next = safeNextPath(params.get('next'));
+
   usePageTitle('Sign in');
 
   async function onSubmit(event) {
@@ -47,7 +57,7 @@ export default function LoginPage() {
       // Every query was fetched as a signed-out reader; drop the lot rather
       // than reasoning about which ones are now different.
       await queryClient.invalidateQueries();
-      window.location.assign('/overview');
+      window.location.assign(next);
     } catch (err) {
       setFormError(err.message);
       setBusy(false);
@@ -71,10 +81,10 @@ export default function LoginPage() {
               You have access to every lens, every question and the full series catalogue.
             </p>
             <a
-              href="/overview"
+              href={next}
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-caption-1-medium text-page transition-opacity hover:opacity-90"
             >
-              Start reading
+              {next === '/overview' ? 'Start reading' : 'Back to the page you were sent'}
               <RiArrowRightLine className="size-4" aria-hidden />
             </a>
           </>

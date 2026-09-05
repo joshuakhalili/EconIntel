@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Block secrets before they leave this machine.
 #
 # GitHub's push protection is the last line of defence and only fires once the
@@ -8,17 +8,33 @@
 # because rewriting history is far harder than not writing it.
 #
 # Enable with: git config core.hooksPath .githooks
-
-staged=$(git diff --cached --name-only --diff-filter=ACM)
-[ -z "$staged" ] && exit 0
+#
+# WHY BASH AND NOT /bin/sh
+#
+# A staged filename containing a space was silently skipped. The file list came
+# back newline-separated and was iterated with `for file in $staged`, which
+# word-splits on ALL whitespace — so `docs/my notes.md` became two entries,
+# neither of which exists, and both the filename rule and the content scan
+# passed over the real file without reading it. A file this hook cannot read is
+# a file it cannot refuse.
+#
+# The fix is a NUL-delimited list, and `read -d ''` is not POSIX. Process
+# substitution below is not either, and it is what keeps `fail` in this shell
+# rather than in a pipeline's subshell where its value would be discarded. Both
+# want bash, which every machine this runs on has.
 
 fail=0
 
 # 1. Any .env variant other than the template must never be staged.
-for file in $staged; do
+#
+# `*.env` AND `.env*`, because the rule used to be anchored at the START of the
+# name: `prod.env`, `staging.env` and `src/config/.env` all slipped through a
+# check written for `.env.local`. `.gitignore` covers the same two shapes for
+# the same reason.
+while IFS= read -r -d '' file; do
   case "$file" in
-    .env.example) ;;
-    .env|.env.*)
+    .env.example|*.env.example) ;;
+    .env|.env.*|*.env|*.env.*)
       echo "BLOCKED: $file is an environment file and must not be committed."
       fail=1
       ;;
@@ -27,7 +43,7 @@ for file in $staged; do
       fail=1
       ;;
   esac
-done
+done < <(git diff --cached --name-only -z --diff-filter=ACM)
 
 # 2. Scan staged content for key-shaped strings. Assignments only — a bare hex
 #    string is usually a git SHA or a checksum, so matching those would cry wolf
@@ -106,27 +122,73 @@ done
 #    ordinary words — `task-oriented-design-system` contains `sk-oriented-…`,
 #    twenty-odd legal characters, and blocked a commit in testing. `risk-`,
 #    `desk-` and `disk-` do the same.
-patterns='[A-Za-z0-9_]+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9-]{16,}
-(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9-]{6,}[0-9][A-Za-z0-9-]{6,}
-(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}
-ghp_[A-Za-z0-9]{36}
-AKIA[0-9A-Z]{16}
-cfut_[A-Za-z0-9]{20,}
-postgres(ql)?://[^:/]+:[^@]{8,}@[A-Za-z0-9-]+\.'
+#
+#    THE PROVIDER SHAPES BELOW THE TWO GENERIC RULES, and why each is here.
+#
+#    Every one of these was MISSED by the rules above it, verified by running
+#    the pattern set over a bank of realistic credentials:
+#
+#      xoxb-…    Slack bot token. Hyphen-separated, so the generic value rule
+#                (which stops at the first non-[A-Za-z0-9-] character) sees it
+#                but the NAME side did not fire: `SLACK_BOT=` ends in neither
+#                KEY, TOKEN, SECRET nor PASSWORD.
+#      AIzaSy…   Google API key. Same reason. Google's keys are a fixed 39
+#                characters beginning `AIzaSy`, which is about as unambiguous
+#                as a credential shape gets.
+#      glpat-…   GitLab personal access token.
+#      npg_…     A BARE NEON PASSWORD, and the one that matters most here: this
+#                project's database password lives inside a Neon connection
+#                string, and the moment somebody copies just the password out
+#                of one — into a note, a script, a `DB_PASSWORD=` line — the
+#                connection-string rule no longer applies. It was missed by
+#                the generic rules because their value side excludes `_`
+#                (deliberately: see the entropy argument above) and `npg` is
+#                only three characters before the underscore.
+#      eyJ….eyJ… A JWT: base64 for `{"` twice, separated by a dot. This is how
+#                a Supabase service-role key or a signed session travels, and
+#                `SUPABASE_SERVICE_ROLE=` matches no keyword rule.
+#
+#    All five are anchored to a fixed provider prefix, so none of them can fire
+#    on ordinary prose the way a bare keyword can. Verified: the full set below
+#    produces ZERO matches across every committable file in the repository.
+patterns=(
+  '[A-Za-z0-9_]+(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9-]{16,}'
+  '(KEY|TOKEN|SECRET|PASSWD|PASSWORD)["'"'"' ]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9-]{6,}[0-9][A-Za-z0-9-]{6,}'
+  '(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}'
+  'ghp_[A-Za-z0-9]{36}'
+  'AKIA[0-9A-Z]{16}'
+  'cfut_[A-Za-z0-9]{20,}'
+  'xox[baprs]-[A-Za-z0-9-]{10,}'
+  'AIzaSy[A-Za-z0-9_-]{27,}'
+  'glpat-[A-Za-z0-9_-]{20,}'
+  'npg_[A-Za-z0-9]{12,}'
+  'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.'
+  'postgres(ql)?://[^:/]+:[^@]{8,}@[A-Za-z0-9-]+\.'
+)
 
-for file in $staged; do
-  [ -f "$file" ] || continue
-  case "$file" in .env.example|.githooks/*) continue ;; esac
+# A temp file rather than a shell variable, because the staged content may be
+# binary: command substitution silently drops NUL bytes and prints a warning
+# per file. It also means one `git show` per file instead of one per pattern.
+staged_content=$(mktemp "${TMPDIR:-/tmp}/precommit-scan.XXXXXX") || exit 1
+trap 'rm -f "$staged_content"' EXIT
 
-  echo "$patterns" | while IFS= read -r pattern; do
-    [ -z "$pattern" ] && continue
-    if git show ":$file" 2>/dev/null | grep -niEq "$pattern"; then
+while IFS= read -r -d '' file; do
+  case "$file" in .env.example|*.env.example|.githooks/*) continue ;; esac
+
+  # Read from the INDEX, not the worktree. What is being committed is the
+  # staged content, which is not necessarily what is on disk — and a file
+  # staged then deleted from the worktree still enters history.
+  git show ":$file" > "$staged_content" 2>/dev/null || continue
+
+  for pattern in "${patterns[@]}"; do
+    if grep -niEq -- "$pattern" "$staged_content"; then
       echo "BLOCKED: $file contains something shaped like a live credential:"
-      git show ":$file" 2>/dev/null | grep -niE "$pattern" | head -3 | sed 's/^/    /'
-      exit 1
+      grep -niE -- "$pattern" "$staged_content" | head -3 | sed 's/^/    /'
+      fail=1
+      break
     fi
-  done || fail=1
-done
+  done
+done < <(git diff --cached --name-only -z --diff-filter=ACM)
 
 if [ "$fail" -ne 0 ]; then
   cat <<'MSG'

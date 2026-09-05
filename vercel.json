@@ -10,7 +10,8 @@
   "trailingSlash": false,
   "functions": {
     "api/index.js": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "public/index.html"
     }
   },
   "redirects": [
@@ -48,11 +49,11 @@
     },
     {
       "source": "/lens/:slug",
-      "destination": "/app"
+      "destination": "/api/index"
     },
     {
       "source": "/q/:slug",
-      "destination": "/app"
+      "destination": "/api/index"
     },
     {
       "source": "/explore",
@@ -64,7 +65,7 @@
     },
     {
       "source": "/data/:id",
-      "destination": "/app"
+      "destination": "/api/index"
     },
     {
       "source": "/news",
@@ -76,7 +77,7 @@
     },
     {
       "source": "/simulate/:slug",
-      "destination": "/app"
+      "destination": "/api/index"
     }
   ],
   "headers": [

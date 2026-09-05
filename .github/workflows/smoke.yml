@@ -25,7 +25,23 @@
 # Vercel finishes and carries the URL it actually produced, so this always
 # tests the thing that just shipped.
 
-name: Smoke
+# WHY THIS IS CALLED "PRODUCTION SMOKE" AND NOT "SMOKE"
+#
+# The only alert channel this project has is GitHub's failed-workflow email,
+# and `Ingest` goes red most days for something that is not a fault — one
+# upstream refusing a connection, an index fetch timing out. So the inbox is
+# being trained to delete that email unread, and the day this workflow catches
+# a real outage its notification lands in the same folder wearing much the same
+# subject line.
+#
+# Two things separate them, both cheap. The workflow NAME is what GitHub puts
+# in the subject — "Run failed: Production smoke" is a different sentence from
+# "Run failed: Ingest" — and a failure here also OPENS AN ISSUE, which is a
+# channel ingest never uses, so it cannot be diluted by ingest noise. Neither
+# fixes the ingest exit policy, which is where the noise is actually made and
+# is somebody else's file.
+
+name: Production smoke
 
 on:
   deployment_status:
@@ -44,6 +60,13 @@ on:
 concurrency:
   group: smoke-${{ github.event.deployment_status.environment_url || 'production' }}
   cancel-in-progress: true
+
+# `issues: write` is the whole reason this is not `contents: read` like CI.
+# The alerting step below opens one issue when production breaks; nothing else
+# in this workflow writes anything, and the token can do nothing else.
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   smoke:
@@ -124,6 +147,7 @@ jobs:
       # built-ins, which keeps this job a few seconds rather than a minute —
       # and means a broken lockfile cannot stop production being checked.
       - name: Smoke the deployment
+        id: smoke
         env:
           # THE STABLE ALIAS, NOT `deployment_status.environment_url`.
           #
@@ -145,7 +169,46 @@ jobs:
           # cover the rest. Testing the immutable URL instead would need a
           # protection-bypass secret in the repo, which is a credential this
           # does not currently need.
-          TARGET: ${{ inputs.url || 'https://diffusion-econintel.vercel.app' }}
+          #
+          # THE CANONICAL HOST, and not the project-name alias. Both
+          # `trydiffusion.vercel.app` and `diffusion-econintel.vercel.app`
+          # currently answer 200 on /healthz, so this was not broken — but
+          # `trydiffusion` is the address the site links to itself as
+          # (landing/assets/js/nav.js sends every call to action there), and a
+          # smoke suite should check the address readers are actually sent to.
+          TARGET: ${{ inputs.url || 'https://trydiffusion.vercel.app' }}
+
+          # A SESSION FOR THE DATA CHECKS, when one exists.
+          #
+          # Every data endpoint is behind the sign-in gate, so without a cookie
+          # the suite proves the shell renders and nothing about the numbers in
+          # it. Set `SMOKE_SESSION` to the full Cookie header value for a
+          # dedicated smoke reader row and the /api/overview, /api/series and
+          # /api/questions checks start asserting instead of skipping.
+          #
+          # Unset is the normal state and is safe: an empty secret resolves to
+          # an empty string and the script reports those three checks SKIPPED,
+          # with the reason, rather than passing them.
+          SMOKE_SESSION: ${{ secrets.SMOKE_SESSION }}
+
+          # WHETHER TO INSIST THAT A 500 LEAVES A TRACE.
+          #
+          # `/healthz?deep=1` reports whether the deployment has an error sink
+          # configured — the KIND, never the address. The sink lives entirely in
+          # Vercel environment variables, so nothing in this repository can
+          # otherwise tell whether it is set, and an unset variable looks exactly
+          # like a working one: 500s are answered normally and disappear into a
+          # function log nobody reads.
+          #
+          # A REPOSITORY VARIABLE, NOT A SECRET — it holds no value worth hiding,
+          # and `vars` is readable in the Settings UI, which is where somebody
+          # will go looking when this check goes red.
+          #
+          # Leave it unset until an error sink actually exists; the check reports
+          # the true state and skips. Set it to `1` (Settings → Secrets and
+          # variables → Actions → Variables) once one does, and this starts
+          # catching the variable being dropped in a project reshuffle.
+          EXPECT_ERROR_SINK: ${{ vars.EXPECT_ERROR_SINK }}
 
           # THE SHA THIS RUN EXPECTS TO FIND LIVE.
           #
@@ -164,8 +227,15 @@ jobs:
           # reports the comparison SKIPPED with that reason rather than
           # passing it silently.
           EXPECT_COMMIT: ${{ github.event_name == 'deployment_status' && github.sha || '' }}
+
+          # Through the environment rather than substituted into the script.
+          # `github.event_name` is a fixed enum GitHub sets, so this one was
+          # never injectable — but a `${{ }}` inside a `run:` block is the
+          # shape of the hole that was real in ingest.yml, and leaving one
+          # example of it here is how the pattern gets copied next time.
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" = "deployment_status" ]; then
+          if [ "$EVENT_NAME" = "deployment_status" ]; then
             echo "Waiting 20s for the production alias to settle…"
             sleep 20
           fi
@@ -184,9 +254,74 @@ jobs:
           # takes the exit code from the script rather than from tee, so a
           # failing check fails the job. That is the entire point of the file.
           set +e
-          node scripts/smoke-deploy.js "$TARGET" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          node scripts/smoke-deploy.js "$TARGET" 2>&1 | tee smoke-output.txt | tee -a "$GITHUB_STEP_SUMMARY"
           status=${PIPESTATUS[0]}
           set -e
 
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            # A distinctive title, because the annotation is what shows on the
+            # commit and in the run list next to a dozen ingest annotations.
+            echo "::error title=PRODUCTION SMOKE FAILED::$TARGET is not serving a working site"
+          fi
           exit "$status"
+
+      # ── THE ALERT ────────────────────────────────────────────────────────
+      #
+      # Runs only when the CHECKS failed — not when the deploy did. A failed
+      # Vercel build already emails from Vercel and is a different fault with a
+      # different fix; conflating them is how an issue tracker becomes noise of
+      # its own.
+      #
+      # ONE ISSUE, NOT ONE PER RUN. The daily schedule would otherwise open a
+      # new issue every morning for as long as production stayed down. So: reuse
+      # the open one if there is one, and comment on it instead.
+      #
+      # A manual run is excluded. `workflow_dispatch` can target any URL,
+      # including a preview, and a failure there is somebody experimenting.
+      - name: Open an issue — production is down
+        if: always() && steps.smoke.outcome == 'failure' && github.event_name != 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ inputs.url || 'https://trydiffusion.vercel.app' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          # The failing lines only. `smoke-deploy.js` prints ANSI colour, which
+          # is unreadable in an issue body, so it is stripped here rather than
+          # by turning colour off — the run log wants it.
+          failing=$(sed 's/\x1b\[[0-9;]*m//g' smoke-output.txt | grep '^  ✗' || true)
+          body=$(printf '%s\n' \
+            "Production smoke failed against \`$TARGET\`." \
+            "" \
+            "**Failing checks**" \
+            '```' \
+            "${failing:-(the suite did not get far enough to report a check)}" \
+            '```' \
+            "" \
+            "Commit \`$SHA\` · [full run]($RUN_URL)" \
+            "" \
+            "Opened by \`.github/workflows/smoke.yml\`. It will comment here rather" \
+            "than open a second issue while this one stays open — close it once" \
+            "production is serving again.")
+
+          # The label is the dedupe key, so it has to exist before either branch
+          # can use it. Creating it is idempotent-by-failure: the second run
+          # errors "already exists" and that is fine.
+          gh label create production-down --color B60205 \
+            --description "Production smoke is failing" >/dev/null 2>&1 || true
+
+          existing=$(gh issue list --label production-down --state open \
+                      --limit 1 --json number --jq '.[0].number' 2>/dev/null || true)
+
+          # A token without `issues: write` must not mask the smoke failure
+          # itself, which is the finding. Warn and carry on: the job is already
+          # red for the right reason.
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body" \
+              || echo "::warning title=Alert not delivered::could not comment on issue #$existing"
+          else
+            gh issue create --title "Production smoke failed" --body "$body" \
+              --label production-down \
+              || echo "::warning title=Alert not delivered::could not open an issue — check Settings → Actions → Workflow permissions"
+          fi

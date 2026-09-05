@@ -3,6 +3,7 @@ import { useStatus } from '@/hooks/queries';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import { useReveal, revealClass } from '@/hooks/useReveal';
+import { isFuturePeriod } from '@/components/periodModel';
 import PageHero from '@/components/PageHero';
 
 /**
@@ -44,17 +45,31 @@ export default function PipelinePage() {
   const totalObservations = measured.reduce((sum, s) => sum + s.observations, 0);
   const missing = integrations.filter((i) => !i.ready);
 
+  /*
+   * "Countries" here used to be `count(*) FROM countries` — six of those rows
+   * are aggregates (World, EU, OECD…) and one holds nothing at all. The
+   * overview prints coverage instead, and two provenance pages printing
+   * different country counts is precisely the defect this page exists to
+   * catch, so both print the same figure under a label that says which one it
+   * is. A figure whose column has not arrived is dropped rather than
+   * substituted: a coverage label over a row count would be worse than no
+   * figure. "Sources supplying" is the length of the register printed below
+   * it, so the two cannot disagree.
+   */
+  const figures = [
+    ['Observations', counts.observations],
+    ['Active indicators', counts.indicators],
+    ['Documents', counts.documents],
+    ['Countries with data', counts.countries_with_data],
+    ['Sources supplying', sources.length],
+  ].filter(([, value]) => value != null);
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHero
         eyebrow="Provenance"
         title="Where this comes from"
-        figures={[
-          ['Observations', counts.observations],
-          ['Active indicators', counts.indicators],
-          ['Documents', counts.documents],
-          ['Countries', counts.countries],
-        ]}
+        figures={figures}
       >
         A dashboard that will not show its own plumbing is asking to be trusted
         rather than checked. This is every source, what it is licensed under,
@@ -85,7 +100,11 @@ export default function PipelinePage() {
       />
 
       <Runs runs={recentRuns} />
-      <Stale rows={staleIndicators} />
+      {/* `counts.stale_indicators` does not exist yet — /api/status sends the
+          staleness list under a LIMIT and publishes no total. Read here rather
+          than waited for, so the day the field lands this band starts printing
+          a real count with no change on this page. */}
+      <Stale rows={staleIndicators} total={counts.stale_indicators ?? null} />
 
       {missing.length > 0 && <NotConfigured integrations={missing} />}
     </div>
@@ -186,7 +205,19 @@ function Register({ eyebrow, title, note, rows, total, unit, field = 'observatio
                   </span>
                 )}
                 <span>{source.licence ?? 'licence not recorded'}</span>
-                {source.latest_period && <span>latest {source.latest_period}</span>}
+                {/* A period after today is a published forecast, not coverage.
+                    One source here carries European Commission projections
+                    inside an AMECO history and was printing "latest 2027-01-01"
+                    with no marker — on the page a sceptic checks first. What
+                    the payload cannot say is where the measured part ends; that
+                    needs the server to publish it, so the claim made here is
+                    only the one the date itself proves. */}
+                {source.latest_period && (
+                  <span>
+                    latest {source.latest_period}
+                    {isFuturePeriod(source.latest_period) && ' · a forecast, not a measurement'}
+                  </span>
+                )}
               </p>
             </li>
           );
@@ -259,37 +290,116 @@ function Runs({ runs }) {
   );
 }
 
-function Stale({ rows }) {
+/**
+ * What has stopped publishing.
+ *
+ * THIS LIST USED TO BE EMPTY, AND THAT WAS THE DEFECT.
+ *
+ * The query behind it tested `last_ingested_at`, which is set on any
+ * successful fetch INCLUDING one that returned nothing new. Every active
+ * series had been fetched the night before, so the query returned no rows and
+ * this page told the reader "Nothing is late. Every active series has run
+ * inside its own cadence" while more than half the catalogue held nothing
+ * newer than a year — the worst of them nothing newer than 2020. On the one
+ * page whose entire job is to say how much to trust the numbers, that is the
+ * most expensive sentence on the site.
+ *
+ * It now measures the DATA: the newest period actually holding a value,
+ * against the series' own cadence. The note that used to disclaim a wrong
+ * list now describes a right one, and the gap between "we last asked" and
+ * "the newest number we hold" is printed where it is large, because a job
+ * that has succeeded every night for six years while returning nothing is the
+ * exact failure the old badge could not see.
+ *
+ * AND THE COUNT ABOVE IT WAS A CAPPED LIST PRINTED AS A TOTAL.
+ *
+ * The query behind this ends `LIMIT 40` and the response carries no total, so
+ * `rows.length` is the length of a truncated list. It printed "38 series are
+ * behind" — true on the day it was written, and false the moment two more
+ * series fall behind, with nothing on the page changing to say so. A sentence
+ * that goes wrong on its own while the code stays still is worse than one that
+ * is wrong today, because nobody is looking when it turns.
+ *
+ * So the count is now stated as what it provably is — the rows this page was
+ * sent, ordered worst-first — with the cap named rather than left to be
+ * inferred. `total` is the honest fix and is read the moment the endpoint
+ * publishes it.
+ */
+function Stale({ rows = [], total = null }) {
   return (
     <Band
       eyebrow="Freshness"
       title="What is late"
-      /* The query behind this returns when the job last RAN, which is not the
-         same as the last period observed — an adapter can fetch successfully
-         and find nothing new. Said here rather than in a column header,
-         because it changes how the whole list should be read. */
-      note="Series whose job has not run inside its expected cadence. This is when the job last ran, not when the data was last published: an adapter can fetch successfully and find nothing new, and that shows here as fresh."
+      note="Measured on the data, not on the job. A series is listed when its newest published value is more than three of its own periods old — three, because every publisher runs behind its own reference period and one period late is ordinary. Where a job is still running successfully against a series that has stopped publishing, that gap is named: fetching cleanly and finding nothing is not freshness."
     >
       {rows.length === 0 ? (
         <p className="mt-6 text-body-regular text-text-secondary">
-          Nothing is late. Every active series has run inside its own cadence.
+          Nothing is late. Every active series has published inside its own cadence.
         </p>
       ) : (
-        <ul className="mt-6 flex flex-col">
-          {rows.map((row) => (
-            <li
-              key={row.id ?? row.indicator_id}
-              className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-border-button-default py-3 first:border-t-0 first:pt-0"
-            >
-              <span className="min-w-0 flex-1 text-body-regular text-text-secondary">
-                {row.name ?? row.id ?? row.indicator_id}
-              </span>
-              <span className="figure text-caption-1-regular text-text-tertiary">
-                {row.last_ingested_at ? row.last_ingested_at.slice(0, 10) : 'never run'}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="mt-5 text-body-regular text-text-secondary">
+            {/* No denominator is invented in either branch. Inventing "of 125"
+                here is the class of thing this page exists to stop, and so is
+                printing the length of a capped list as though it were the
+                answer to "how many are late". */}
+            {total == null ? (
+              <>
+                The <span className="figure">{rows.length}</span> furthest behind are listed,
+                worst first. This page is sent a capped list and no total, so it cannot say
+                whether these are all of them.
+              </>
+            ) : (
+              <>
+                <span className="figure">{total}</span>{' '}
+                {total === 1 ? 'series is' : 'series are'} behind
+                {rows.length < total && (
+                  <>
+                    , of which the <span className="figure">{rows.length}</span> furthest behind
+                    are listed
+                  </>
+                )}
+                , worst first.
+              </>
+            )}
+          </p>
+
+          <ul className="mt-6 flex flex-col">
+            {rows.map((row) => (
+              <li
+                key={row.id ?? row.indicator_id}
+                className="border-t border-border-button-default py-3 first:border-t-0 first:pt-0"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <span className="min-w-0 flex-1 text-body-regular text-text-secondary">
+                    {row.name ?? row.id ?? row.indicator_id}
+                  </span>
+                  <span className="figure text-caption-1-regular text-text-tertiary">
+                    {row.latest_period ? `newest value ${row.latest_period}` : 'no value ever'}
+                    {row.days_behind != null && (
+                      <>
+                        {' · '}
+                        {row.days_behind.toLocaleString('en-GB')} days behind
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                {/* A year of successful fetches that moved nothing. Named
+                    rather than left to be inferred from two dates. */}
+                {row.ingest_gap_days > 365 && row.last_ingested_at && (
+                  <p className="mt-1 text-caption-1-regular text-text-tertiary">
+                    Fetched {row.last_ingested_at.slice(0, 10)} and has returned nothing new for{' '}
+                    <span className="figure">
+                      {row.ingest_gap_days.toLocaleString('en-GB')}
+                    </span>{' '}
+                    days.
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Band>
   );

@@ -3,7 +3,35 @@ import { displayUnit } from '@/lib/format';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import ChartCard from './ChartCard';
 import SeriesChart from './SeriesChart';
+import RankedBarChart from './RankedBarChart';
 import { useSeriesPalette, exceedsPalette } from './palette';
+
+/*
+ * The thirteen chart honesty behaviours this project treats as non-negotiable
+ * are written down once, next to this file, in HONESTY.md — with the file and
+ * line implementing each. Two of them are here: the refusal to draw more
+ * series than there are validated hues, and the footer that states how many
+ * series were rebased. Read it before changing anything.
+ */
+
+/**
+ * WHICH FORM A GROUP DRAWS IN IS AN EDITORIAL DECISION, RECORDED IN THE DATA.
+ *
+ * `chart_forms` (db/migrations/0025, seeded by db/seeds/037_chart_form.sql)
+ * holds one row per chart_group naming its form and the reason a person chose
+ * it. The repository joins it onto every member as `chart_form`.
+ *
+ * Deliberately NOT inferred from `members.length`. A group crossing six members
+ * would then silently change the shape of an argument, and the decision would
+ * live in a conditional no editor can see or overrule. The default — no row —
+ * is a line chart, which is what every group was before this existed.
+ */
+const FORMS = { line: 'line', 'ranked-bars': 'ranked-bars' };
+
+function formOf(members) {
+  const declared = members.map((m) => m.chart_form).find(Boolean);
+  return FORMS[declared] ?? 'line';
+}
 
 /**
  * One chart, drawn from the indicators the editorial layer put in a group.
@@ -40,7 +68,17 @@ export default function ChartGroup({ members, height = 260, onPick }) {
    * an API caller rather than a reader.
    */
   const palette = useSeriesPalette();
-  const tooManySeries = exceedsPalette(members.length, palette);
+
+  /*
+   * The palette ceiling is a fact about COLOUR, so it only binds a form that
+   * encodes by colour. A ranked bar chart draws every bar in one hue — colour
+   * means nothing there, so nothing is made ambiguous by having more entities
+   * than hues, and the ceiling does not apply. Every other form is a line
+   * chart with one hue per series, where it does.
+   */
+  const form = formOf(members);
+  const ranked = form === 'ranked-bars';
+  const tooManySeries = !ranked && exceedsPalette(members.length, palette);
 
   const { data: payload, isPending, isError, error } = useSeries(
     ids,
@@ -48,7 +86,7 @@ export default function ChartGroup({ members, height = 260, onPick }) {
     // `enabled` is useSeries's THIRD argument, not part of the options object.
     // Passing it in the second is silently ignored and the doomed request goes
     // out anyway.
-    { enabled: !tooManySeries }
+    { enabled: !tooManySeries && !ranked }
   );
 
   const lead = members[0];
@@ -84,7 +122,9 @@ export default function ChartGroup({ members, height = 260, onPick }) {
         </span>
       }
     >
-      {tooManySeries ? (
+      {ranked ? (
+        <RankedBarChart members={members} onPick={onPick} />
+      ) : tooManySeries ? (
         /*
          * More series than there are validated hues, so this cannot be drawn
          * honestly and is not drawn at all.
@@ -100,9 +140,11 @@ export default function ChartGroup({ members, height = 260, onPick }) {
          * while the legend implied they did not. A wrong chart that renders is
          * worse than one that refuses, because nobody investigates it.
          *
-         * So the refusal is explicit and says what is wrong. The fix is
-         * editorial and belongs to a person: sixteen countries is a ranked bar
-         * chart or small multiples, not sixteen lines on one axis.
+         * THIS BRANCH IS STILL HERE ON PURPOSE. `ranked-bars` above is the
+         * answer for the two groups a person has ruled on; this is what a
+         * group with more members than hues and NO ruling still does. Removing
+         * it once the flagship case was fixed would reopen the exact failure it
+         * was built to catch, on whichever group crosses six next.
          */
         <div className="rounded-2xl border border-border-button-default p-5">
           <p className="text-body-regular text-text-secondary">
@@ -129,11 +171,19 @@ export default function ChartGroup({ members, height = 260, onPick }) {
  * Name a multi-indicator chart by what its members have in common, falling
  * back to the first indicator's name rather than concatenating all of them
  * into something unreadable.
+ *
+ * The SUFFIX is tried after the prefix because country-first naming is the
+ * house convention — "Germany — Enterprises using AI", "France — Enterprises
+ * using AI" — and those share no prefix at all. The sixteen-country adoption
+ * panel was therefore titled "United Kingdom — Enterprises using AI", which
+ * names one member of a chart that is about all of them.
  */
 function groupTitle(members) {
   const names = members.map((m) => m.name);
-  const shared = commonPrefix(names).replace(/[\s,\-–—:]+$/, '');
-  return shared.length > 12 ? shared : names[0];
+  const prefix = commonPrefix(names).replace(/[\s,\-–—:]+$/, '');
+  if (prefix.length > 12) return prefix;
+  const suffix = commonSuffix(names).replace(/^[\s,\-–—:]+/, '');
+  return suffix.length > 12 ? suffix : names[0];
 }
 
 function commonPrefix(strings) {
@@ -143,4 +193,13 @@ function commonPrefix(strings) {
     while (!s.startsWith(prefix) && prefix) prefix = prefix.slice(0, -1);
   }
   return prefix;
+}
+
+function commonSuffix(strings) {
+  if (strings.length < 2) return '';
+  let suffix = strings[0];
+  for (const s of strings.slice(1)) {
+    while (!s.endsWith(suffix) && suffix) suffix = suffix.slice(1);
+  }
+  return suffix;
 }

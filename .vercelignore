@@ -39,11 +39,24 @@
 # A leading slash anchors to the project root, which is what was meant in
 # every case here.
 /public/
-/legacy/
 /docs/
 /db/
 /.githooks/
-/.mirror-cache/
+/landing/.mirror-cache/
+
+# The Framer clone manifest. It is a BUILD INPUT (docs/verify-nav.py reads its page
+# list) and it was being served at /clone.json with HTTP 200, announcing the template
+# this site was mirrored from. Nothing a reader needs; everything an onlooker enjoys.
+/landing/clone.json
+
+# The template's Framer CMS payload for the legal pages. Both blobs carry the
+# ATMOS privacy policy and terms verbatim — 13 "atmos" and mailto:contact@atmos.com
+# each, and zero "Diffusion" — and both were being served at HTTP 200. The shipped
+# legal pages are static HTML and already carry the right text, so nothing a reader
+# does needs these; today they are only unreachable because nav.js turns every
+# internal link into a full page reload, which is a rule holding rather than a file
+# being gone. Not served is the difference.
+/landing/assets/js/*.framercms
 
 # Committed reference material and screenshots, not runtime code.
 *.md

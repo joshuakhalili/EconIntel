@@ -18,6 +18,7 @@
  */
 
 import { HttpError } from '../../lib/http.js';
+import { USER_AGENT } from './user-agent.js';
 import { config } from '../../config.js';
 
 const BASE = 'https://prices.lbma.org.uk/json';
@@ -46,7 +47,7 @@ export async function fetchMetal(metal, indicatorId) {
 
   const url = `${BASE}/${spec.path}`;
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion)' },
+    headers: { 'User-Agent': USER_AGENT },
     signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) {

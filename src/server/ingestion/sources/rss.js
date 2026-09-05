@@ -19,14 +19,15 @@ import Parser from 'rss-parser';
 
 import { scoreRelevance } from '../../lib/relevance.js';
 
-/**
+/*
  * The SEC is not the only publisher that blocks anonymous automated traffic —
  * BLS returns 403 without one, and Bloomberg and the FT are inconsistent. A
  * descriptive User-Agent with contact details is both the polite and the
- * working choice.
+ * working choice. The string, and the reasoning about what may and may not be
+ * in it, live in `sources/user-agent.js` — there were five copies of it and
+ * the fifth was still wrong after the other four were fixed.
  */
-const USER_AGENT =
-  'Diffusion/1.0 (+https://github.com/joshuakhalili/Diffusion; joshuakhalili20@gmail.com)';
+import { USER_AGENT } from './user-agent.js';
 
 /**
  * Curated feed list.
@@ -182,34 +183,23 @@ export async function fetchFeed(feed) {
   return documents;
 }
 
-/**
- * Fetch every feed.
+/*
+ * `fetchAllFeeds()` USED TO LIVE HERE AND HAS BEEN DELETED.
  *
- * Feeds are fetched sequentially with a small delay rather than in parallel.
- * These are other people's free services and this job runs on a schedule with
- * no deadline; hammering eight publishers simultaneously to save four seconds
- * is a good way to be blocked.
+ * It fetched every feed in one call, collected per-feed failures into an array
+ * and returned them, and its JSDoc promised "failures are collected and
+ * returned so the caller can record them". No caller existed — `grep -rIn
+ * fetchAllFeeds src scripts db docs` found the definition and nothing else —
+ * and the path that really runs, DOCUMENT_JOBS in ingestion/runner.js, does not
+ * work that way at all: it calls `fetchFeed(feed)` once per feed, each inside
+ * its own `ingestion_runs` audit record, so a failing publisher is a stored row
+ * with its own error message rather than an entry in an array in memory.
  *
- * One feed failing must not lose the others — publishers change URLs, expire
- * certificates and rate-limit without warning. Failures are collected and
- * returned so the caller can record them rather than discovering an empty
- * news panel later.
- *
- * @returns {Promise<{documents: object[], failures: Array<{sourceId: string, url: string, error: string}>}>}
+ * That is strictly more than the deleted function offered, and it is what
+ * `/api/status` and the nightly summary read. Keeping a second, unused fetch
+ * path whose contract the real one does not implement is a trap: the next
+ * person to wire it up would silently lose the per-feed audit rows and get an
+ * unread `failures` array instead. Its politeness delay went nowhere either —
+ * the runner already awaits one feed at a time, and the eight feeds are eight
+ * different publishers.
  */
-export async function fetchAllFeeds({ delayMs = 400 } = {}) {
-  const documents = [];
-  const failures = [];
-
-  for (const feed of FEEDS) {
-    try {
-      const items = await fetchFeed(feed);
-      documents.push(...items);
-    } catch (error) {
-      failures.push({ sourceId: feed.sourceId, url: feed.url, error: error.message });
-    }
-    if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  return { documents, failures };
-}

@@ -509,9 +509,19 @@ describe('runScenario — the range verdict', () => {
 });
 
 describe('runHash', () => {
+  /* A parameter set that looks like one, so the shape assertions below are
+     about the hash and not about the fixture. */
+  const PARAMS = { okun_coefficient: -0.563, gdp_usd_bn: 29298, unemployment_baseline: 4.02 };
+
   test('is stable across key order', () => {
-    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { a: 1, b: 2 } });
-    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { b: 2, a: 1 } });
+    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { a: 1, b: 2 }, parameters: PARAMS });
+    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { b: 2, a: 1 }, parameters: PARAMS });
+    assert.equal(a, b);
+  });
+
+  test('is stable across parameter key order too', () => {
+    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: { x: 1, y: 2 } });
+    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: { y: 2, x: 1 } });
     assert.equal(a, b);
   });
 
@@ -519,18 +529,77 @@ describe('runHash', () => {
      entries for one run would mean two separately generated narrations of
      identical numbers. */
   test('is stable across string and numeric forms of the same value', () => {
-    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: '50' } });
-    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 } });
-    const c = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50.0 } });
+    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: '50' }, parameters: PARAMS });
+    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: PARAMS });
+    const c = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50.0 }, parameters: PARAMS });
     assert.equal(a, b);
     assert.equal(b, c);
   });
 
+  /* Postgres hands NUMERIC over the wire as a string. A run cached from the web
+     tier and one cached from a script must be the same run. */
+  test('is stable across string and numeric forms of a coefficient', () => {
+    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: { okun: '-0.563' } });
+    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: { okun: -0.563 } });
+    assert.equal(a, b);
+  });
+
   test('separates scenarios, countries and values', () => {
-    const base = { scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 } };
+    const base = { scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: PARAMS };
     assert.notEqual(runHash(base), runHash({ ...base, scenarioId: 't' }));
     assert.notEqual(runHash(base), runHash({ ...base, countryIso3: 'GBR' }));
     assert.notEqual(runHash(base), runHash({ ...base, inputs: { shock: 51 } }));
+  });
+
+  /*
+   * THE POINT OF THE WHOLE FUNCTION.
+   *
+   * A corrected coefficient in db/seeds/034 has to produce a cache MISS, or the
+   * reader keeps the pre-correction chart under a citation panel already showing
+   * the new figure. This is the assertion that was missing while that was true.
+   */
+  test('a corrected coefficient is a different run', () => {
+    const base = { scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: PARAMS };
+    assert.notEqual(
+      runHash(base),
+      runHash({ ...base, parameters: { ...PARAMS, okun_coefficient: -0.5 } }),
+      'a changed coefficient must not resolve to the cached run computed from the old one'
+    );
+    /* An added row counts too: today it is unused, tomorrow a model reads it. */
+    assert.notEqual(
+      runHash(base),
+      runHash({ ...base, parameters: { ...PARAMS, price_phillips_slope: 0.11 } })
+    );
+  });
+
+  /* NULL and nought are not the same coefficient, and `Number(null)` is 0. */
+  test('a null coefficient does not hash as zero', () => {
+    const a = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: { okun: null } });
+    const b = runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: { okun: 0 } });
+    assert.notEqual(a, b);
+  });
+
+  /*
+   * `narrations` has no model_version column and keys on (scope, input_hash,
+   * prompt_version), so a version bump has to move the input hash or the prose
+   * written about the old equations survives the equations.
+   */
+  test('bumping the model version is a different run', () => {
+    const base = { scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: PARAMS };
+    assert.notEqual(runHash(base), runHash({ ...base, modelVersion: 'v99-2099-01-01' }));
+  });
+
+  /* Optional would mean a caller that forgets it silently gets the old,
+     coefficient-blind key back — the bug with a longer fuse. */
+  test('refuses to hash a run without its parameters', () => {
+    assert.throws(
+      () => runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 } }),
+      /requires the parameter set/
+    );
+    assert.throws(
+      () => runHash({ scenarioId: 's', countryIso3: 'USA', inputs: { shock: 50 }, parameters: null }),
+      /requires the parameter set/
+    );
   });
 });
 

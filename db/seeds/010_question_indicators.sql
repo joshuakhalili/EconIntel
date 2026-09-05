@@ -133,7 +133,7 @@ INSERT INTO question_indicators
 -- JOBS
 -- ─────────────────────────────────────────────────────────────────────────────
 ('jobs', 'derived.information_employment_share', 'hero', 1, NULL, 'USA',
- 'Jobs in America''s information sector as a share of all jobs. It rose for most of the last decade and has been falling since 2023.',
+ 'Jobs in America''s information sector as a share of all jobs. It peaked near 2.75% in 2000 and has fallen since, apart from a rise between 2019 and 2022; 2026 is the lowest the series has been.',
  'USINFO divided by PAYEMS. The ratio is the point: both series absorb the same macro shocks, so the divergence between them is attributable to something specific to information work rather than to the cycle. Not causal identification, but closer than either series alone.'),
 
 ('jobs', 'fred.USINFO', 'supporting', 2, NULL, 'USA',
@@ -260,7 +260,7 @@ INSERT INTO question_indicators
 -- ─────────────────────────────────────────────────────────────────────────────
 ('building', 'derived.datacentre_capacity_mw', 'hero', 1, NULL, 'USA',
  'Publicly known data-centre capacity in the United States, in megawatts. Under 400 in 2023, nearly 2,000 by 2025.',
- 'Cumulative installed capacity from Epoch AI''s cluster register, summed by first operational date. Cumulative rather than annual additions because capacity is a stock. A documented LOWER BOUND — the register covers disclosed clusters only, roughly 2,600 MW worldwide, certainly less than exists.'),
+ 'Cumulative installed capacity from Epoch AI''s cluster register, summed by first operational date. Cumulative rather than annual additions because capacity is a stock. A documented LOWER BOUND — the register covers disclosed clusters only, roughly 2,500 MW across 28 countries, certainly less than exists.'),
 
 ('building', 'epoch.gpu_cluster_count', 'supporting', 2, NULL, 'USA',
  'The number of large computing clusters known publicly.',
@@ -354,15 +354,15 @@ INSERT INTO question_indicators
 
 ('markets', 'dbn.BOJ.SPPI.5201330001', 'supporting', 7, 'japan-tech-prices', 'JPN',
  'What Japanese software development costs.',
- 'BOJ services PPI, software development, 2015=100.'),
+ 'BOJ services PPI, software development, 2015=100. Last published month is April 2024; the line stops there.'),
 
 ('markets', 'dbn.BOJ.SPPI.5201350004', 'supporting', 8, 'japan-tech-prices', 'JPN',
  'And Japanese cloud services — falling while software development rises.',
- 'BOJ services PPI, cloud applications, same base and cadence, so a shared axis is legitimate. The divergence between the two is the automation story in miniature.'),
+ 'BOJ services PPI, cloud applications, same base and cadence, so a shared axis is legitimate. The divergence between the two is the automation story in miniature — through to April 2024, which is the last month either series carries.'),
 
 ('markets', 'dbn.BOJ.CGPI.2300440015', 'supporting', 9, NULL, 'JPN',
  'The export price of Japanese chip-making equipment.',
- 'BOJ corporate goods price index, semiconductor-making equipment, contract currency, 2020=100.'),
+ 'BOJ corporate goods price index, semiconductor-making equipment, contract currency, 2020=100. Last published month is May 2024; the line stops there.'),
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Whole-economy macro series.

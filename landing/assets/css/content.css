@@ -39,3 +39,19 @@ img[src*="pULw97g0NbmYBdnrSAKemRBqzE"],
 img[src*="DFzG1yXny0N4VBIJify9JjzxUVE"] {
   display: none !important;
 }
+
+/* The stats card's status glyphs. Four figures, four decorations, none of
+   them measuring anything: a red up-arrow beside the observation count, a
+   chevron beside the series count, an icon beside sources, and a green "A+"
+   beside the country count — that last one was the template's "98 / 100
+   Compliance score" badge. An arrow claims a trend nobody computed and a
+   grade grades nothing.
+
+   Matched on the component's authored name and on the fact that the "A+" is
+   the one rich-text block in the card with no data-framer-name of its own;
+   the numbers and their labels are named "Text" and "Title". Framer's
+   generated class names change on re-mirror, these two attributes do not. */
+div[data-framer-name="Stats Card"] svg[role="presentation"],
+div[data-framer-name="Stats Card"] div[data-framer-component-type="RichTextContainer"]:not([data-framer-name]) {
+  display: none !important;
+}

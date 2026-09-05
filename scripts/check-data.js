@@ -302,6 +302,199 @@ const CHECKS = [
       `${r.id}/${r.country_iso3}/${r.param_key} has no URL and a citation with no year, ` +
       'table or page number in it',
   },
+  {
+    /*
+     * THE BASE YEAR AN INDEX CLAIMS, AGAINST THE ONE IT HAS.
+     *
+     * `unit` reaches the axis label verbatim — `displayUnit()` only truncates
+     * at a parenthesis or thirty characters — so "index_2017=1" is a sentence
+     * the chart says to the reader. It was also wrong. FRED serves the Penn
+     * World Table US total factor productivity series rebased to 2021 = 1
+     * (2021 reads exactly 1.000000, 2017 reads 0.953378) and this database
+     * carried the 2017 label from the day the series was added. Told the wrong
+     * base, a reader takes 0.993 in 2023 for a fall below 2017 when it is 4.2%
+     * above it — on the one page whose entire argument is whether the residual
+     * has moved.
+     *
+     * An index without its base is not a number, so the claim is checkable and
+     * is checked here: whatever period the unit names, the series has to take
+     * the value it names in that period. Annual, quarterly and monthly bases
+     * are all parsed, because the units in use include "index_2017=100",
+     * "Index Dec 1998=100" and "Index, observed base 2025 Q4 = 100".
+     *
+     * TOLERANCE, AND WHY IT IS NOT ZERO. The base period is compared as a mean
+     * over its months, and a seasonally adjusted or chain-linked series does
+     * not average to exactly 100 over its own base year: across the 24 indexed
+     * series currently active the largest legitimate deviation is
+     * derived.productivity_gap_mfg_vs_total at 100.3627 against a claimed 100,
+     * 0.363% off. 0.5% is the smallest round tolerance that admits every
+     * correct series, and the defect it was written for is 4.7% off, so there
+     * is a factor of nine between the two.
+     *
+     * WHAT IT CANNOT SEE, STATED SO NOBODY TRUSTS IT FURTHER THAN IT GOES. It
+     * asserts the VALUE, not the year: relabelling a slow-moving index by one
+     * year passes when the neighbouring period happens to sit within 0.5% —
+     * moving fred.PCU333242333242 from "Dec 2003" to "Dec 2004" (99.7) is not
+     * caught, moving it to "Dec 2010" (90.4) is. And a base period outside the
+     * loaded history cannot be checked at all, so those are skipped rather
+     * than failed; there are none today.
+     */
+    name: 'index base years',
+    why:
+      'An index is meaningless without its base, and the unit string goes straight ' +
+      'onto the axis. If the series does not take the value its unit claims in the ' +
+      'period its unit names, every level a reader computes from the chart is wrong.',
+    sql: `WITH parsed AS (
+            SELECT i.id,
+                   i.unit,
+                   regexp_match(
+                     i.unit,
+                     '(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[[:space:]]+)?([0-9]{4})([[:space:]]*q([1-4]))?[[:space:]]*=[[:space:]]*([0-9]+(?:\\.[0-9]+)?)',
+                     'i') AS m
+              FROM indicators i
+             WHERE i.is_active
+          ),
+          claimed AS (
+            SELECT id, unit,
+                   m[2]::int     AS base_year,
+                   lower(m[1])   AS base_month,
+                   m[4]::int     AS base_quarter,
+                   m[5]::numeric AS base_value
+              FROM parsed
+             WHERE m IS NOT NULL
+          ),
+          base_window AS (
+            SELECT c.*,
+                   CASE
+                     WHEN base_month IS NOT NULL
+                       THEN make_date(base_year,
+                                      position(base_month in 'janfebmaraprmayjunjulaugsepoctnovdec') / 3 + 1,
+                                      1)
+                     WHEN base_quarter IS NOT NULL
+                       THEN make_date(base_year, (base_quarter - 1) * 3 + 1, 1)
+                     ELSE make_date(base_year, 1, 1)
+                   END AS lo,
+                   CASE
+                     WHEN base_month   IS NOT NULL THEN interval '1 month'
+                     WHEN base_quarter IS NOT NULL THEN interval '3 months'
+                     ELSE interval '1 year'
+                   END AS span
+              FROM claimed c
+          )
+          SELECT w.id,
+                 w.unit,
+                 w.base_value,
+                 round(avg(o.value), 4) AS actual,
+                 count(o.*)::int        AS obs,
+                 coalesce(upper(w.base_month) || ' ', '')
+                   || w.base_year
+                   || coalesce(' Q' || w.base_quarter, '') AS base_period
+            FROM base_window w
+            JOIN observations o
+              ON o.indicator_id = w.id
+             AND o.value IS NOT NULL
+             AND o.period_start >= w.lo
+             AND o.period_start <  w.lo + w.span
+           GROUP BY 1, 2, 3, 6
+          HAVING abs(avg(o.value) - w.base_value) > 0.005 * abs(w.base_value)
+           ORDER BY 1`,
+    format: (r) =>
+      `${r.id} — unit ${JSON.stringify(r.unit)} claims ${r.base_period} = ${r.base_value}, ` +
+      `but the series reads ${r.actual} there (${r.obs} observation(s))`,
+  },
+  {
+    /*
+     * DECLARED CADENCE AGAINST THE CADENCE THE DATA ACTUALLY HAS.
+     *
+     * `SeriesChart` infers cadence per series from the points it is given, so
+     * a wrong `cadence` does not break a chart. It breaks everything else:
+     * `cadence` is what the catalogue lists, what the indicator page prints
+     * and what /api/indicators serves. Four active series disagreed with their
+     * own data, two of them against their page's own prose — a reader told the
+     * SEC filing rate was quarterly expected four points a year on a chart
+     * that has one, and derived.ai_news_volume was declared daily while every
+     * row spans a month.
+     *
+     * THE STATISTIC IS THE MODE, AND THAT CHOICE IS THE WHOLE CHECK.
+     * A missing period only ever adds a LARGER gap, never a smaller one, so
+     * the mean and the median both drift upward on any series with holes in
+     * it. derived.ai_presidential_documents is the case that settles it: its
+     * median gap is 60 days and its modal gap is 31, and it is a correctly
+     * declared monthly series with empty months. The mode is the publication
+     * interval; the long tail is the holes. Partitioned by country, industry
+     * and company so a panel is not read as one interleaved series.
+     *
+     * WHAT IT DELIBERATELY DOES NOT FAULT.
+     *   - `irregular` declares no interval, so there is nothing to contradict.
+     *     Epoch's record-holder series are irregular by nature.
+     *   - Fewer than three gaps: a mode over one or two intervals is noise.
+     *   - A modal gap no enum value describes. `cadence` is
+     *     (daily, weekly, monthly, quarterly, annual, irregular) — there is no
+     *     'semiannual' and no 'biennial'. Both Eurostat electricity price
+     *     bands publish every 184 days and the OECD ai_any survey series every
+     *     730, and no declaration available to them is true. Faulting a row
+     *     for failing to say something the schema cannot hold would make this
+     *     gate un-greenable rather than useful. Seed 036 records the migration
+     *     that would fix it; until then those series are visible here as
+     *     unclassifiable rather than as violations.
+     */
+    name: 'declared cadence',
+    why:
+      'cadence is what the catalogue, the indicator page and the API report. A series ' +
+      'declared quarterly that publishes once a year promises a reader four points ' +
+      'where the chart has one.',
+    sql: `WITH gaps AS (
+            SELECT o.indicator_id,
+                   (o.period_start - lag(o.period_start) OVER (
+                      PARTITION BY o.indicator_id, o.country_iso3,
+                                   o.industry_code, o.company_id
+                      ORDER BY o.period_start))::int AS gap
+              FROM observations o
+             WHERE o.value IS NOT NULL
+          ),
+          modal AS (
+            SELECT indicator_id,
+                   mode() WITHIN GROUP (ORDER BY gap) AS gap_days,
+                   count(*)::int                      AS gaps
+              FROM gaps
+             WHERE gap IS NOT NULL AND gap > 0
+             GROUP BY 1
+          )
+          SELECT i.id,
+                 i.cadence::text AS declared,
+                 m.gap_days,
+                 m.gaps,
+                 CASE
+                   WHEN m.gap_days BETWEEN   1 AND   3 THEN 'daily'
+                   WHEN m.gap_days BETWEEN   6 AND   8 THEN 'weekly'
+                   WHEN m.gap_days BETWEEN  27 AND  32 THEN 'monthly'
+                   WHEN m.gap_days BETWEEN  88 AND  95 THEN 'quarterly'
+                   WHEN m.gap_days BETWEEN 360 AND 371 THEN 'annual'
+                 END AS measured
+            FROM indicators i
+            JOIN modal m ON m.indicator_id = i.id
+           WHERE i.is_active
+             AND i.cadence <> 'irregular'
+             AND m.gaps >= 3
+             AND CASE
+                   WHEN m.gap_days BETWEEN   1 AND   3 THEN 'daily'
+                   WHEN m.gap_days BETWEEN   6 AND   8 THEN 'weekly'
+                   WHEN m.gap_days BETWEEN  27 AND  32 THEN 'monthly'
+                   WHEN m.gap_days BETWEEN  88 AND  95 THEN 'quarterly'
+                   WHEN m.gap_days BETWEEN 360 AND 371 THEN 'annual'
+                 END IS DISTINCT FROM i.cadence::text
+             AND CASE
+                   WHEN m.gap_days BETWEEN   1 AND   3 THEN 'daily'
+                   WHEN m.gap_days BETWEEN   6 AND   8 THEN 'weekly'
+                   WHEN m.gap_days BETWEEN  27 AND  32 THEN 'monthly'
+                   WHEN m.gap_days BETWEEN  88 AND  95 THEN 'quarterly'
+                   WHEN m.gap_days BETWEEN 360 AND 371 THEN 'annual'
+                 END IS NOT NULL
+           ORDER BY i.id`,
+    format: (r) =>
+      `${r.id} is declared ${r.declared} but publishes every ${r.gap_days} days ` +
+      `(modal gap over ${r.gaps} gaps), which is ${r.measured}`,
+  },
 ];
 
 /** Rows printed per failing check before the rest are summarised. */

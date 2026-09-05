@@ -1,6 +1,13 @@
 import { cx } from '@/utils/cx';
 import { colorAt } from './palette';
 
+/*
+ * The thirteen chart honesty behaviours this project treats as non-negotiable
+ * are written down once, next to this file, in HONESTY.md. The one this
+ * component IS: a legend is always present at two or more series, so identity
+ * never rests on colour alone. Read it before changing anything.
+ */
+
 /**
  * Legend with per-series visibility.
  *

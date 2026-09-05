@@ -63,6 +63,26 @@ export const APP_ROUTES = [
 /** Paths the Express function answers. Everything else is static. */
 const FUNCTION_ROUTES = ['/api/:path*', '/auth/:path*', '/healthz'];
 
+/**
+ * The app routes that carry a slug, and therefore cannot be answered by shape
+ * alone.
+ *
+ * A rewrite matches `/q/:slug` whether or not that question exists, so pointing
+ * these at the static shell answered `/q/does-not-exist` with a 200 — measured
+ * on production, along with `/lens/nope`, `/data/9999` and `/simulate/nope`.
+ * Every link checker, search engine and archive is entitled to read that as a
+ * live page.
+ *
+ * So these fall through to the function, which resolves the slug against the
+ * database and answers 404 when there is nothing behind it — see the long note
+ * in `api/index.js`. This is a FALLBACK and not the normal path:
+ * `scripts/build-static.js` writes a real file for every question, lens, series
+ * and scenario that exists at build time, and Vercel serves a file that exists
+ * before it consults this table. What reaches the function is an address that
+ * is wrong, or one that is newer than the deploy.
+ */
+const DYNAMIC_APP_ROUTES = new Set(['/lens/:slug', '/q/:slug', '/data/:id', '/simulate/:slug']);
+
 export function buildConfig() {
   const hashes = inlineScriptHashes([
     path.join(ROOT, 'public'),
@@ -118,6 +138,11 @@ export function buildConfig() {
            cancelled by Postgres with a real error rather than by the platform
            with a 504 that says nothing. */
         maxDuration: 15,
+        /* The built app shell, for an address that is real but newer than the
+           deploy — a question activated by a seed run, which happens without a
+           rebuild. Nothing imports this file, so nothing traces it into the
+           bundle, so it has to be named. */
+        includeFiles: 'public/index.html',
       },
     },
     redirects: [
@@ -144,8 +169,15 @@ export function buildConfig() {
          serves — a rewrite pointing at it resolves to nothing and every app
          route returns the landing page's 404. Which is exactly what shipped:
          the build was green, the function was healthy, the database was
-         connected, and /overview said "Page not found". */
-      ...APP_ROUTES.map((source) => ({ source, destination: '/app' })),
+         connected, and /overview said "Page not found".
+
+         The four routes carrying a slug go to the function instead, because a
+         rewrite cannot tell a real slug from an invented one. See
+         DYNAMIC_APP_ROUTES above. */
+      ...APP_ROUTES.map((source) => ({
+        source,
+        destination: DYNAMIC_APP_ROUTES.has(source) ? '/api/index' : '/app',
+      })),
     ],
     headers: [
       {

@@ -42,9 +42,22 @@
 --   papers are defensible; they cannot both be used, and picking the one that
 --   gives a working model is picking a result.
 --
---   CAN is excluded because the OECD estimate (0.18) is not significant.
---   BCS get 0.32*** and so the two sources disagree about whether there is
---   anything there at all.
+--   CAN is excluded because the source this scenario chose for every price
+--   slope reports Canada's as insignificant: OECD WP 1579 Table 1 gives 0.18
+--   with no significance stars, adj. R² 0.29. That is the rule stated above,
+--   applied unchanged, and it is the whole of the reason.
+--
+--   It is NOT that the two sources disagree, which is what this paragraph said
+--   until 4 Sep 2026. Blanchard, Cerutti & Summers do get 0.32*** for Canada —
+--   but Italy carries the same mixed pattern in the other direction (OECD
+--   0.37***, BCS 0.12 not significant in one specification and 0.15*** in the
+--   other) and Italy ships, its own row below describing that as the two
+--   sources agreeing. A criterion that excludes Canada and admits Italy is not
+--   the criterion that was applied, and the honest version excludes Canada on
+--   the OECD result alone. Reaching for BCS to rescue Canada would break the
+--   rule set out under the price slopes further down: all four values come from
+--   one table of one paper, and admitting a second source for one country would
+--   put two inflation measures and two samples under one column heading.
 --
 -- Those three are not seeded at all rather than seeded and withheld.
 -- `getScenario()` returns every parameter row for a scenario and the page
@@ -104,7 +117,7 @@ VALUES (
 
   'A five-year impulse response, not a forecast. A capital-spending shock enters as a share of GDP, propagates through the published annual investment-multiplier profile (Abiad, Furceri & Topalova, IMF WP/15/95, Table 1 column 1, k = 0 to 4), then through Okun''s law, a wage Phillips curve with persistence, and a price equation carrying both a direct slack term and wage pass-through. Every coefficient is a cell from a named table; none is fitted here, and that now includes the SHAPE of the multiplier — the model previously decayed it geometrically from a fitted rate that no source publishes, and in the wrong direction, since both IMF sources have the investment multiplier rising over this horizon. Differentiation between countries is narrower than the picker implies: GDP, the Okun coefficient, baseline unemployment, the inflation target and the price Phillips slope are per-country; the multiplier profile, the wage block and wage-price pass-through are advanced-economy panel estimates carried across all four, and every such row says so in its notes. Germany, the United Kingdom and Canada are absent for a stated reason rather than for lack of searching — see docs/research/simulation-phillips-2026-09-02.md.',
 
-  'This is arithmetic on published coefficients, not a forecast, and its most important limits are structural rather than statistical. The model is linear. It has no capacity constraint, no monetary policy reaction, no expectations, and no feedback from prices back to output — so it will keep multiplying whatever shock you hand it, and nothing in it says the central bank raises rates, that firms run out of workers to hire, or that higher prices choke off the spending that caused them. That breaks in plain sight rather than subtly: push the slider to $500bn, which is 21% of Italy''s annual output, and by year five the equations put Italian unemployment at −0.51%, which cannot happen. Read the direction and the relative sizes, not the levels. And read nothing at all past year five — the multiplier profile underneath is published only to that horizon, and the model refuses to run further rather than extending a line the paper does not draw.',
+  'This is arithmetic on published coefficients, not a forecast, and its most important limits are structural rather than statistical. The model is linear. It has no capacity constraint, no monetary policy reaction, no expectations, and no feedback from prices back to output — so it will keep multiplying whatever shock you hand it, and nothing in it says the central bank raises rates, that firms run out of workers to hire, or that higher prices choke off the spending that caused them. That breaks in plain sight rather than subtly: push the slider to $500bn, which is 21% of Italy''s annual output, and by year five the equations put Italian unemployment at −0.51%, which cannot happen. And that is the gentle case, at the far end of the slider: set the injection to repeat every year and the same failure arrives at $130bn for France and $140bn for Italy and Japan — one toggle and three $10bn steps from where this slider starts for France, four for the other two. Read the direction and the relative sizes, not the levels. Read the price path most cautiously of all of them: the two widest published intervals in this whole parameter set, high against low, are the two coefficients that set it — the wage-to-price pass-through, and France''s price Phillips slope. Under each chart is the published range of the coefficients behind that particular line, or the statement that the source published none. And read nothing at all past year five — the multiplier profile underneath is published only to that horizon, and the model refuses to run further rather than extending a line the paper does not draw.',
 
   5,
   'investment_shock_v1',

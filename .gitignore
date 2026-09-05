@@ -15,6 +15,9 @@ public/
 # .env.staging) is safe the moment it is created rather than when remembered.
 .env
 .env.*
+# Also catch variants that do not START with .env (prod.env, staging.env) — the
+# same gap the pre-commit hook's filename rule has.
+*.env
 !.env.example
 *.pem
 *.key
@@ -32,7 +35,6 @@ landing/.mirror-cache/
 landing/docs/verify-shots/
 landing/.content-applied
 .vercel
-.env*
 
 # Database dumps from scripts/backup-db.js. Never commit data.
 /backups/

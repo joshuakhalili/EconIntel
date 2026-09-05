@@ -209,7 +209,24 @@ export async function runSimulation(slug, countryIso3, suppliedInputs) {
   if (!validated.ok) return { error: validated.error, status: 400 };
   const inputs = validated.values;
 
-  const inputHash = runHash({ scenarioId: scenario.id, countryIso3: country, inputs });
+  /*
+   * The coefficients are fetched BEFORE the cache is consulted, not after.
+   *
+   * They are part of the cache key — see `runHash`. This used to read them only
+   * on a miss, which is why the key could not contain them, which is why a
+   * corrected coefficient never reached a reader who had already visited that
+   * slider position. It costs one extra query on the hit path; the arithmetic
+   * behind it is microseconds and the cache was never here for speed (see the
+   * note above), so that is the cheapest correctness this file buys.
+   */
+  const parameters = await getParameters(scenario.id, country);
+
+  const inputHash = runHash({
+    scenarioId: scenario.id,
+    countryIso3: country,
+    inputs,
+    parameters,
+  });
 
   const { rows: cached } = await query(
     `SELECT results FROM simulation_runs
@@ -223,7 +240,6 @@ export async function runSimulation(slug, countryIso3, suppliedInputs) {
   if (cached.length > 0) {
     results = cached[0].results;
   } else {
-    const parameters = await getParameters(scenario.id, country);
     results = runScenario({
       modelKey: scenario.model_key,
       inputs,
@@ -280,9 +296,47 @@ export async function runSimulation(slug, countryIso3, suppliedInputs) {
     horizon_years: scenario.horizon_years,
     model_key: scenario.model_key,
     model_version: MODEL_VERSION,
+    /*
+     * The run's identity, returned rather than left implicit.
+     *
+     * `scripts/generate-simulation-narrations.js` has to write its narration
+     * under the SAME hash this function looks one up by, or the page never
+     * finds what the script wrote. It used to recompute that hash itself from
+     * the same arguments — a comment in the script even said "same function,
+     * same inputs", which was true right up to the moment `runHash` started
+     * needing the coefficients too. Handing the hash back means there is one
+     * computation of it and no way for the two ends to drift apart.
+     */
+    input_hash: inputHash,
     ...results,
     narration: narrations[0] ?? null,
   };
+}
+
+/**
+ * Delete cached runs from a superseded model version.
+ *
+ * They are already unreachable — `model_version` is in the cache key, so
+ * nothing can be served from them — which is why this is housekeeping rather
+ * than a correctness fix. It is worth doing anyway: the table gains a whole
+ * generation of rows on every version bump, and the rows left behind by the v2
+ * → v3 bump are the ones that drew NEGATIVE unemployment, which is not a thing
+ * to keep lying around in a table whose stated purpose includes "regression
+ * evidence".
+ *
+ * Called from `scripts/generate-simulation-narrations.js`, because that script
+ * is what has to run after a MODEL_VERSION bump anyway: a bump invalidates every
+ * run, and the prose describing those runs has to be rewritten against the new
+ * numbers. Anything it deletes was unreachable before it started.
+ *
+ * @returns {Promise<number>} rows removed
+ */
+export async function pruneStaleRuns() {
+  const result = await query(
+    'DELETE FROM simulation_runs WHERE model_version <> $1',
+    [MODEL_VERSION]
+  );
+  return result.rowCount ?? 0;
 }
 
 /**

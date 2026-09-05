@@ -33,7 +33,11 @@ The template ships invented proof, and the rule is remove rather than invent:
     2032-2048, +18% EU Central, 124/89/8 MW. Where a number appears in the
     replacement below it is a real one, and the comment says where it came
     from and when it was read.
-  - support@atmos.com and contact@atmos.com.
+  - support@atmos.com and contact@atmos.com, and the owner's personal Gmail
+    that briefly replaced them. No email address is published anywhere on this
+    site now; the contact route is CONTACT_URL below. A plain-text mailto on a
+    public page is harvested within days, and the address that starts
+    receiving it is one person's personal inbox with no way to hand it off.
   - The AI-assistant chat panel. Diffusion has no assistant, and mocking one
     up would be claiming a feature that does not exist. That subtree is
     repurposed to show a real question page instead.
@@ -41,10 +45,23 @@ The template ships invented proof, and the rule is remove rather than invent:
     personal Instagram, X, Threads and LinkedIn while presenting them as the
     product's socials.
 
-FIGURES, ALL READ FROM THE DATABASE ON 2026-08-29
-  73,847 observations · 111 series with data · 24 sources · 44 countries
-  AI adoption by firms, Eurostat/OECD: Denmark 24%→42%, Finland 16%→38%,
-  Poland 3%→8% over 2021-2025. 16 of 44 countries have any adoption survey.
+FIGURES, ALL READ FROM THE DATABASE ON 2026-09-03
+  75,934 observations · 134 series with data · 17 sources · 44 countries
+  AI adoption by firms, Eurostat/OECD 2025: Denmark 42.0%, Finland 37.8%,
+  Poland 8.4%. 16 of 44 countries have any adoption survey, 28 have none.
+  Contested questions: 4. Institutional reports cited: 10, across 9 publishers.
+  Every one of those queries is written out beside the string that uses it, so
+  a later reader can re-run it rather than trust this paragraph.
+
+TWO STRINGS, TWO MEANINGS
+-------------------------
+The template reuses the same copy in different components — "42.1 g/kWh" is
+both a stats-card figure and a globe tile, "Get instant alerts" is both a
+feature row and a rule. A flat dict cannot express that: whichever value is
+written wins in both places, silently. That is not hypothetical; it shipped
+Denmark's 2025 AI adoption as "73,847". PAIRED at the bottom of this file
+handles those, anchored on the neighbouring string, and REPLACEMENTS now
+REFUSES to build when one key is defined in two groups.
 """
 
 # ---------------------------------------------------------------------------
@@ -57,13 +74,76 @@ BRAND = {
 }
 
 # ---------------------------------------------------------------------------
+# Where this site lives, and how to reach the person who runs it
+# ---------------------------------------------------------------------------
+#
+# THE HOST IS DECLARED ONCE. Every place a hostname appears — the canonical
+# tag, og:url, robots.txt's Sitemap line, every <loc> in sitemap.xml, the
+# absolute links into the app, and Framer's own runtime siteCanonicalURL inside
+# the bundle — reads it from SITE_ORIGIN. Buying a real domain later is a
+# one-line change here, not a hunt through eight HTML files and two generators.
+#
+# It was a hunt: build-diffusion.py used to hardcode diffusion.observer into
+# the sitemap and overwrite whatever docs/detach.py had written, so passing the
+# right --domain to detach.py did not even fix it. diffusion.observer has no
+# DNS record, and a canonical tag pointing at a host that does not resolve is
+# the strongest available instruction to a search engine not to index the site
+# that is actually being served.
+SITE_ORIGIN = "https://trydiffusion.vercel.app"
+
+# The host the mirror was detached onto and which the pristine-mirror commit
+# still carries. build-diffusion.py rewrites every occurrence of it to
+# SITE_ORIGIN and then asserts that no canonical or og:url on any page names
+# anything else, so this cannot rot back.
+STALE_ORIGIN = "https://diffusion.observer"
+
+# What sitemap.xml advertises. /404, /waitlist and /thanks are deliberately
+# absent: the first should never be indexed and the other two are retired
+# routes that Express redirects to /login.
+SITEMAP_PATHS = ("/", "/legal/privacy-policy", "/legal/terms-of-service")
+
+# THE CONTACT ROUTE IS A PROFILE, NOT AN ADDRESS.
+#
+# The template shipped contact@atmos.com and support@atmos.com. Those were
+# repointed at the owner's personal Gmail, which put a harvestable plain-text
+# address on a public page in four places — including a privacy policy that
+# invites people to write in, so the volume was intended. The address is out of
+# every shipped file; the contact route everywhere (footer, FAQ, both legal
+# pages) is this profile.
+#
+# CONTACT_TEXT is the VISIBLE text and CONTACT_URL the href, and they have to
+# be set separately because Framer stores them in two different places: the
+# SSR markup carries the anchor, and the hydration payload further down the
+# same file carries the child text as its own value. Setting only one of them
+# produced the state two separate audits reported in opposite directions — the
+# file said one thing and the browser showed another.
+CONTACT_URL = "https://www.linkedin.com/in/joshuakhalili/"
+CONTACT_TEXT = "Joshua Khalili on LinkedIn"
+
+# The hero's scroll-revealed statement, in one place because it lives on two
+# surfaces that need it byte-identical: the JS chunk holds it as a single
+# string, and the SSR markup holds it one <span> per word. See WORD_REVEAL.
+HERO_STATEMENT = (
+    "Diffusion gathers what is actually measured about AI and the economy: "
+    "investment, output, jobs, prices, policy. Every figure comes from a named "
+    "public source. Every page states what its data cannot show."
+)
+
+# ---------------------------------------------------------------------------
 # Header, hero, and the scroll-revealed statement
 # ---------------------------------------------------------------------------
 
 HERO = {
     # The template's "System active" is a status claim with nothing behind it.
-    # These two numbers are stable enough for static copy and both are true.
-    "System active": "111 series · 24 sources",
+    #
+    # THE DATE IS NOT DECORATION. This pill renders in the header a few pixels
+    # from a clock component that ticks in real time, and an undated counter
+    # next to a running clock tells the reader the counter is live. It is not:
+    # it is static copy, and it was wrong by 26 series and 2,087 observations
+    # before anyone noticed. Until the pill reads from /api/status it carries
+    # the same "as of" date as the stats card further down the page, and the
+    # two are updated together.
+    "System active": "134 series · 17 sources · 3 Sep 2026",
 
     # Every primary CTA — the header button and the ones dotted through the
     # page. The template points them at a waitlist; there is nothing to wait
@@ -86,8 +166,16 @@ HERO = {
 
     # The word-by-word scroll reveal. Written to land its last clause on the
     # reveal, because that is the sentence the animation exists to deliver.
+    #
+    # THIS KEY ONLY REACHES THE JS CHUNK AND THE SEARCH INDEX, where the
+    # sentence is one string. In the SSR markup it is one <span> per word at
+    # three breakpoints, so this key cannot match there and never did — which
+    # is why the shipped HTML still read "Diffusion is a unified system for
+    # global infrastructure. We connect climate, emissions, energy…" months
+    # after this line was written. WORD_REVEAL at the bottom of the file
+    # rebuilds those spans from the same sentence.
     "Atmos is a unified system for global infrastructure. We connect climate, emissions, energy, and regional data into one evolving layer that reflects how systems behave in real time.":
-        "Diffusion gathers what is actually measured about AI and the economy — investment, output, jobs, prices, policy. Every figure comes from a named public source. Every page states what its data cannot show.",
+        HERO_STATEMENT,
 }
 
 # ---------------------------------------------------------------------------
@@ -102,8 +190,19 @@ HOW_IT_WORKS = {
         "Each question shows the claim being tested, how this page measures it, and where it fails.",
 
     "Data Collection": "Named sources",
+    # Eight publishers carry the statistical series and nine more carry the
+    # reading list; seventeen sources hold anything at all. The previous
+    # wording said "and nineteen others", which counted every row in the
+    # sources table including eight that have never returned a single
+    # observation or document.
+    #   select count(*) from sources s
+    #    where exists (select 1 from indicators i join observations o
+    #                    on o.indicator_id = i.id
+    #                   where i.source_id = s.id and i.is_active)
+    #       or exists (select 1 from documents d where d.source_id = s.id);
+    #   -> 17   (8 with series, 9 documents-only)   read 2026-09-03
     "Collect emissions and environmental data from sensors, infrastructure, and external sources in real time.":
-        "FRED, the World Bank, DBnomics, SEC EDGAR, Epoch AI and nineteen others. Every series links back to its publisher with its licence stated.",
+        "Eight publishers behind the series — FRED, the World Bank, DBnomics, SEC EDGAR, Epoch AI, the US Federal Register, GDELT and the LBMA — and nine news and research feeds behind the reading list. Every series links back to its publisher with its licence stated.",
 
     "System Analysis": "Stated reasoning",
     "Analyze environmental performance, detect patterns, and monitor system behavior continuously.":
@@ -153,7 +252,12 @@ DEMO = {
     "Would you like me to generate a detailed report based on this data?":
         "What this does not show: a national youth unemployment rate averages away an effect concentrated in a few exposed occupations.",
     "Ask about climate insights...": "Every figure links to its source",
-    "Data is updated in real time": "Prose last checked against the data on 29 August 2026",
+    # "on 29 August 2026" was true of nothing. Each question carries its own
+    # review date and they are spread across a week, so the honest form is the
+    # oldest of them — the weakest guarantee, not the flattering one:
+    #   select min(last_reviewed), max(last_reviewed) from questions
+    #    where is_active;   -> 2026-08-28 .. 2026-09-02   read 2026-09-03
+    "Data is updated in real time": "Prose on every question rechecked since 28 August 2026",
 }
 
 # ---------------------------------------------------------------------------
@@ -167,21 +271,41 @@ FEATURES = {
         "Five lenses, in the order the causation is supposed to run",
     "Combine your data from different sources into one place you can actually use.":
         "Money is spent, output does or does not rise, jobs change, prices move, governments respond.",
+    # THE TEMPLATE CARD HAS THREE ROWS AND THE SITE HAS FIVE LENSES.
+    # The heading above promises five and the component cannot grow a fourth
+    # slot without breaking hydration, so the last row carries the remaining
+    # two by name. All five are now on the page, in causal order, and the
+    # heading is true. Names and sublines are the lenses table's own:
+    #   select sort_order, name, subtitle from lenses order by sort_order;
+    #   -> Investment & Capital / Growth & Productivity / Labour Markets /
+    #      Prices & Markets / Policy & Regulation        read 2026-09-03
     "Connect all data sources": "Investment & Capital",
     "Sync data from multiple systems": "What is being spent, and what it buys",
     "Work as one team": "Growth & Productivity",
     "Share insights and act faster": "Whether any of it shows up in output",
-    "Catch issues early": "Labour Markets",
-    "Spot anomalies before they grow": "Jobs, pay, and who gets hired",
+    "Catch issues early": "Labour, Prices & Markets, Policy & Regulation",
+    "Spot anomalies before they grow": "Jobs and pay, what it costs, and what governments are doing",
 
+    # THE FOUR FIGURES AND THE DATE MOVE TOGETHER. The date is not a
+    # disclaimer, it is the thing that makes four static numbers honest, and
+    # the header pill above carries the same one. Read 2026-09-03:
+    #   select count(*) from observations;                     -> 75934
+    #   select count(*) from indicators where is_active;        -> 134
+    #     (every active indicator has at least one observation, checked as
+    #      count(distinct o.indicator_id) over active indicators -> 134)
+    #   sources holding at least one observation or document;   -> 17
+    #   select count(*) from countries where not is_aggregate;  -> 44
+    #     (all 44 carry observations; the six aggregate rows — World, EU,
+    #      Euro area, OECD, High income, Low & middle income — are not
+    #      countries and are not counted as such)
     "Unified system overview": "What this site holds",
     "Real-time metrics across all connected sources.":
-        "Read from the database on 29 August 2026.",
-    "42.1 g/kWh": "73,847",
+        "Read from the database on 3 September 2026.",
+    "42.1 g/kWh": "75,934",
     "Carbon intensity": "Observations",
-    "1.8k MW": "111",
+    "1.8k MW": "134",
     "Energy usage": "Series with data",
-    "2032-2048": "24",
+    "2032-2048": "17",
     "Net zero target": "Sources",
     "98 / 100": "44",
     "Compliance score": "Countries",
@@ -190,37 +314,138 @@ FEATURES = {
     "Team Workflow": "The literature",
     "Work together across teams and regions in real time":
         "What other people have found, and where they disagree",
+    #   select count(distinct source_title), count(distinct publisher)
+    #     from report_figures;   -> 10 titles, 9 publishers   read 2026-09-03
+    # (the IMF appears twice with two different reports, which is why the two
+    # counts differ and why both are given)
     "Collaborate on data, share insights and align decisions across your entire organization.":
-        "Twelve institutional and consulting reports, cited and linked. Labelled by who produced it, never ranked.",
-    "Share insights across teams": "Cited, never redistributed",
-    "Collaborate in real time": "Labelled by kind, not by rank",
-    "Align decisions faster": "Marked where it disagrees with us",
+        "Ten institutional and consulting reports from nine publishers, cited and linked. Labelled by who produced it, never ranked.",
 
+    # THE THREE SUB-LINES ARE NOT DECORATION EITHER. Each of these six rows is
+    # a title and a description, and only the titles were ever mapped — so a
+    # careful sentence about how disagreement is handled was followed by
+    # "Keep everyone aligned with the same data", which is SaaS filler about a
+    # product this is not. Six template sentences, six replacements.
+    "Share insights across teams": "Cited, never redistributed",
+    "Keep everyone aligned with the same data":
+        "Figures are quoted and linked back to the report. Nothing is rehosted.",
+    "Collaborate in real time": "Labelled by kind, not by rank",
+    "Work together without delays or silos":
+        "A consultancy survey and a central bank paper are both shown, and named as what they are.",
+    "Align decisions faster": "Marked where it disagrees with us",
+    "Turn insights into action instantly":
+        "A source that contradicts the page it sits on stays on that page, saying so.",
+
+    # THE CITED CLAIM AND THE PAGE NUMBER COME OUT OF report_figures, NOT OUT
+    # OF A SENTENCE SOMEBODY LIKED.
+    #
+    # This card used to read "US employment for software developers aged 22–25
+    # fell close to 20% from its 2022 peak", cited to "p. 221". Neither exists:
+    #   select id from report_figures where page_ref like '%221%';   -> 0 rows
+    #   ... where quote/title/subtitle/note ilike '%developer%';
+    #       -> one row, a productivity quote, not that claim
+    # The eight Stanford HAI rows run p. 181 to p. 225. The row below is real:
+    #   select publisher, source_title, page_ref, title, question_id
+    #     from report_figures
+    #    where id = 'hai-workforce-reductions-observed-vs-expected';
+    #   -> Stanford HAI | The 2026 AI Index Report — Economy chapter
+    #      | p. 55 (report p. 225)
+    #      | Headcount cuts attributed to AI: observed versus expected
+    #      | jobs                                          read 2026-09-03
+    # and the question it is filed against is contested:
+    #   select question, strength from questions where id = 'jobs';
+    #   -> Is the exposed sector shrinking? | contested
+    #
+    # "Not yet checked by a person" is true of it and of every other row:
+    #   select figure_source, count(*) from report_figures group by 1;
+    #   -> extracted 56    (there is no 'reviewed' row at all)
     "Sofia Novak": "Stanford HAI",
-    "Climate Analyst": "AI Index 2026, Economy chapter",
-    "Region": "Stance",
-    "EU Central (Western Europe)": "Disagrees with this page",
-    "Responsibility": "Finding",
-    "Emission monitoring & reporting": "US employment for software developers aged 22–25 fell close to 20% from its 2022 peak",
+    "Climate Analyst": "The 2026 AI Index Report — Economy chapter",
+    "Region": "Filed against",
+    "EU Central (Western Europe)": "Is the exposed sector shrinking? — contested",
+    "Responsibility": "Figure",
+    # BOTH SPELLINGS OF THE AMPERSAND ARE NEEDED, and only the raw one was
+    # here. The markup escapes it as &amp; and the chunk that re-renders the
+    # same node writes a raw &, so the single raw key fixed the chunk and left
+    # "Emission monitoring &amp; reporting" sitting in the HTML — which is what
+    # a crawler, and any reader before 1.7 MB of JS lands, actually gets.
+    "Emission monitoring & reporting":
+        "Headcount cuts attributed to AI: observed against expected, by business function, 2025",
+    "Emission monitoring &amp; reporting":
+        "Headcount cuts attributed to AI: observed against expected, by business function, 2025",
     "View activity": "Read it",
-    "Message": "p. 221",
+    "Message": "p. 55 (report p. 225)",
     "Assign task": "Not yet checked by a person",
+    # The rendered header is lowercase "Team member"; the capitalised key that
+    # sat here matched nothing, which is why a cited institution was still
+    # labelled as a colleague on a one-person project. "Open profile" was not
+    # in the map at all.
+    "Team member": "Source",
+    # The capitalised spelling is not a duplicate of the line above: it is the
+    # stock portrait's alt attribute, alt="Team Member", which the quoted-string
+    # rule reaches and the >node< rule does not. Dropping it would put "Team
+    # Member" back into the markup of a one-person project.
     "Team Member": "Source",
+    "Open profile": "Report",
 
     # 3 — was "Early Alerts". Now the contested state.
+    #   select strength, count(*) from questions where is_active group by 1;
+    #   -> consistent 8, insufficient 7, contested 4, suggestive 4
+    #                                                       read 2026-09-03
+    # It said three. A reader who follows that into the app finds four, in
+    # about thirty seconds, on the site whose whole proposition is that its
+    # counts can be checked.
     "Early Alerts": "When sources disagree",
     "Detect potential issues before they impact your operations":
-        "Three pages are marked contested, and that is the finding",
+        "Four pages are marked contested, and that is the finding",
     "Stay ahead of risks by identifying anomalies and unusual patterns as they emerge.":
         "Where credible sources reach opposite conclusions, the disagreement is reported rather than resolved.",
     "Monitor unusual patterns": "Evidence strength on every page",
+    "Track unexpected changes in your data":
+        "Consistent, suggestive, insufficient or contested, printed beside the answer.",
+    # "Get instant alerts" is this row's title. It is ALSO the fourth rule's
+    # title in CAPABILITIES, and a flat map cannot give one key two values —
+    # so the rule silently inherited this one and shipped the wrong heading.
+    # The rule's own value now lives in PAIRED, anchored on its description.
     "Get instant alerts": "Insufficient is a valid answer",
+    "Be notified as soon as something shifts":
+        "When the series cannot separate the answers, the page says so instead of picking one.",
     "Act before it escalates": "Contested is stated, not smoothed over",
+    "Respond early and reduce impact":
+        "Averaging two opposite findings into a middle number would be the dishonest option.",
 
     "Monitoring": "Contested",
     "Emissions spike detected": "Sources disagree",
+
+    # THE NOTIFICATION CARD IS THREE TEXT NODES, NOT ONE SENTENCE.
+    #
+    # The flat sentence below is real — it is what the search index holds — but
+    # in the markup and in the chunk the same sentence is split, because
+    # "+18% in EU Central (Frankfurt)" is styled in its own <span> and ", " in
+    # another. So the whole-sentence key matched the search index, which nobody
+    # reads, and never matched the card, which is the first thing a reader
+    # sees: an invented +18% carbon-intensity figure presented as a live alert,
+    # directly above a section headed "The rules are the point" whose first
+    # rule is "No number is written by a model".
+    #
+    # The three fragments are keyed separately and the flat key is kept in step
+    # with them, so all four surfaces say the same thing. The ", " between them
+    # is left alone: two characters is far too generic to be a key, and it is
+    # already the separator the replacement wants.
+    #
+    # Both halves of the claim are rows in report_figures against question
+    # 'jobs' ("Is the exposed sector shrinking?", strength contested):
+    #   PwC, 2026 Global AI Jobs Barometer, p. 20 — "Firm headcount growth
+    #     since 2018, most vs least AI-exposed companies"
+    #   IMF, Bridging Skill Gaps for the Future, p. 20 — "Estimated employment
+    #     shortfall in AI-exposed occupations five years after AI skills appear
+    #     locally"                                          read 2026-09-03
+    "Carbon intensity increased by ": "On whether AI-exposed jobs are shrinking, ",
+    "+18% in EU Central (Frankfurt)": "PwC and the IMF point opposite ways",
+    "driven by industrial output over the last 24 hours.":
+        "so the page shows both and stays marked contested.",
     "Carbon intensity increased by +18% in EU Central (Frankfurt), driven by industrial output over the last 24 hours.":
-        "PwC finds headcount growing fastest at the most AI-exposed firms. The IMF finds employment falling in exposed occupations. Different methods, opposite results — both are on the page.",
+        "On whether AI-exposed jobs are shrinking, PwC and the IMF point opposite ways, so the page shows both and stays marked contested.",
 }
 
 # ---------------------------------------------------------------------------
@@ -234,12 +459,25 @@ CAPABILITIES = {
     "Monitor, analyze and respond across your entire infrastructure in real time":
         "Four constraints this site holds itself to, whether or not anyone checks",
 
+    # FOUR RULES, EACH A TITLE AND A DESCRIPTION. Two of the four template
+    # strings here are shared with the features section above, so neither can
+    # be written in this dict — see PAIRED at the bottom of the file:
+    #
+    #   rule 1's description is "Sync data from multiple systems", which the
+    #     lens list also uses, so the rule rendered as "No number is written by
+    #     a model / What is being spent, and what it buys"
+    #   rule 4's title is "Get instant alerts", which the contested block also
+    #     uses, so the rule rendered under a heading already used 1,700px
+    #     higher up: "Insufficient is a valid answer"
+    #
+    # Both are anchored in PAIRED on their neighbour in this section, which is
+    # unique to it. Adding either one back here is now a build failure rather
+    # than a silent overwrite.
     "Connect all sources": "No number is written by a model",
     "Understand patterns": "Caveats are sections, not footnotes",
     "Turn raw data into clear, useful insights": "Stated under the answer and above every chart.",
     "Monitor in real time": "Evidence strength is always stated",
     "Track changes across all systems": "Including when it is insufficient.",
-    "Get instant alerts": "Charts are not allowed to flatter",
     "Respond to issues without delay": "One y-axis. Zero baseline. Gaps break the line.",
 }
 
@@ -251,18 +489,39 @@ GLOBAL_STATS = {
     "Global Signals": "Where it has spread",
     "Understand what’s happening across the planet":
         "Technology diffusion, where anyone has measured it",
+    # 2017, not 2021: the ten Eurostat series run 2021-2025 but the six OECD
+    # ones start in 2017, and the "16 measured" tile below counts all sixteen.
+    #   select min(period_start), max(period_start) from observations
+    #    where indicator_id like '%.ai_any.%';   -> 2017-01-01 .. 2025-01-01
     "Track emissions, energy and system activity in real time across regions":
-        "The share of firms using AI, 2021 to 2025, from national statistical surveys",
+        "The share of firms using AI, 2017 to 2025, from national statistical surveys",
 
+    # THESE THREE ARE THE TILE LABELS ONLY. Their values are in PAIRED, because
+    # the template uses the same two strings for the stats-card figures higher
+    # up the page — which is how "73,847 — Denmark, 2025" and "111 — Poland,
+    # 2025" came to be printed as national AI adoption rates under a heading
+    # promising national statistical surveys.
     "Carbon emissions": "Denmark, 2025",
     "Industrial output": "Finland, 2025",
     "Energy demand": "Poland, 2025",
+
+    #   select count(distinct default_country_iso3) from indicators
+    #    where (id like 'eurostat.ai_any.%' or id like 'oecd.ai_any.%')
+    #      and exists (select 1 from observations o
+    #                   where o.indicator_id = indicators.id);   -> 16
+    #   select count(*) from countries where not is_aggregate;   -> 44
+    #                                                       read 2026-09-03
     "EU Central": "measured",
     "US West": "of 44 countries",
     "Asia Pacific": "annual surveys",
     "+18% emissions": "16",
     "Stable grid": "28 unmeasured",
-    "+9% surge": "4 points deep",
+    # Not "4 points deep". Four is the Eurostat series' depth; across all
+    # sixteen countries it runs from one point to six:
+    #   select min(n), max(n) from (select count(*) n from observations
+    #     where indicator_id like '%.ai_any.%' group by indicator_id) t;
+    #   -> 1 (United Kingdom, 2020 only) .. 6 (South Korea, 2019-2024)
+    "+9% surge": "1 to 6 points",
     "Active regions": "Eurostat and OECD enterprise surveys",
 }
 
@@ -276,8 +535,12 @@ FAQ = {
         "How the data is gathered, how the claims are made, and where both fall short.",
 
     "How is climate data collected?": "Where does the data come from?",
+    # Seventeen, counted the same way as the stats card and the header pill —
+    # sources holding at least one observation or document, read 2026-09-03.
+    # It said twenty-four, which was every row in the sources table including
+    # eight that have never returned anything.
     "Data is gathered from sensors, infrastructure systems, and external providers, then unified into a single real-time stream.":
-        "From twenty-four public sources — FRED, the World Bank, DBnomics, SEC EDGAR, Epoch AI, the US Federal Register and others. Nothing is redistributed: every series links back to its publisher with its licence stated, so you can take the data on the publisher's terms rather than trusting a chart here.",
+        "From seventeen public sources — FRED, the World Bank, DBnomics, SEC EDGAR, Epoch AI, the US Federal Register and others. Nothing is redistributed: every series links back to its publisher with its licence stated, so you can take the data on the publisher's terms rather than trusting a chart here.",
 
     "How often is the data updated?": "How often does it update?",
     "Data is continuously updated in real time, reflecting live changes across regions and systems.":
@@ -289,7 +552,7 @@ FAQ = {
 
     "How does the platform generate insights?": "What does 'contested' mean?",
     "The system analyzes incoming data, detects patterns, and highlights meaningful changes you can act on.":
-        "That credible sources reach opposite conclusions, and the disagreement is the finding. Three pages currently carry it. The alternative — picking whichever result is tidier — is the thing this site exists not to do.",
+        "That credible sources reach opposite conclusions, and the disagreement is the finding. Four pages currently carry it. The alternative — picking whichever result is tidier — is the thing this site exists not to do.",
 
     "Can I connect my own data sources?": "Can I use the data?",
     "Yes, you can integrate your own systems and combine them with external data for a complete view.":
@@ -297,7 +560,7 @@ FAQ = {
 
     "Is the data reliable?": "Where is this weakest?",
     "Data is validated and processed from multiple sources to ensure accuracy and consistency.":
-        "Country coverage. One country has real depth; most carry six annual World Bank series and nothing else. Policy is thin. Occupation-level employment, which is what several questions actually need, is largely missing. All of that is stated on the pages it affects rather than hidden.",
+        "Country coverage. One country has real depth; thirteen of the forty-four carry six annual World Bank series and nothing else, and only the United States carries more than sixteen. Policy is thin. Occupation-level employment, which is what several questions actually need, is largely missing. All of that is stated on the pages it affects rather than hidden.",
 
     "Didn’t find what you were looking for?": "Found something wrong?",
     "Reach out and we’ll help you get the answers you need.":
@@ -315,7 +578,11 @@ CTA = {
     "Global system overview": "Enterprises using AI",
     "Energy, emissions, and system data in one view.":
         "Share of firms with 10 or more employees, by country.",
+    # Both spellings, for the same reason as "Emission monitoring & reporting"
+    # above: the markup writes &amp; and the chunk writes a raw &. The raw key
+    # alone fixed the chunk and left "Scope 1 &amp; 2 Emissions" in the HTML.
     "Scope 1 & 2 Emissions": "Adoption, 2021–2025",
+    "Scope 1 &amp; 2 Emissions": "Adoption, 2021–2025",
     "Real-time metrics from global sensor networks.":
         "Eurostat Community Survey on ICT usage in enterprises.",
 }
@@ -324,7 +591,8 @@ FOOTER = {
     "Get in touch": "Get in touch",
     "Reach out for access, questions, or partnerships.":
         "Corrections, questions, or a series this should be using and is not.",
-    "Contact Us": "Email",
+    # The footer's own contact link. Was "Email", pointing at a mailto.
+    "Contact Us": CONTACT_TEXT,
     "Explore": "Read",
     "Follow Us": "Project",
     "Legal": "Legal",
@@ -343,8 +611,22 @@ FOOTER = {
     "LinkedIn": "LinkedIn",
     "X": "Source on GitHub",
 
-    "support@atmos.com": "joshuakhalili20@gmail.com",
-    "contact@atmos.com": "joshuakhalili20@gmail.com",
+    # THE VISIBLE TEXT OF EVERY CONTACT ANCHOR. Four of them: the FAQ's, the
+    # footer's, and one at the end of each legal document. The href is a
+    # separate string and lives in LINKS.
+    #
+    # These keys reach BOTH renderings of that anchor — the SSR markup, where
+    # the address is a text node between tags, and the Framer hydration
+    # payload, where it is a quoted child inside a <script>. The payload form
+    # is escaped as \"contact@atmos.com\", and build-diffusion.py's short-key
+    # rule used to require a bare quote on both sides, so it matched the markup
+    # and missed the payload. React then patched the DOM to the payload's
+    # value on hydration: the file said one thing and the browser showed
+    # another, which is why one audit reported the page showing
+    # contact@atmos.com and another reported it showing the Gmail. Both were
+    # right about different renderings of the same anchor.
+    "support@atmos.com": CONTACT_TEXT,
+    "contact@atmos.com": CONTACT_TEXT,
 }
 
 # ---------------------------------------------------------------------------
@@ -380,9 +662,9 @@ FOOTER = {
 
 LEGAL = {
     # ---- Both documents ----
-    "Version 2.8": "Version 1.0",
-    "Version 2.6": "Version 1.0",
-    "Mar 28, 2026": "Aug 30, 2026",
+    "Version 2.8": "Version 1.1",
+    "Version 2.6": "Version 1.1",
+    "Mar 28, 2026": "Sep 4, 2026",
 
     # ---- Privacy Policy ----
     "Privacy Policy - Atmos": "Privacy Policy — Diffusion",
@@ -411,7 +693,7 @@ LEGAL = {
         "No record of what you read, no device fingerprint, and no IP address "
         "log kept against your account.",
     "Communications with our team, including support requests and feedback.":
-        "Anything you choose to send by email, which is read by one person.",
+        "Anything you choose to send me, which is read by one person.",
 
     "Your information is used to:":
         "The address is used for exactly one thing, and here is the honest "
@@ -454,9 +736,15 @@ LEGAL = {
         "hand over.",
     "All partners are required to protect your data and use it only for the "
     "services they provide.":
-        "Google Fonts serves two typefaces to your browser, which means Google "
-        "sees that request. That is the only external service any page here "
-        "loads, and it is told nothing about you.",
+        # Was a Google Fonts disclosure until 4 Sep 2026. The app now self-hosts
+        # Trispace and Fragment Mono (src/client/static-assets/fonts/), so the
+        # disclosure became a false statement in a legal document — over-disclosure
+        # is still a false statement, and this list is headed "Named individually,
+        # so this cannot be read generously".
+        "No external service is loaded by any page here. The typefaces are served "
+        "from this site rather than from Google Fonts, which is a change from an "
+        "earlier version of this policy: nothing about your visit reaches a third "
+        "party.",
 
     "We implement industry-standard security measures to protect your "
     "information. However, no system can guarantee complete security, and we "
@@ -469,9 +757,12 @@ LEGAL = {
 
     "Depending on your location, you may have the right to:":
         "Wherever you are, and without having to cite a regulation:",
+    # No longer "Email and ask": there is no published address to email. The
+    # contact link at the end of this document is the route.
     "Access, update, or delete your personal data.":
-        "Email and ask what is stored under your address, or ask for it to be "
-        "deleted. It will be, and you will get a reply saying so.",
+        "Ask what is stored under your address, or ask for it to be deleted, "
+        "using the contact link at the end of this page. It will be, and you "
+        "will get a reply saying so.",
     "Request restriction or portability of your data.":
         "There is no processing to restrict, and the portable version of your "
         "record is a name and an email address.",
@@ -629,15 +920,53 @@ META = {
 # Everything, in one map. The build sorts by key length descending.
 # ---------------------------------------------------------------------------
 
+_GROUPS = (
+    ("HERO", HERO), ("HOW_IT_WORKS", HOW_IT_WORKS), ("DEMO", DEMO),
+    ("FEATURES", FEATURES), ("CAPABILITIES", CAPABILITIES),
+    ("GLOBAL_STATS", GLOBAL_STATS), ("FAQ", FAQ), ("CTA", CTA),
+    ("FOOTER", FOOTER), ("LEGAL", LEGAL), ("META", META), ("BRAND", BRAND),
+)
+
+# A KEY DEFINED IN TWO GROUPS IS A BUILD FAILURE, NOT A PREFERENCE.
+#
+# This used to be a setdefault, described as "first writer wins". What it
+# actually did was throw the second value away without saying so. Exactly one
+# key was defined twice — "Get instant alerts", in FEATURES and again in
+# CAPABILITIES — and the consequence was that the section headed "Four
+# constraints this site holds itself to" rendered its fourth rule under a
+# heading used 1,700px further up the page, while the heading it should have
+# had appeared in no shipped file at all. A map that silently discards half of
+# what it is told is worse than no map.
+#
+# A string that genuinely needs two different values in two components cannot
+# be expressed here at all. That is what PAIRED is for.
+#
+# (Ordering is still first-listed-first for the pass itself: BRAND is last so
+# that it never rewrites the brand name inside a longer phrase. That safety
+# comes from sorting by key length in build-diffusion.py, not from this loop.)
 REPLACEMENTS = {}
-for _group in (
-    HERO, HOW_IT_WORKS, DEMO, FEATURES, CAPABILITIES,
-    GLOBAL_STATS, FAQ, CTA, FOOTER, LEGAL, META, BRAND,
-):
+_OWNER = {}
+_CLASHES = []
+for _name, _group in _GROUPS:
     for _k, _v in _group.items():
-        # First writer wins: BRAND is applied last and must not overwrite a
-        # longer phrase that happens to contain the brand name.
-        _REPL = REPLACEMENTS.setdefault(_k, _v)
+        if _k in REPLACEMENTS:
+            _CLASHES.append((_k, _OWNER[_k], REPLACEMENTS[_k], _name, _v))
+            continue
+        REPLACEMENTS[_k] = _v
+        _OWNER[_k] = _name
+
+if _CLASHES:
+    raise SystemExit(
+        "content_diffusion.py: %d replacement key(s) defined in two groups.\n"
+        "Only one value can ever reach the page, so the other is dead copy.\n"
+        "If the two really are different components that need different text, "
+        "move one of them into PAIRED and anchor it on a neighbouring string.\n"
+        % len(_CLASHES)
+        + "".join(
+            "  %r\n      %s -> %r\n      %s -> %r  (discarded)\n"
+            % (k, g1, v1, g2, v2) for k, g1, v1, g2, v2 in _CLASHES
+        )
+    )
 
 # ---------------------------------------------------------------------------
 # The giant wordmark
@@ -702,11 +1031,15 @@ WORDMARK_VIEWBOX = {
 # is being served from, so localhost and production behave identically and only
 # a reader with JavaScript disabled is sent to the absolute URL.
 
-APP_ORIGIN = "https://trydiffusion.vercel.app"
+# The landing page and the app are one deployment, so this is SITE_ORIGIN
+# rather than a second copy of the same hostname. Named separately because the
+# two are different facts that happen to coincide today: if the app ever moves
+# behind its own host, this is the line that changes.
+APP_ORIGIN = SITE_ORIGIN
 
 # Every app path the landing page links into. nav.js is generated from this list,
 # so the two cannot drift.
-APP_PATHS = ("/login", "/overview")
+APP_PATHS = ("/login", "/overview", "/data")
 
 LINKS = {
     # The primary CTA in the SSR markup. Only half the fix: the same buttons are
@@ -727,12 +1060,17 @@ LINKS = {
     "https://www.linkedin.com/in/liana-tme/": "https://www.linkedin.com/in/joshuakhalili/",
     "https://lunaui.co": "https://github.com/joshuakhalili/EconIntel",
 
-    # The footer's "Email" link. FOOTER replaces the visible address, but the
-    # mailto: is a separate string and was still addressed to the template's
-    # support desk — so the one link on the site that invites a correction went
-    # nowhere.
-    "mailto:contact@atmos.com": "mailto:joshuakhalili20@gmail.com",
-    "mailto:support@atmos.com": "mailto:joshuakhalili20@gmail.com",
+    # The contact anchors' hrefs — footer, FAQ, and one per legal document.
+    # FOOTER above replaces the visible text; the mailto: is a separate string
+    # and needs its own entry, which is how the one link on the site that
+    # invites a correction spent a while pointing at the template author's
+    # support desk. It now goes to a profile rather than an address: a
+    # plain-text mailto on a public page is harvested within days, and a
+    # privacy policy that invites people to write in means the volume is
+    # intended. There is no mailto: left behind either — removing the visible
+    # address and leaving it in the href would publish it just as effectively.
+    "mailto:contact@atmos.com": CONTACT_URL,
+    "mailto:support@atmos.com": CONTACT_URL,
 
     # "Built in Framer" is fair attribution and stays. Its href was not
     # attribution: it carried the template author's Google Ads campaign ids and
@@ -822,6 +1160,18 @@ CHUNK_PATCHES = {
     # out of the middle of minified code. detach.py neutralises the badge loader
     # the same way, with `false&&`.
     "EditorBar:T===void 0?void 0:": "EditorBar:!0?void 0:",
+
+    # Framer's router reads this at runtime to build absolute URLs — share
+    # links, and anything else that needs to name the site. It still said
+    # atmos-system.framer.website, the TEMPLATE AUTHOR's Framer site, in
+    # assets/js/script_main.*.mjs. It is not a link in the markup, so neither
+    # LINKS nor the host rewrite over canonical tags would ever have found it,
+    # and a rebuild left it every time.
+    #
+    # Re-derive by grepping assets/js/script_main.*.mjs for `siteCanonicalURL`
+    # if this key ever goes stale.
+    "siteCanonicalURL:`https://atmos-system.framer.website`":
+        "siteCanonicalURL:`" + SITE_ORIGIN + "`",
 }
 
 # ---------------------------------------------------------------------------
@@ -862,6 +1212,22 @@ a[data-framer-name="Footer"][href$="/404"] {
    headshot. Hiding the image alone left its container's ring — an empty circle
    next to the name, which reads as a broken image rather than as no image. */
 figure:has(img[src*="DFzG1yXny0N4VBIJify9JjzxUVE"]) {
+  display: none !important;
+}
+
+/* The stats card's status glyphs. Four figures, four decorations, none of
+   them measuring anything: a red up-arrow beside the observation count, a
+   chevron beside the series count, an icon beside sources, and a green "A+"
+   beside the country count — that last one was the template's "98 / 100
+   Compliance score" badge. An arrow claims a trend nobody computed and a
+   grade grades nothing.
+
+   Matched on the component's authored name and on the fact that the "A+" is
+   the one rich-text block in the card with no data-framer-name of its own;
+   the numbers and their labels are named "Text" and "Title". Framer's
+   generated class names change on re-mirror, these two attributes do not. */
+div[data-framer-name="Stats Card"] svg[role="presentation"],
+div[data-framer-name="Stats Card"] div[data-framer-component-type="RichTextContainer"]:not([data-framer-name]) {
   display: none !important;
 }
 
@@ -925,7 +1291,163 @@ document.addEventListener("click", function (e) {
   e.preventDefault();
   window.location.assign(url.pathname + url.search + url.hash);
 }, true);
+
+/* ── "Read it" on the literature card ──────────────────────────────────────
+   M-43 asked for this label to be an anchor to the source URL that already
+   sits in report_figures.source_url. It cannot become one in the markup: the
+   label ships as a bare <p>, and reshaping a node is exactly what HIDE_CSS's
+   header warns against — Framer hydration fails on a DOM that does not match
+   its payload, and a failed hydration reverts the WHOLE page to the template's
+   content. Trading a dead label for an ATMOS page is not a fix.
+
+   So it is wired at runtime, after hydration, where the DOM is already settled
+   and nothing downstream re-reads it. The URL is not a figure — it is the
+   citation stored against
+   report_figures.hai-workforce-reductions-observed-vs-expected, page ref
+   "p. 55 (report p. 225)", read from the database on 4 Sep 2026. */
+var CITATION_URL = "https://hai.stanford.edu/ai-index/2026-ai-index-report/economy";
+
+function wireCitationLink() {
+  var nodes = document.querySelectorAll("p, span, div");
+  for (var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    if (n.children.length !== 0) continue;
+    if ((n.textContent || "").trim() !== "Read it") continue;
+    if (n.dataset && n.dataset.citationWired === "1") continue;
+    if (n.dataset) n.dataset.citationWired = "1";
+    n.setAttribute("role", "link");
+    n.setAttribute("tabindex", "0");
+    n.setAttribute("title", "Stanford HAI, AI Index 2026 — Economy chapter");
+    n.style.cursor = "pointer";
+    n.style.textDecoration = "underline";
+    var go = function (e) {
+      e.preventDefault();
+      window.open(CITATION_URL, "_blank", "noopener,noreferrer");
+    };
+    n.addEventListener("click", go);
+    n.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") go(e);
+    });
+    return true;
+  }
+  return false;
+}
+
+/* Hydration replaces nodes, so try again a few times rather than once. */
+(function () {
+  var tries = 0;
+  var t = setInterval(function () {
+    tries += 1;
+    if (wireCitationLink() || tries > 20) clearInterval(t);
+  }, 250);
+})();
 """ % {
     "origin": APP_ORIGIN,
     "paths": "[" + ", ".join('"%s"' % p for p in APP_PATHS) + "]",
+}
+
+# ---------------------------------------------------------------------------
+# One template string, two components, two meanings
+# ---------------------------------------------------------------------------
+#
+# REPLACEMENTS is a flat dict, so a key can carry exactly one value. The
+# template does not respect that: it reuses the same copy in components that
+# now say different things. Three consequences shipped.
+#
+#   "42.1 g/kWh" and "1.8k MW" are the first two figures on the stats card AND
+#   the first and third tiles of the globe. Mapping them to the database
+#   counters printed "73,847 — Denmark, 2025" and "111 — Poland, 2025" under a
+#   heading reading "The share of firms using AI, from national statistical
+#   surveys". 73,847 was the observation count and 111 the series count.
+#   Neither is a share of anything. The right figures were forty lines up the
+#   same page, in the question-page mock.
+#
+#   "Get instant alerts" is a feature row AND the fourth rule.
+#   "Sync data from multiple systems" is a lens subtitle AND the first rule's
+#   description.
+#
+# Each entry here is (anchor, old, new). `old` is replaced ONLY where it falls
+# within PAIR_WINDOW characters of `anchor`, in either direction; every other
+# occurrence is left for REPLACEMENTS. So the pair runs first, takes the copy
+# it owns, and the flat map picks up what is left.
+#
+# WHY ANCHOR ON THE NEIGHBOUR AND NOT ON THE MARKUP. The obvious alternative
+# is to put the enclosing tag in the key. It does not survive: the globe tile
+# renders as <h5> on desktop, <h6> on tablet and <p> on mobile, and the mobile
+# variant shares its style preset with the stats card, so tag-and-preset
+# distinguishes neither reliably. The neighbouring string does, on every
+# surface — in the markup the label sits in the sibling node, and in the chunk
+# both are props of the same component call.
+#
+# EVERY ENTRY MUST MATCH AT LEAST ONCE OR THE BUILD FAILS, and the build
+# prints, per entry, how many it took and how many occurrences it deliberately
+# left outside the window.
+#
+# THE WINDOW IS SIZED FROM MEASUREMENT, NOT FROM TASTE. Every distance from an
+# occurrence to its own anchor, measured across index.html and the page chunk
+# on 2026-09-03: 84, 87, 88, 88, 91, 115, 115, 148, 341, 503, 505, 508, 513,
+# 514, 1050. Every distance from an occurrence belonging to the OTHER
+# component: 15533 and up. 4000 sits in the middle of a gap of an order of
+# magnitude, so neither a markup reshuffle nor a re-mirror is likely to move an
+# occurrence across it without the counts printed by the build changing first.
+#
+# ALL SIX STRINGS BELOW ARE THE TEMPLATE'S OWN, so this table only applies to
+# a tree that has been reset to the pristine mirror. That is the only supported
+# rebuild path anyway — see the header of build-diffusion.py.
+PAIR_WINDOW = 4000
+
+PAIRED = (
+    # The globe's three country tiles. Eurostat's own 2025 figures, one
+    # decimal place, exactly as the series stores them:
+    #   select indicator_id, period_start, value from observations
+    #    where indicator_id in ('eurostat.ai_any.DNK','eurostat.ai_any.FIN',
+    #                           'eurostat.ai_any.POL')
+    #      and period_start = '2025-01-01';
+    #   -> DNK 42.03   FIN 37.82   POL 8.36            read 2026-09-03
+    #   (indicators.decimals = 1 for all three, so 42.0 / 37.8 / 8.4)
+    ("Carbon emissions",  "42.1 g/kWh", "42.0%"),
+    ("Industrial output", "+4.8%",      "37.8%"),
+    ("Energy demand",     "1.8k MW",    "8.4%"),
+
+    # Capabilities rule 4's title. "Respond to issues without delay" is rule
+    # 4's description and appears nowhere else on the site.
+    ("Respond to issues without delay", "Get instant alerts",
+     "Charts are not allowed to flatter"),
+
+    # Capabilities rule 1's description. "Connect all sources" is rule 1's
+    # title; the lens list's near-identical "Connect all data sources" is a
+    # different string and is not matched by it.
+    ("Connect all sources", "Sync data from multiple systems",
+     "Computed in SQL from a named series, and dated where it is prose."),
+)
+
+# ---------------------------------------------------------------------------
+# The hero statement, which the markup stores one word at a time
+# ---------------------------------------------------------------------------
+#
+# Framer's scroll reveal needs each word in its own inline-block so it can be
+# faded in separately, so the SSR markup holds the sentence as 28 <span>s —
+# each containing the word twice, once dimmed and once bright and absolutely
+# positioned over it — repeated at all three breakpoints. No whole-sentence
+# key can match that, and none ever did: the HERO entry for this sentence
+# reached the JS chunk and the search index only, and the shipped HTML went on
+# describing a climate and emissions platform. That is the copy a crawler
+# reads, and the copy a reader sees before 1.7 MB of JavaScript lands.
+#
+# So the spans are regenerated rather than substituted: the build joins each
+# run of them, looks the sentence up here, and rewrites the run word by word
+# using the styles it found on the first span, so nothing but the words moves.
+#
+# BOTH SPELLINGS OF THE FIRST WORD ARE LISTED. On a pristine mirror the run
+# begins "Atmos"; on a tree where the brand pass has already run it begins
+# "Diffusion". The same sentence comes out either way, so the map is correct
+# for a rebuild and for a tree that is part-way through one.
+WORD_REVEAL = {
+    "Atmos is a unified system for global infrastructure. We connect climate, "
+    "emissions, energy, and regional data into one evolving layer that "
+    "reflects how systems behave in real time.": HERO_STATEMENT,
+
+    "Diffusion is a unified system for global infrastructure. We connect "
+    "climate, emissions, energy, and regional data into one evolving layer "
+    "that reflects how systems behave in real time.": HERO_STATEMENT,
 }

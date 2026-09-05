@@ -7,19 +7,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diffusion — Is AI changing the economy?</title>
 <meta name="description" content="Tracking artificial intelligence's measurable effect on the world economy, from official statistics.">
-<!-- Fonts as <link> rather than a CSS @import: an @import inside the stylesheet
-     cannot start downloading until the stylesheet has itself arrived and been
-     parsed, so the two requests queue in front of first paint instead of running
-     together. preconnect opens the connection during that gap. -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- This link is load-bearing and was missing. atmos.css carried the same
-     families as an @import, and the CSS minifier drops an @import that does not
-     sit at the very top of the bundle — which it cannot, since atmos.css is
-     imported after globals.css and charts.css. The built stylesheet contained no
-     @import at all, so Trispace and Fragment Mono were never requested and every
-     eyebrow and figure rendered in the system mono fallback. -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Trispace:wght@100..800&family=Fragment+Mono&display=swap">
+<!-- NO THIRD-PARTY FONT REQUEST. This used to be two preconnects and a
+     stylesheet link to fonts.googleapis.com for Trispace and Fragment Mono,
+     while the landing page served the identical faces from its own origin.
+     That made a reader crossing from / into /overview re-download typefaces
+     they already had — a flash of fallback type on every eyebrow and figure at
+     the seam between two halves built to share one system — and it sent their
+     IP address to Google on an app whose sign-in copy says "No tracking, no
+     read history, no IP logging".
+
+     Both faces are now self-hosted the way Inter Display already was; the
+     @font-face rules and the reasoning live in styles/globals.css. The link
+     had replaced an @import in atmos.css, which the CSS minifier silently
+     dropped because it did not sit at the top of the bundle; an @font-face is
+     not an @import and has no such rule, so that failure cannot recur.
+
+     There is no font request to any other origin left on any app page. -->
+<link rel="preload" as="font" type="font/woff2" href="/fonts/trispace-var-latin.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/fragment-mono-400-latin.woff2" crossorigin>
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23010101'/><path d='M8 21l5-6 4 3 6-8' stroke='%237da0ff' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <!-- iOS ignores SVG favicons entirely; without a PNG, "Add to Home Screen"
@@ -36,6 +41,18 @@
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to main content</a>
+<!-- Without this, a reader with JavaScript off — or a crawler that does not
+     execute it — got a blank white page and no explanation. The landing page
+     at / is static HTML and says what the project is, so it is the right place
+     to send them. Styled inline because the stylesheet is itself loaded by the
+     bundle this is apologising for. -->
+<noscript>
+  <div style="max-width:34rem;margin:12vh auto;padding:0 1.5rem;font-family:system-ui,sans-serif;color:#d1d1d1;background:#010101">
+    <h1 style="color:#fff;font-size:1.5rem;font-weight:500;margin:0 0 0.75rem">Diffusion needs JavaScript</h1>
+    <p style="line-height:1.6;margin:0 0 1rem">Every chart here is drawn in the browser from data fetched at read time, so this half of the site cannot render without it.</p>
+    <p style="line-height:1.6;margin:0"><a href="/" style="color:#7da0ff">The front page</a> is plain HTML and explains what this measures and where the numbers come from.</p>
+  </div>
+</noscript>
 <div id="root"></div>
 <script type="module" src="/main.jsx"></script>
 </body>

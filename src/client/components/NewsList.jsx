@@ -111,15 +111,26 @@ export default function NewsList({ documents, emptyMessage = 'No articles yet.',
                     {formatPublished(doc.published_at)}
                   </span>
                   {doc.ai_relevance != null && (
+                    /*
+                     * LABELLED, BECAUSE THE COLOUR WAS DOING THE ONLY WORK.
+                     *
+                     * This was a bare integer — 45, 55, 80 — tinted lime,
+                     * yellow or neutral, with the explanation in a `title`
+                     * attribute. A title does not exist on a touch device and
+                     * is announced inconsistently by screen readers, so on a
+                     * page carrying a hundred of these the number communicated
+                     * nothing and the hue carried the whole meaning, which is
+                     * the thing this project's palette notes argue against
+                     * everywhere else. The word is now in the chip; the colour
+                     * is the second cue rather than the only one. What the
+                     * scale IS gets defined once, under the /news h1.
+                     */
                     <Chip
                       variant="caption"
                       color={relevanceColor(doc.ai_relevance)}
-                      /* The bare number meant nothing without this. It is a
-                         keyword score from ingestion, shown rather than used to
-                         hide anything, so a reader can disagree with it. */
                       title={`AI-economics relevance ${doc.ai_relevance} of 100 — a keyword score, not a judgement`}
                     >
-                      {doc.ai_relevance}
+                      relevance {doc.ai_relevance}
                     </Chip>
                   )}
                 </div>

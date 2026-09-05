@@ -34,8 +34,13 @@
  * To assert WHICH commit is live, pass the SHA that was expected to ship.
  * Without it the comparison reports itself skipped rather than passing:
  *     EXPECT_COMMIT=<sha> node scripts/smoke-deploy.js <url>
+ *
+ * To exercise the endpoints behind the sign-in gate, pass a session cookie for
+ * a dedicated smoke reader. Without it those checks report themselves skipped:
+ *     SMOKE_SESSION='<cookie header value>' node scripts/smoke-deploy.js <url>
  */
 
+import { createHash } from 'node:crypto';
 import { APP_ROUTES } from './vercel-config.js';
 
 const GREEN = '\x1b[32m';
@@ -54,15 +59,24 @@ const headers = process.env.VERCEL_BYPASS
   ? { 'x-vercel-protection-bypass': process.env.VERCEL_BYPASS }
   : {};
 
-async function get(path) {
+async function get(path, extra = {}) {
   const response = await fetch(`${base}${path}`, {
-    headers,
+    headers: { ...headers, ...extra },
     redirect: 'manual',
     signal: AbortSignal.timeout(20_000),
   });
-  const body = response.status < 400 || response.status === 404 ? await response.text() : '';
+  // Every status, not just the successful ones. This used to discard the body
+  // of anything 4xx or 5xx except a 404, which threw away the one thing worth
+  // reading when a data endpoint breaks: the error message naming the cause.
+  // Capped, because a platform error page can be large.
+  const body = (await response.text()).slice(0, 20_000);
   return { status: response.status, body, location: response.headers.get('location') };
 }
+
+/** Parse a JSON body without throwing on an HTML error page. */
+const asJson = (body) => {
+  try { return JSON.parse(body); } catch { return null; }
+};
 
 const title = (html) => (/<title>([^<]*)<\/title>/i.exec(html)?.[1] ?? '').trim();
 
@@ -162,6 +176,162 @@ if (deployedCommit == null) {
 // sign-in exists at all, which is why it is registered before the auth gate.
 const me = await get('/api/me');
 check('/api/me answers signed out', me.status === 200, `status ${me.status}`);
+
+/*
+ * ── THE DATA LAYER ──────────────────────────────────────────────────────────
+ *
+ * Everything above proves the SHELL. `/healthz` says Postgres answers `SELECT
+ * 1`; every route serves a `<div id="root">`. None of it touches a query that
+ * produces a number a reader sees. Every data endpoint sits behind the auth
+ * gate and this suite has no session, so a deploy where `/api/overview`,
+ * `/api/series` and `/api/questions` all return 500 passed every check here,
+ * green, and the first person to find out was somebody who signed in to empty
+ * charts.
+ *
+ * Two ways in, both optional, both reporting themselves SKIPPED rather than
+ * passing silently when they are not available. A tick next to a comparison
+ * that never happened is the disease the rest of this file is being treated
+ * for.
+ *
+ *   1. `/healthz?deep=1` — unauthenticated, and the cheaper of the two because
+ *      it needs no credential in the repository. Implemented in
+ *      `src/server/app.js` (DEEP_PROBES, and the `/healthz` route below it).
+ *      The contract:
+ *
+ *        GET /healthz?deep=1  → 200 (or 503 if any probe failed)
+ *        {
+ *          ok, database, latencyMs, env, commit,   // unchanged
+ *          probedAt, errorSink,                    // when, and whether a 500 leaves a trace
+ *          probes: [ { name: 'overview', ok: true, rows: 5, ms: 31 }, … ]
+ *        }
+ *
+ *      One probe per repository that backs a route, each running the real
+ *      query and reporting the row count. `rows: 0` is a failure for a probe
+ *      whose page cannot render empty. Outside the auth gate, like `/healthz`
+ *      and `/api/me` already are, and exposing counts only — no row content —
+ *      so it stays safe to serve anonymously.
+ *
+ *   2. `SMOKE_SESSION` — a session cookie for a dedicated reader row, held as
+ *      a repository secret. Costs a credential, and in exchange it tests the
+ *      endpoints exactly as a reader meets them, gate included.
+ */
+const deep = await get('/healthz?deep=1');
+const deepJson = asJson(deep.body);
+if (!deepJson || !Array.isArray(deepJson.probes)) {
+  /*
+   * A deployment older than the commit that added the probes ignores `deep=1`
+   * and answers the plain health body — which is what production does until
+   * this ships. Skipped rather than failed, because that is a stale deploy
+   * rather than a broken site, and the message says which so it is not read as
+   * "the endpoint is fine". The `/healthz reports a commit` check above is the
+   * one that catches a deployment being stale.
+   */
+  skip(
+    'data endpoints answer',
+    `/healthz?deep=1 returned no \`probes\` array (status ${deep.status}) — this deployment predates the deep health check`
+  );
+} else {
+  const broken = deepJson.probes.filter((p) => !p.ok || !(p.rows > 0));
+  check(
+    'data endpoints answer',
+    deepJson.probes.length > 0 && broken.length === 0,
+    broken.length === 0
+      ? deepJson.probes.map((p) => `${p.name}:${p.rows}`).join(' ')
+      : `failing: ${broken.map((p) => p.name).join(', ')}`
+  );
+}
+
+/*
+ * ── WOULD A 500 ON THIS DEPLOYMENT LEAVE A TRACE? ───────────────────────────
+ *
+ * Everything above asks whether the site works. This asks the question behind
+ * the whole suite: if it stops working between two runs, does anyone find out?
+ *
+ * The error sink is configured entirely through environment variables on the
+ * deployment (`ERROR_SINK_URL`, or `ERROR_SINK_GITHUB_REPO` plus a token), and
+ * nothing in the repository can tell whether they are set. An unset variable
+ * looks exactly like a working one from here: 500s are answered normally and
+ * vanish into the function log. `/healthz?deep=1` reports the answer — the KIND
+ * of sink, never its address — which is the only way to learn it before an
+ * outage rather than during one.
+ *
+ * NOT A FAILURE BY DEFAULT, deliberately. Whether this project runs an error
+ * sink at all is the owner's decision and it is not made yet; going red for an
+ * unmade decision is how a suite gets ignored. So it reports the true state and
+ * says nothing more. Once a sink IS configured, set `EXPECT_ERROR_SINK=1` and
+ * this becomes an assertion — which is what catches the variable being dropped
+ * in a Vercel project reshuffle, the silent failure this whole file exists for.
+ */
+const expectSink = (process.env.EXPECT_ERROR_SINK ?? '').trim() === '1';
+const sink = deepJson?.errorSink;
+if (!sink) {
+  skip(
+    'a 500 would be recorded somewhere durable',
+    'the deployment does not report an error sink — it predates the check'
+  );
+} else if (expectSink) {
+  check(
+    'a 500 would be recorded somewhere durable',
+    sink.configured === true,
+    sink.configured ? `sink: ${sink.kind}` : 'NO SINK CONFIGURED — errors go only to the function log'
+  );
+} else {
+  skip(
+    'a 500 would be recorded somewhere durable',
+    sink.configured
+      ? `not asserted (set EXPECT_ERROR_SINK=1) — a ${sink.kind} sink is configured`
+      : 'not asserted (set EXPECT_ERROR_SINK=1) — no sink is configured, so a 500 leaves only a function log'
+  );
+}
+
+/*
+ * The signed-in half. `SMOKE_SESSION` is the whole `Cookie:` header value, so
+ * the cookie name lives in the secret rather than being guessed here.
+ */
+const session = (process.env.SMOKE_SESSION ?? '').trim();
+const AUTHED = [
+  {
+    path: '/api/overview',
+    // Asserts NON-EMPTY rather than "5 lenses". A count written into a check
+    // is a count that goes wrong the day a sixth lens is added, and a gate
+    // that cries wolf on a legitimate change is a gate people switch off —
+    // the same argument check-tokens.js makes about its allowlists. What
+    // matters is that the query ran and returned something to draw.
+    ok: (j) => Array.isArray(j?.lenses) && j.lenses.length > 0,
+    say: (j) => `${j?.lenses?.length ?? 0} lenses`,
+  },
+  {
+    path: '/api/series?ids=fred.GDPC1',
+    ok: (j) => j?.series?.[0]?.points?.length > 0,
+    say: (j) => `${j?.series?.[0]?.points?.length ?? 0} points`,
+  },
+  {
+    path: '/api/questions/adoption',
+    ok: (j) => typeof j?.slug === 'string',
+    say: (j) => (j?.slug ? `slug ${j.slug}` : 'no slug'),
+  },
+];
+
+if (!session) {
+  for (const { path: p } of AUTHED) {
+    skip(`${p} returns data`, 'no SMOKE_SESSION — nothing to sign in with');
+  }
+} else {
+  for (const { path: p, ok, say } of AUTHED) {
+    const response = await get(p, { cookie: session });
+    const json = asJson(response.body);
+    const passed = response.status === 200 && ok(json);
+    check(
+      `${p} returns data`,
+      passed,
+      passed
+        ? say(json)
+        : response.status === 401
+          ? '401 — the SMOKE_SESSION cookie is not a valid session'
+          : `status ${response.status} ${json?.error ?? ''}`.trim()
+    );
+  }
+}
 
 // ── The landing page owns the front door ────────────────────────────────────
 const root = await get('/');
@@ -320,12 +490,58 @@ for (const { path: secret, leaked: isLeak } of PRIVATE_PATHS) {
 
 // ── Security headers, which only exist on the real host ─────────────────────
 const headed = await fetch(`${base}/`, { headers, signal: AbortSignal.timeout(20_000) });
+const cspHtml = await headed.text();
 const csp = headed.headers.get('content-security-policy') ?? '';
 check('CSP present on the landing page', csp.includes("script-src"), '');
+
+/*
+ * THE HASHES ARE COMPARED, NOT COUNTED.
+ *
+ * This check was `(csp.match(/sha256-/g) ?? []).length >= 7` — it counted the
+ * substring `sha256-`. Seven WRONG hashes passed it. That is precisely the
+ * failure the top of this file describes: inline scripts blocked, page still
+ * renders its markup, animation engine dead, nobody notices. The project has
+ * already paid for it once — from 2026-08-28 to 2026-08-30 the CSP silently
+ * blocked all seven of the landing page's inline scripts because a scan looked
+ * in the wrong directory, and the count-based check could not tell.
+ *
+ * So: take the page that just came back, find the scripts a browser would
+ * execute, hash each body the way a browser hashes it, and require every one
+ * to be named in the header.
+ *
+ * WRITTEN OUT HERE RATHER THAN IMPORTED, deliberately. `security.js` has an
+ * extractor and `vercel-config.js` uses it to WRITE the header. If this read
+ * the same code, a bug in the extractor would produce a wrong header and a
+ * green check agreeing with it. A second, independent implementation is the
+ * only version of this check that can disagree with the first.
+ *
+ * EXTRA hashes in the header are not a fault. The CSP covers every page the
+ * CDN serves, and `404.html` carries an inline script `/` does not — the live
+ * header holds 7 hashes for 6 scripts on `/` for exactly that reason. Missing
+ * ones are the fault: a script on the page that the header does not allow.
+ */
+const INLINE_SCRIPT = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g;
+const TYPE_ATTR = /\btype\s*=\s*["']?([^"'\s>]+)/;
+// What a browser will actually run. Anything else — application/json,
+// importmap, text/template — is a data block and is never hashed.
+const EXECUTABLE = new Set(['', 'text/javascript', 'application/javascript', 'module']);
+
+const pageHashes = new Set();
+for (const [, attrs, body] of cspHtml.matchAll(INLINE_SCRIPT)) {
+  const declared = (TYPE_ATTR.exec(attrs)?.[1] ?? '').toLowerCase();
+  if (!EXECUTABLE.has(declared)) continue;
+  pageHashes.add(`sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}`);
+}
+
+const missing = [...pageHashes].filter((h) => !csp.includes(h));
 check(
-  'CSP permits the landing page inline scripts',
-  (csp.match(/sha256-/g) ?? []).length >= 7,
-  `${(csp.match(/sha256-/g) ?? []).length} hashes`
+  'every inline script on / is hashed in the CSP',
+  pageHashes.size > 0 && missing.length === 0,
+  pageHashes.size === 0
+    ? 'no inline scripts found on / — the extractor or the page has changed'
+    : missing.length === 0
+      ? `${pageHashes.size} scripts, all allowed (${(csp.match(/sha256-/g) ?? []).length} hashes in the header)`
+      : `${missing.length} of ${pageHashes.size} NOT in the header: ${missing.join(' ')}`
 );
 
 const failed = results.filter((r) => !r.ok);

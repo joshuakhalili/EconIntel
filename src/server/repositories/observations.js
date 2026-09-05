@@ -129,7 +129,16 @@ export async function upsertObservations(observations) {
  * Mark an indicator as freshly ingested. Read by the freshness view that backs
  * the "last updated" badge on every panel.
  *
- * @param {import('pg').PoolClient | null} client
+ * THIS RECORDS THAT THE JOB RAN, NOT THAT THE DATA MOVED.
+ *
+ * It is called on any successful fetch, including one that returned nothing
+ * new, so `last_ingested_at` says only "we asked and nobody errored". Treating
+ * it as a freshness signal is what let /pipeline report "Nothing is late" while
+ * 73 of 125 active series had no observation newer than a year, every one of
+ * them touched the night before. Anything asking how current the DATA is must
+ * read `max(period_start) FILTER (WHERE value IS NOT NULL)` instead — which is
+ * what the staleness query in app.js now does.
+ *
  * @param {string} indicatorId
  */
 export async function touchIndicator(indicatorId) {

@@ -40,6 +40,7 @@ is the same literal text; what must NOT change there are slugs and ids, and no
 key in the content map is one.
 """
 
+import ast
 import re
 import sys
 from pathlib import Path
@@ -48,12 +49,17 @@ sys.path.insert(0, str(Path(__file__).parent))
 from content_diffusion import (  # noqa: E402
     REPLACEMENTS, HIDE_CSS, WORDMARK_VIEWBOX, LINKS, NAV_LINKS,
     CHUNK_PATCHES, NAV_APP_LINKS_JS,
+    SITE_ORIGIN, STALE_ORIGIN, SITEMAP_PATHS,
+    PAIRED, PAIR_WINDOW, WORD_REVEAL,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
+MAP_PATH = Path(__file__).resolve().parent / "content_diffusion.py"
 MARKER = ROOT / ".content-applied"
 HIDE_CSS_PATH = ROOT / "assets/css/content.css"
 NAV_JS_PATH = ROOT / "assets/js/nav.js"
+ROBOTS_PATH = ROOT / "robots.txt"
+SITEMAP_PATH = ROOT / "sitemap.xml"
 
 GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
 
@@ -71,8 +77,122 @@ def targets():
     files += sorted(ROOT.glob("*/*/index.html"))
     files += sorted((ROOT / "assets/js").glob("*.mjs"))
     files += sorted((ROOT / "assets/data").glob("searchIndex-*.json"))
-    # sitemap/robots carry the domain, not copy; detach.py owns those.
+    # sitemap.xml and robots.txt carry the host rather than copy, and are
+    # rewritten wholesale from SITE_ORIGIN further down rather than substituted.
     return [f for f in files if f.is_file()]
+
+
+# ---------------------------------------------------------------------------
+# Gate: a dict literal in the content map may not name the same key twice
+# ---------------------------------------------------------------------------
+#
+# Python collapses `{"a": 1, "a": 2}` to `{"a": 2}` at parse time, without a
+# warning, so a duplicated key inside one group is invisible to the map's own
+# cross-group check — it never sees the discarded value. The cost is the same:
+# a sentence that is in the map, reads correctly, and reaches no page. Read the
+# source instead of the object.
+def duplicate_keys_in_source(path):
+    dups = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if not isinstance(node, ast.Dict):
+            continue
+        seen = set()
+        for k in node.keys:
+            if k is None:          # {**other} spread carries no key
+                continue
+            try:
+                key = ast.literal_eval(k)
+            except Exception:
+                continue           # a computed key; nothing to compare
+            if not isinstance(key, str):
+                continue
+            if key in seen:
+                dups.append((getattr(k, "lineno", 0), key))
+            seen.add(key)
+    return sorted(dups)
+
+
+# ---------------------------------------------------------------------------
+# The hero's word-by-word scroll reveal
+# ---------------------------------------------------------------------------
+#
+# One <span> per word, each holding the word twice — dimmed, then bright and
+# absolutely positioned over it. See the note above WORD_REVEAL in the content
+# map for why no whole-sentence key can ever reach this.
+WORD_SPAN_RE = re.compile(
+    r'<span style="display:inline-block;margin-right:0\.3em;margin-bottom:0\.2em;'
+    r'position:relative;white-space:normal;color:(?P<dim>[^"]*)">'
+    r'(?P<word>[^<>]*)'
+    r'<span style="(?P<bright>position:absolute;inset:0;[^"]*)">'
+    r'(?P=word)</span></span>'
+)
+
+
+def word_span(dim, bright, word):
+    return ('<span style="display:inline-block;margin-right:0.3em;'
+            'margin-bottom:0.2em;position:relative;white-space:normal;'
+            'color:%s">%s<span style="%s">%s</span></span>'
+            % (dim, word, bright, word))
+
+
+def rewrite_word_reveals(text, table, hits):
+    """Rebuild any run of word spans whose joined text is in `table`."""
+    runs, current = [], []
+    for m in WORD_SPAN_RE.finditer(text):
+        if current and m.start() != current[-1].end():
+            runs.append(current)
+            current = []
+        current.append(m)
+    if current:
+        runs.append(current)
+
+    out, pos = [], 0
+    for run in runs:
+        sentence = " ".join(m.group("word") for m in run)
+        if sentence not in table:
+            continue
+        dim, bright = run[0].group("dim"), run[0].group("bright")
+        out.append(text[pos:run[0].start()])
+        out.append("".join(word_span(dim, bright, w)
+                           for w in table[sentence].split(" ")))
+        pos = run[-1].end()
+        hits[sentence] = hits.get(sentence, 0) + 1
+    out.append(text[pos:])
+    return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# The strings the template uses twice
+# ---------------------------------------------------------------------------
+def merge_windows(spans):
+    merged = []
+    for a, b in sorted(spans):
+        if merged and a <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], b)
+        else:
+            merged.append([a, b])
+    return merged
+
+
+def apply_paired(text, entries, took, left):
+    """Replace `old` only near `anchor`; leave every other occurrence alone."""
+    for anchor, old, new in entries:
+        if old not in text:
+            continue
+        windows = merge_windows(
+            (max(0, m.start() - PAIR_WINDOW), m.end() + PAIR_WINDOW)
+            for m in re.finditer(re.escape(anchor), text))
+        parts, pos = [], 0
+        for m in re.finditer(re.escape(old), text):
+            inside = any(a <= m.start() and m.end() <= b for a, b in windows)
+            parts.append(text[pos:m.start()])
+            parts.append(new if inside else m.group(0))
+            pos = m.end()
+            took[(anchor, old)] = took.get((anchor, old), 0) + int(inside)
+            left[(anchor, old)] = left.get((anchor, old), 0) + int(not inside)
+        parts.append(text[pos:])
+        text = "".join(parts)
+    return text
 
 
 def main():
@@ -82,6 +202,74 @@ def main():
             f"{DIM}Substitution is not idempotent. Reset to the tag first:\n"
             f"    bash docs/reset.sh && python3 docs/build-diffusion.py{RESET}"
         )
+        return 1
+
+    # ---- Gates on the map itself, before a single file is touched ----------
+    dups = duplicate_keys_in_source(MAP_PATH)
+    if dups:
+        print(f"{RED}✗ {len(dups)} duplicate key(s) inside one dict in "
+              f"{MAP_PATH.name}{RESET}")
+        for lineno, key in dups:
+            print(f"  {RED}line {lineno}{RESET} {DIM}{key[:80]!r}{RESET}")
+        print(f"{DIM}Python keeps only the last one and says nothing. Delete "
+              f"the dead entry, or move it to PAIRED if the two really are "
+              f"different components.{RESET}")
+        return 1
+
+    # A word of a rebuilt reveal is a whole text node, so a short REPLACEMENTS
+    # key equal to one of those words would match it and rewrite a single word
+    # of the hero sentence.
+    reveal_words = {w for s in WORD_REVEAL.values() for w in s.split(" ")}
+    shadowed = sorted(reveal_words & set(REPLACEMENTS))
+    if shadowed:
+        print(f"{RED}✗ {len(shadowed)} word(s) of the hero statement are also "
+              f"replacement keys{RESET}")
+        for w in shadowed:
+            print(f"  {RED}{w!r}{RESET} {DIM}-> {REPLACEMENTS[w]!r}{RESET}")
+        print(f"{DIM}Each word of the reveal is its own text node, so the key "
+              f"would rewrite it. Reword the statement or the key.{RESET}")
+        return 1
+
+    # ---- The two passes that have to run before the flat map --------------
+    #
+    # WORD_REVEAL first, because it keys on the template's sentence and the
+    # brand pass is about to rename the first word of it. PAIRED second, for
+    # the same reason: it anchors on strings the flat map is about to replace.
+    reveal_hits, paired_took, paired_left = {}, {}, {}
+    reveal_files = paired_files = 0
+    for path in targets():
+        original = path.read_text(encoding="utf-8", errors="surrogateescape")
+        updated = original
+        if path.suffix == ".html":
+            updated = rewrite_word_reveals(updated, WORD_REVEAL, reveal_hits)
+            if updated != original:
+                reveal_files += 1
+        before_pair = updated
+        updated = apply_paired(updated, PAIRED, paired_took, paired_left)
+        if updated != before_pair:
+            paired_files += 1
+        if updated != original:
+            path.write_text(updated, encoding="utf-8", errors="surrogateescape")
+
+    dead_pairs = [(a, o) for a, o, _ in PAIRED if not paired_took.get((a, o))]
+    if dead_pairs:
+        print(f"{RED}✗ {len(dead_pairs)} paired key(s) matched nothing{RESET}")
+        for anchor, old in dead_pairs:
+            seen = paired_left.get((anchor, old), 0)
+            print(f"  {RED}{old[:40]:42}{RESET} {DIM}near {anchor[:40]!r} "
+                  f"— {seen} occurrence(s) found, none within "
+                  f"{PAIR_WINDOW} chars{RESET}")
+        print(f"{DIM}Either the tree is not a pristine mirror, or the template "
+              f"moved one of the two strings apart. Reset before retrying."
+              f"{RESET}")
+        return 1
+
+    if not reveal_hits:
+        print(f"{RED}✗ the hero statement's word spans were not found{RESET}")
+        print(f"{DIM}Nothing in WORD_REVEAL matched a run of word spans, so "
+              f"the SSR markup still carries the template's sentence at every "
+              f"breakpoint. Check WORD_SPAN_RE against the current markup."
+              f"{RESET}")
         return 1
 
     # Longest first. This is the whole safety property of the pass.
@@ -105,7 +293,17 @@ def main():
     tagged = (re.compile(r"(?<=>)(" + "|".join(re.escape(k) for k in short_keys) + r")(?=<)")
               if short_keys else None)
     # `Key` or "Key" — a complete string literal in the minified chunks.
-    quoted = (re.compile(r"(?<=[`\"])(" + "|".join(re.escape(k) for k in short_keys) + r")(?=[`\"])")
+    #
+    # THE TRAILING BACKSLASH IS NOT OPTIONAL. Framer's hydration payload is
+    # JSON embedded in a <script> inside the HTML, so a string literal there
+    # reads \"Key\" — the closing quote is escaped. The lookahead used to
+    # demand a bare quote, so a short key matched the SSR markup and missed
+    # the payload sitting further down the same file. React finds the mismatch
+    # on hydration and patches the DOM to the payload's value, which is how
+    # both legal pages ended up showing contact@atmos.com in a browser while
+    # the file on disk said something else. The opening side needs no such
+    # allowance: in \"Key the character before the key is already a quote.
+    quoted = (re.compile(r"(?<=[`\"])(" + "|".join(re.escape(k) for k in short_keys) + r")(?=\\?[`\"])")
               if short_keys else None)
 
     counts = {k: 0 for k in REPLACEMENTS}
@@ -221,39 +419,102 @@ def main():
             '<!DOCTYPE html>\n<html lang="en">\n  <head>\n'
             '    <meta charset="utf-8">\n    <title>Legal — Diffusion</title>\n'
             '    <meta http-equiv="refresh" content="0; url=/legal/privacy-policy">\n'
-            '    <link rel="canonical" href="/legal/privacy-policy">\n'
+            # Absolute, like every other canonical on the site, so the check
+            # below covers this stub too rather than needing an exception.
+            f'    <link rel="canonical" href="{SITE_ORIGIN}/legal/privacy-policy">\n'
             '    <meta name="robots" content="noindex">\n  </head>\n'
             '  <body><a href="/legal/privacy-policy">Privacy Policy</a></body>\n'
             '</html>\n',
             encoding="utf-8",
         )
 
-    # The sitemap the mirror inherited advertises four pages that should not be
-    # indexed: /404, and the template's waitlist and thanks pages. Diffusion has
-    # no waitlist — every call to action was repointed at /login — so those two
-    # are orphans, and one of them still renders the template's invented
-    # "1,200+ people on the waitlist". Express redirects both to /login; this
-    # stops a search engine advertising them in the meantime.
+    # ---- The host, in one place -------------------------------------------
     #
-    # Written here rather than committed for the same reason as legal/index.html:
-    # reset.sh restores the tag, and a hand-edit would vanish on every rebuild.
-    sitemap = ROOT / "sitemap.xml"
-    if sitemap.exists():
-        sitemap.write_text(
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-            "  <url><loc>https://diffusion.observer/</loc></url>\n"
-            "  <url><loc>https://diffusion.observer/legal/privacy-policy</loc></url>\n"
-            "  <url><loc>https://diffusion.observer/legal/terms-of-service</loc></url>\n"
-            "</urlset>\n",
-            encoding="utf-8",
-        )
+    # Every canonical tag, og:url and twitter:url on all eight pages, plus
+    # robots.txt and sitemap.xml, named https://diffusion.observer — a host
+    # with no DNS record at all. A canonical tag is an instruction to a search
+    # engine that the real copy of the page lives elsewhere; pointing it at
+    # nothing is the strongest available way to ask not to be indexed, and
+    # og:url is what Slack and LinkedIn fetch when the link is pasted.
+    #
+    # There were two writers and they disagreed. docs/detach.py takes the host
+    # as --domain, and this file then hardcoded diffusion.observer over the top
+    # of the sitemap it had written, so passing the right --domain did not fix
+    # it. Now there is one writer and one constant: SITE_ORIGIN.
+    host_fixes = host_hits = 0
+    for path in targets() + [p for p in (ROBOTS_PATH, SITEMAP_PATH) if p.exists()]:
+        text = path.read_text(encoding="utf-8", errors="surrogateescape")
+        n = text.count(STALE_ORIGIN)
+        if not n:
+            continue
+        path.write_text(text.replace(STALE_ORIGIN, SITE_ORIGIN),
+                        encoding="utf-8", errors="surrogateescape")
+        host_fixes += 1
+        host_hits += n
+
+    # robots.txt and sitemap.xml are then rewritten outright rather than
+    # patched, so the host is not the only thing about them that is correct.
+    # The sitemap deliberately omits /404 and the retired /waitlist and
+    # /thanks: every call to action now points at /login, so those two are
+    # orphans that Express redirects, and one of them still renders the
+    # template's invented "1,200+ people on the waitlist".
+    #
+    # Written here rather than committed for the same reason as
+    # legal/index.html: reset.sh restores the tag, and a hand-edit would vanish
+    # on every rebuild.
+    ROBOTS_PATH.write_text(
+        f"User-agent: *\nAllow: /\n\nSitemap: {SITE_ORIGIN}/sitemap.xml\n",
+        encoding="utf-8",
+    )
+    SITEMAP_PATH.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(f"  <url><loc>{SITE_ORIGIN}{p}</loc></url>\n"
+                  for p in SITEMAP_PATHS)
+        + "</urlset>\n",
+        encoding="utf-8",
+    )
+
+    # AND THEN CHECK THE END STATE, not the number of substitutions. A count
+    # of zero is ambiguous — it means either "already correct" or "never
+    # matched" — so the gate asserts the property instead: every canonical,
+    # og:url and twitter:url that exists names SITE_ORIGIN, and at least one
+    # of them exists, so the check cannot pass by finding nothing.
+    HOST_TAGS = re.compile(
+        r'<link rel="canonical" href="([^"]*)"'
+        r'|<meta (?:property|name)="(?:og:url|twitter:url)" content="([^"]*)"')
+    wrong_host, host_tags_seen = [], 0
+    for path in [p for p in targets() if p.suffix == ".html"]:
+        html = path.read_text(encoding="utf-8", errors="surrogateescape")
+        for m in HOST_TAGS.finditer(html):
+            url = m.group(1) or m.group(2)
+            host_tags_seen += 1
+            if not url.startswith(SITE_ORIGIN):
+                wrong_host.append((path.relative_to(ROOT).as_posix(), url))
+    if wrong_host or not host_tags_seen:
+        print(f"\n{RED}✗ canonical/og:url check failed{RESET}")
+        if not host_tags_seen:
+            print(f"  {RED}no canonical or og:url tag on any page{RESET}")
+        for rel, url in wrong_host[:12]:
+            print(f"  {RED}{rel:38}{RESET} {DIM}{url[:70]}{RESET}")
+        print(f"{DIM}Every one of them must name {SITE_ORIGIN}.{RESET}")
+        return 1
 
     applied = {k: n for k, n in counts.items() if n}
     missed = [k for k, n in counts.items() if not n]
 
+    print(f"{GREEN}✓{RESET} hero word-reveal rebuilt in {reveal_files} file(s) "
+          f"{DIM}({sum(reveal_hits.values())} runs of spans){RESET}")
+    print(f"{GREEN}✓{RESET} paired strings resolved in {paired_files} file(s)")
+    for anchor, old, _ in PAIRED:
+        print(f"    {DIM}{old[:34]:36} near {anchor[:28]:30} "
+              f"{paired_took.get((anchor, old), 0)} taken, "
+              f"{paired_left.get((anchor, old), 0)} left for the flat map{RESET}")
     print(f"{GREEN}✓{RESET} {len(applied)} of {len(REPLACEMENTS)} strings applied "
           f"across {touched} files {DIM}({sum(counts.values())} substitutions){RESET}")
+    print(f"{GREEN}✓{RESET} host rewritten to {SITE_ORIGIN} "
+          f"{DIM}({host_hits} occurrence(s) in {host_fixes} file(s); "
+          f"{host_tags_seen} canonical/og:url tags checked){RESET}")
     print(f"{GREEN}✓{RESET} content.css written and linked into {linked} pages")
     print(f"{GREEN}✓{RESET} wordmark viewBox refitted in {wordmark_fixes} file(s)")
     print(f"{GREEN}✓{RESET} links repointed in {link_fixes} file(s) "

@@ -95,8 +95,11 @@ export default function TopNav() {
 
   return (
     <>
+      {/* print:hidden — a fixed bar prints as a band across the top of page one
+          and as nothing at all on pages two onward. See the @media print block
+          in styles/globals.css. */}
       <header
-        className={`fixed inset-x-0 top-0 z-40 transition-transform duration-300 ease-out ${
+        className={`fixed inset-x-0 top-0 z-40 transition-transform duration-300 ease-out print:hidden ${
           hidden ? '-translate-y-full' : 'translate-y-0'
         }`}
       >
@@ -111,9 +114,19 @@ export default function TopNav() {
               Diffusion
             </a>
 
+            {/* "Lenses and sources", not "Sections".
+                This carried aria-label="Sections" — the one word the project
+                deliberately moved away from. OverviewPage's own header comment
+                records that calling them sections was the original mistake
+                ("five parallel silos read as a menu"), and everywhere a sighted
+                reader looks the word is "lenses": the menu button, the landing
+                page's "Five lenses", the lens page's "Lens 01 of 5". A screen
+                reader was getting the discarded vocabulary, and with it the
+                framing that the five are unrelated categories rather than one
+                argument in order. */}
             <nav
               className="hidden flex-1 items-center gap-1 md:flex"
-              aria-label="Sections"
+              aria-label="Lenses and sources"
               ref={navRef}
             >
               {/* The writing. Question counts used to sit beside each name and
@@ -196,6 +209,7 @@ export default function TopNav() {
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={menuOpen}
+                aria-controls="nav-mobile-sheet"
                 className="grid size-9 place-items-center rounded-full text-text-secondary tint hover:bg-white/10 md:hidden"
               >
                 {menuOpen ? (
@@ -211,8 +225,15 @@ export default function TopNav() {
         {/* Mobile: a sheet from the top rather than a bottom tab bar. A tab bar
             can hold four items; this site has five lenses and four tools, and
             the previous one silently dropped everything past the fourth. */}
+        {/* No aria-label on the sheet below: the attribute is only honoured on
+            an element with a role that supports naming, and it is a plain div.
+            The button that opens it is already named, and aria-controls ties
+            the two together. */}
         {menuOpen && (
-          <div className="mx-4 mt-1 overflow-hidden rounded-2xl border border-border-button-default bg-panel/95 p-2 backdrop-blur-md md:hidden">
+          <div
+            id="nav-mobile-sheet"
+            className="mx-4 mt-1 overflow-hidden rounded-2xl border border-border-button-default bg-panel/95 p-2 backdrop-blur-md md:hidden"
+          >
             <p className="eyebrow px-3 pb-1 pt-2">Lenses</p>
             {(lenses ?? []).map((lens) => (
               <NavLink
@@ -242,8 +263,10 @@ export default function TopNav() {
         )}
       </header>
 
-      {/* The bar is fixed, so the document needs its height back. */}
-      <div className="h-16" aria-hidden />
+      {/* The bar is fixed, so the document needs its height back. Not in print,
+          where the bar itself is hidden and this would be 64px of blank paper
+          above the first heading. */}
+      <div className="h-16 print:hidden" aria-hidden />
     </>
   );
 }
@@ -259,12 +282,33 @@ export default function TopNav() {
  * one listener covers both menus.
  */
 function Menu({ label, open, onToggle, active, width = 'w-72', children }) {
+  /*
+   * WHAT THE BUTTON TELLS A SCREEN READER IT OPENS.
+   *
+   * It announced expanded state and nothing else, so a reader knew something
+   * had opened but not what. `aria-controls` names the panel and
+   * `aria-labelledby` on that panel names it back, so the two are announced as
+   * a pair.
+   *
+   * DELIBERATELY NOT aria-haspopup. That attribute means "menu" — ARIA 1.1
+   * defines aria-haspopup="true" as equivalent to "menu" — and this popup is a
+   * list of links, not a menu: no roving tabindex, no arrow-key navigation, no
+   * role="menuitem". Claiming it would announce a widget whose keyboard
+   * contract this does not honour, which is worse than announcing nothing. The
+   * ARIA Authoring Practices' "Disclosure Navigation Menu" pattern is exactly
+   * this shape and says not to use it.
+   */
+  const panelId = `nav-menu-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  const buttonId = `${panelId}-button`;
+
   return (
     <div className="relative">
       <button
+        id={buttonId}
         type="button"
         onClick={onToggle}
         aria-expanded={open}
+        aria-controls={panelId}
         className={`tint flex items-center gap-1 rounded-full px-3 py-1.5 text-caption-1-medium ${
           active ? 'text-signal' : 'text-text-secondary hover:text-text-primary'
         }`}
@@ -278,6 +322,8 @@ function Menu({ label, open, onToggle, active, width = 'w-72', children }) {
 
       {open && (
         <div
+          id={panelId}
+          aria-labelledby={buttonId}
           className={`sheet-in absolute left-0 top-full mt-2 ${width} origin-top overflow-hidden rounded-2xl border border-border-button-default bg-panel/95 p-1.5 shadow-2xl backdrop-blur-md`}
         >
           {children}

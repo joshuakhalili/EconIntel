@@ -16,6 +16,7 @@ import { parse } from 'csv-parse/sync';
 
 import { config } from '../../config.js';
 import { HttpError } from '../../lib/http.js';
+import { USER_AGENT } from './user-agent.js';
 
 const BASE = 'https://epoch.ai/data';
 
@@ -54,7 +55,9 @@ export async function fetchCsv(url) {
   }
 
   const response = await fetch(url, {
-    headers: { Accept: 'text/csv', 'User-Agent': 'Diffusion/1.0 (research dashboard)' },
+    // Was `Diffusion/1.0 (research dashboard)`, which named no contact at
+    // all — the one thing a User-Agent is for. See sources/user-agent.js.
+    headers: { Accept: 'text/csv', 'User-Agent': USER_AGENT },
     signal: AbortSignal.timeout(30_000),
   });
 
