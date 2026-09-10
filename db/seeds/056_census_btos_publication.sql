@@ -17,7 +17,7 @@ ON CONFLICT(id) DO UPDATE SET description=EXCLUDED.description,source_series_cod
 
 INSERT INTO question_indicators(question_id,indicator_id,role,sort_order,country_iso3,series_panel,caption_plain,caption_expert)
 VALUES ('adoption','census_btos.ai_use_current.USA','supporting',22,'USA','Census BTOS — revised November 2025 questionnaire',
- 'A more timely US adoption measure: the share of employer businesses reporting AI use in the previous two weeks. This experimental survey measures use, not productivity gains. Wording changed in November 2025, so the line starts with the new questionnaire; do not join it to the earlier series or rank its level against a different national survey.',
+ 'A more timely US adoption measure: the share of employer businesses reporting AI use in the previous two weeks. Dates label the start of each fourteen-day reference window. This experimental survey measures use, not productivity gains. Wording changed in November 2025, so the line starts with the new questionnaire; do not join it to the earlier series or rank its level against a different national survey.',
  'Experimental national BTOS estimates from the Census chart publication. Reference windows span fourteen days. Current-use responses only; expected next-six-month use is excluded. Population and instrument are not harmonised with Eurostat/OECD. No confidence intervals are supplied in this publication, so adjacent point changes are descriptive and not significance tests.')
 ON CONFLICT(question_id,indicator_id) DO UPDATE SET caption_plain=EXCLUDED.caption_plain,caption_expert=EXCLUDED.caption_expert,series_panel=EXCLUDED.series_panel;
 

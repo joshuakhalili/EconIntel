@@ -415,4 +415,3 @@ Access and version are inherited from the actual consulted-source records in see
 - Validate every rendered chart against replacements, country selectors, units, denominators and source dates. This file audits captions, not plotted geometry.
 - Add matched cohort microdata or an identified comparison before making causal claims about employment, energy relocation, regulatory effects or investment returns.
 - Human economic review remains outstanding. All 17 inactive questions remain inactive and their question-specific evidence gates remain in economic-intervention-2026-09-10.md.
-

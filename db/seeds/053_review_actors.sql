@@ -64,4 +64,3 @@ UPDATE question_reading SET review_actor = 'agent'
 WHERE review_actor IS NULL AND takeaway_source = 'reviewed'
 AND (url = 'https://digitaleconomy.stanford.edu/publication/canaries-in-the-coal-mine-six-facts-about-the-recent-employment-effects-of-artificial-intelligence/'
 OR url = 'https://www.nber.org/papers/w33777');
-
