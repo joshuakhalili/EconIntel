@@ -286,7 +286,7 @@ describe('/data/:id — one series', () => {
   });
 
   test('source-check: coverage is the measured end, forecasts are separate', () => {
-    assert.match(rendered, /p\.value_status !== 'projected'/);
+    assert.match(rendered, /!isProjected\(p\)/);
     assert.match(rendered, /label="Forecast to"/);
     assert.doesNotMatch(rendered, /label="Covers"/);
   });

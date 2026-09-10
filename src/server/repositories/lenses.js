@@ -140,7 +140,7 @@ export async function getLens(slug) {
   // make a lens look better read than it is.
   const { rows: reading } = await query(
     `SELECT id, title, publisher, published::text, url, kind, stance, takeaway,
-            takeaway_source, takeaway_ref
+            takeaway_source, takeaway_ref, review_actor
        FROM question_reading
       WHERE lens_id = $1
       ORDER BY sort_order, published DESC NULLS LAST`,

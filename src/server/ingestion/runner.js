@@ -27,7 +27,8 @@ import * as gdelt from './sources/gdelt.js';
 import * as sec from './sources/sec.js';
 import * as lbma from './sources/lbma.js';
 import * as rss from './sources/rss.js';
-import * as openalex from './sources/openalex.js';
+import { ingestCheckpointedCorpus } from './openalex-checkpoint.js';
+import { fetchBtosPublication, BTOS_INDICATOR } from './sources/census-btos-publication.js';
 import { insertDocuments } from '../repositories/documents.js';
 
 /**
@@ -59,7 +60,7 @@ async function finishRun(runId, { status, written = 0, skipped = 0, error = null
   await query(
     `UPDATE ingestion_runs
         SET status = $2, finished_at = now(), rows_written = $3,
-            rows_skipped = $4, error_message = $5, details = $6
+            rows_skipped = $4, error_message = $5, details = COALESCE($6::jsonb, details)
       WHERE id = $1`,
     [
       runId,
@@ -88,6 +89,13 @@ async function dueIndicators({ sourceId = null, force = false } = {}) {
         AND ($1::text IS NULL OR source_id = $1)
         AND ($2::boolean
              OR last_ingested_at IS NULL
+             OR (source_id = 'worldbank' AND COALESCE((
+               SELECT r.details->>'country_set' FROM ingestion_runs r
+               WHERE r.job_name = 'worldbank:' || indicators.id AND r.status = 'succeeded'
+               ORDER BY r.started_at DESC LIMIT 1
+             ), '') IS DISTINCT FROM (
+               SELECT string_agg(iso3::text, ',' ORDER BY iso3) FROM countries
+             ))
              OR last_ingested_at + COALESCE(refresh_interval, INTERVAL '1 day') < now())
       ORDER BY source_id, id`,
     [sourceId, force]
@@ -129,7 +137,7 @@ async function ingestFredIndicator(indicator) {
 }
 
 /** Ingest one World Bank-backed indicator across all seeded countries. */
-async function ingestWorldBankIndicator(indicator) {
+export async function ingestWorldBankIndicator(indicator) {
   const runId = await startRun(`worldbank:${indicator.id}`, 'worldbank');
   try {
     // Request only countries we actually have rows for. Asking for 'all' would
@@ -157,7 +165,8 @@ async function ingestWorldBankIndicator(indicator) {
       status: 'succeeded',
       written,
       skipped: skipped + (observations.length - filtered.length),
-      details: { fetched: observations.length, unknownCountries: observations.length - filtered.length },
+      details: { fetched: observations.length, unknownCountries: observations.length - filtered.length,
+        country_set: codes.join(',') },
     });
     return { written, skipped, fetched: observations.length };
   } catch (error) {
@@ -270,12 +279,28 @@ async function ingestLbmaIndicator(indicator) {
 }
 
 const HANDLERS = {
+  census_btos: ingestBtosIndicator,
   fred: ingestFredIndicator,
   lbma: ingestLbmaIndicator,
   worldbank: ingestWorldBankIndicator,
   epoch_ai: ingestEpochIndicator,
   dbnomics: ingestDbnomicsIndicator,
 };
+
+export async function ingestBtosIndicator(indicator) {
+  if (indicator.id !== BTOS_INDICATOR) throw new Error('Unsupported BTOS publication series');
+  const runId = await startRun(`census_btos:${indicator.id}`, 'census_btos');
+  try {
+    const observations = await fetchBtosPublication();
+    const result = await upsertObservations(observations);
+    await touchIndicator(indicator.id);
+    await finishRun(runId, { status: 'succeeded', ...result, details: { fetched: observations.length } });
+    return { ...result, fetched: observations.length };
+  } catch (error) {
+    await finishRun(runId, { status: 'failed', error: error.message });
+    throw error;
+  }
+}
 
 /**
  * DERIVED JOBS — the second kind of ingestion.
@@ -534,32 +559,7 @@ const DOCUMENT_JOBS = {
    * OpenAlex back-fills abstracts and DOIs onto works it indexed months ago, so
    * a window would permanently miss the ones that arrived incomplete.
    */
-  openalex: async () => {
-    const { documents, strands, truncated } = await openalex.fetchCorpus();
-
-    if (truncated) {
-      console.warn(
-        '  note  the OpenAlex corpus hit the per-strand page cap; it is a ' +
-          'lower bound and the query has grown past what this job expects'
-      );
-    }
-
-    const { written, duplicates, skipped } = await insertDocuments(documents);
-    return {
-      written,
-      fetched: documents.length,
-      skipped: skipped + duplicates,
-      details: {
-        strands: strands.map((s) => ({
-          strand: s.id,
-          matched: s.total,
-          kept: s.documents,
-          vetoed: s.vetoed,
-          unusable: s.unusable,
-        })),
-      },
-    };
-  },
+  openalex: runCheckpointedOpenAlex,
 };
 
 /**
@@ -581,7 +581,7 @@ async function runDocumentJob(name) {
   try {
     // `details` is optional: a job that has more to say than a count returns
     // one, and it is merged rather than replacing `fetched`, which every job has.
-    const { written, fetched, skipped, details } = await DOCUMENT_JOBS[name]();
+    const { written, fetched, skipped, details } = await DOCUMENT_JOBS[name](runId);
     await finishRun(runId, {
       status: 'succeeded',
       written,
@@ -593,6 +593,19 @@ async function runDocumentJob(name) {
     await finishRun(runId, { status: 'failed', error: error.message });
     throw error;
   }
+}
+
+async function runCheckpointedOpenAlex(runId) {
+  const { rows } = await query(`SELECT details->'checkpoint' AS checkpoint
+    FROM ingestion_runs WHERE job_name = 'documents:openalex' AND id <> $1
+    ORDER BY started_at DESC LIMIT 1`, [runId]);
+  return ingestCheckpointedCorpus({
+    previous: rows[0]?.checkpoint,
+    insert: insertDocuments,
+    save: async (checkpoint) => query(`UPDATE ingestion_runs
+      SET details = jsonb_build_object('checkpoint', $2::jsonb) WHERE id = $1`,
+    [runId, JSON.stringify(checkpoint)]),
+  });
 }
 
 /**

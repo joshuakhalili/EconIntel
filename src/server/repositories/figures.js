@@ -34,7 +34,7 @@ async function figuresWhere(column, id) {
   const { rows } = await query(
     `SELECT f.id, f.publisher, f.source_title, f.source_url, f.published::text,
             f.title, f.subtitle, f.unit, f.unit_symbol, f.decimals,
-            f.axis_kind, f.note, f.page_ref, f.quote, f.figure_source,
+            f.axis_kind, f.note, f.page_ref, f.quote, f.figure_source, f.review_actor,
             COALESCE(
               (SELECT json_agg(json_build_object(
                         'series', p.series,

@@ -379,7 +379,8 @@ for (const route of APP_ROUTES) {
   // `:slug` is a pattern; substitute something real so the CDN matches it.
   const path = route
     .replace(':slug', route.startsWith('/lens') ? 'investment' : 'adoption')
-    .replace(':id', 'fred.GDPC1');
+    .replace(':id', 'fred.GDPC1')
+    .replace(':iso3', 'GBR');
   const page = await get(path);
   const t = title(page.body);
   const servedFramer = FRAMER_MARKUP.test(page.body);

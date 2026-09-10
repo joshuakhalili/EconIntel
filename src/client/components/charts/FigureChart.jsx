@@ -2,7 +2,7 @@ import { RiExternalLinkLine } from '@remixicon/react';
 import { SERIES_COLORS } from '@/lib/format';
 import { figureBasisNote, describeFigureChart, figureTableModel } from './chartModel';
 import ChartDataTable from './ChartDataTable';
-
+import { reviewLabel } from '@/lib/reviewLabel';
 /*
  * The thirteen chart honesty behaviours this project treats as non-negotiable
  * are written down once, next to this file, in HONESTY.md. Four of them are
@@ -288,9 +288,7 @@ export default function FigureChart({ figure }) {
             <RiExternalLinkLine className="size-3.5" aria-hidden />
           </a>
           <span>· {figure.page_ref}</span>
-          {figure.figure_source === 'extracted' && (
-            <span>· read from the source, not yet checked by a person</span>
-          )}
+          <span>· {reviewLabel(figure.figure_source, figure.review_actor)}</span>
         </p>
       </div>
     </figure>

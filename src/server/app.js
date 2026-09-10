@@ -32,6 +32,8 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 import { config, describeIntegrations } from './config.js';
+import { sourceCapabilities } from './lib/source-capabilities.js';
+import { hasSeriesBreak } from '../shared/observationQuality.js';
 import { query } from './db/pool.js';
 import { securityHeaders, rateLimit, sameOriginOnly } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
@@ -46,6 +48,7 @@ import {
 } from './repositories/simulations.js';
 import cookieParser from 'cookie-parser';
 import { globe } from './repositories/globe.js';
+import { listCountryCoverage, countryCoverage } from './repositories/countries.js';
 import * as auth from './lib/auth.js';
 import { reportServerError, describeErrorSink, redact } from './lib/observability.js';
 
@@ -495,8 +498,13 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
                FROM documents
               GROUP BY source_id
            )
+           , successful AS (
+             SELECT source_id, max(finished_at) AS last_success
+               FROM ingestion_runs WHERE status = 'succeeded' GROUP BY source_id
+           )
            SELECT s.id, s.name, s.homepage_url, s.licence, s.attribution_text,
                   s.credibility,
+                  success.last_success,
                   COALESCE(m.observations, 0) AS observations,
                   COALESCE(c.indicators, 0)   AS indicators,
                   m.latest_period,
@@ -505,6 +513,7 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
              LEFT JOIN catalogued c ON c.source_id = s.id
              LEFT JOIN measured   m ON m.source_id = s.id
              LEFT JOIN reported   d ON d.source_id = s.id
+             LEFT JOIN successful success ON success.source_id = s.id
             WHERE COALESCE(m.observations, 0) > 0
                OR COALESCE(d.documents, 0) > 0
             ORDER BY COALESCE(m.observations, 0) DESC,
@@ -538,6 +547,7 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
     staleIndicators: stale.rows,
     sources: sources.rows,
     integrations: describeIntegrations(),
+    capabilities: sourceCapabilities(describeIntegrations(), sources.rows),
   });
 }));
 
@@ -1244,6 +1254,11 @@ app.get('/api/series', route(async (req, res) => {
 
   if (!rebase && !squashed) return res.json({ series, indexed: false });
 
+  if (series.some(s => s.points.some(hasSeriesBreak))) {
+    return res.json({ series, indexed: false, indexBlocked: true,
+      indexNote: 'Rebasing withheld because a source reports a break in series. Raw series are shown separately; changes across the break are not comparable.' });
+  }
+
   /**
    * Index every series to 100 at the first period they ALL cover.
    *
@@ -1418,13 +1433,25 @@ app.get('/api/indicators/:id', route(async (req, res) => {
  * an identifier terminates the string, and the file stops parsing — which is
  * exactly how this endpoint shipped broken once.
  */
+app.get('/api/countries', route(async (req, res) => {
+  res.json({ countries: await listCountryCoverage() });
+}));
+
+app.get('/api/countries/:iso3', route(async (req, res) => {
+  const iso3 = req.params.iso3.toUpperCase();
+  if (!/^[A-Z]{3}$/.test(iso3)) return res.status(400).json({ error: 'Use a three-letter country code' });
+  const result = await countryCoverage(iso3);
+  if (!result) return res.status(404).json({ error: 'Country not found' });
+  res.json(result);
+}));
+
 app.get('/api/indicators/:id/countries', route(async (req, res) => {
   const { rows } = await query(
-    `SELECT o.country_iso3, c.name, count(*)::int AS n
+    `SELECT o.country_iso3, c.name, c.is_aggregate, count(*)::int AS n
        FROM observations o
        JOIN countries c ON c.iso3 = o.country_iso3
-      WHERE o.indicator_id = $1 AND o.country_iso3 IS NOT NULL
-      GROUP BY o.country_iso3, c.name
+      WHERE o.indicator_id = $1 AND o.country_iso3 IS NOT NULL AND o.value IS NOT NULL
+      GROUP BY o.country_iso3, c.name, c.is_aggregate
       ORDER BY lower(c.name)`,
     [req.params.id]
   );

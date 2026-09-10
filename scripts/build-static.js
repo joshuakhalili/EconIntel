@@ -315,7 +315,7 @@ async function pagesFromDatabase() {
   }
 
   try {
-    const [questions, lenses, indicators, scenarios] = await Promise.all([
+    const [questions, lenses, indicators, scenarios, countries] = await Promise.all([
       db.query(
         `SELECT slug, question, subtitle, answer_plain
            FROM questions WHERE is_active ORDER BY slug`
@@ -329,10 +329,14 @@ async function pagesFromDatabase() {
         `SELECT slug, name, subtitle, thesis_plain
            FROM simulation_scenarios WHERE status = 'published' ORDER BY slug`
       ),
+      db.query('SELECT iso3, name FROM countries ORDER BY iso3'),
     ]);
 
     return {
       pages: [
+        ...countries.rows.map((row) => ({ route: 'country', id: row.iso3, type: 'website', inSitemap: false,
+          title: `${row.name} country coverage — Diffusion`,
+          description: `Available economic series for ${row.name}, including sources and reference periods.` })),
         ...questions.rows.map((row) => ({
           route: 'q',
           id: row.slug,

@@ -153,6 +153,18 @@ function series(qs) {
   return fetch(`${base}/api/series?${qs}`, { headers: { Cookie: sessionCookie() } });
 }
 
+describe('source-reported breaks', () => {
+  test('rebasing is withheld rather than bridging a classification change', async () => {
+    indicator('survey', { kind: 'currency', values: [10, 20, 21], dates: YEARS,
+      statuses: [null, 'OBSV_STATUS=B (Break in series)', null] });
+    const body = await (await series('ids=survey&index=true')).json();
+    assert.equal(body.indexed, false);
+    assert.equal(body.indexBlocked, true);
+    assert.match(body.indexNote, /break in series/);
+    assert.deepEqual(body.series[0].points.map(p => p.value), [10, 20, 21]);
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('the request itself', () => {

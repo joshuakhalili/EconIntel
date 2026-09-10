@@ -89,6 +89,8 @@ const ROUTE_DATA = {
     'SELECT count(*) FROM questions WHERE is_active',
   '/data':
     'SELECT count(*) FROM indicators WHERE is_active',
+  '/countries': 'SELECT count(*) FROM countries',
+  '/country/:iso3': 'SELECT count(*) FROM countries',
   /* Both of these render a chart, so an indicator with a definition and no
      observations is not enough — the page would load and draw nothing. */
   '/data/:id': `SELECT count(*) FROM indicators i

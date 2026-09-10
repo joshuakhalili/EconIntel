@@ -100,6 +100,15 @@ export default function PipelinePage() {
       />
 
       <Runs runs={recentRuns} />
+      {status.capabilities?.length > 0 && <Band eyebrow="Operation" title="What each integration can do" note="Configuration describes this deployment. Last success describes recorded ingestion, which can run elsewhere. Latest reference period is data coverage, not proof every series is fresh; the detailed freshness list follows.">
+        <ul className="mt-5 divide-y divide-border-button-default">
+          {status.capabilities.map((capability) => <li key={capability.name} className="py-3">
+            <p className="text-body-medium text-text-primary">{capability.name}</p>
+            <p className="mt-1 text-caption-1-regular text-text-secondary">Adapter: {capability.implemented ? 'implemented' : 'not implemented'} · Configuration: {capability.configured === 'not_required' ? 'no key required' : capability.configured ? 'present' : 'absent'}</p>
+            <p className="mt-1 text-caption-1-regular text-text-tertiary">Last successful ingestion: {capability.latest_success?.slice(0, 10) ?? 'not recorded'} · Latest reference period: {capability.latest_period ?? 'not applicable or unavailable'}</p>
+          </li>)}
+        </ul>
+      </Band>}
       {/* `counts.stale_indicators` does not exist yet — /api/status sends the
           staleness list under a LIMIT and publishes no total. Read here rather
           than waited for, so the day the field lands this band starts printing
@@ -414,9 +423,9 @@ function Stale({ rows = [], total = null }) {
 function NotConfigured({ integrations }) {
   return (
     <Band
-      eyebrow="Not configured"
-      title="What is switched off"
-      note="These would supply data and currently do not, because this server has no key for them. Shown because an absent number and an unconfigured source are different problems, and only one of them is about the world."
+      eyebrow="Integration gaps"
+      title="What is not available yet"
+      note="These integrations are unavailable here. Some need credentials; others still need an adapter. A saved API key does not by itself mean a working data feed. Each entry states the current limitation."
     >
       <ul className="mt-6 flex flex-col">
         {integrations.map((integration) => (

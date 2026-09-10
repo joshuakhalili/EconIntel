@@ -163,6 +163,22 @@ export default function ChartGroup({ members, height = 260, onPick }) {
           {payload && <SeriesChart payload={payload} height={height} onPick={onPick} />}
         </>
       )}
+      {members.length > 1 && (
+        <details className="mt-4 border-t border-border-button-default pt-3">
+          <summary className="cursor-pointer text-body-medium text-text-secondary">
+            Why each series is here
+          </summary>
+          <dl className="mt-3 space-y-4 text-body-regular text-text-secondary">
+            {members.map((member) => (
+              <div key={`${member.indicator_id}:${member.country_iso3 ?? ''}`}>
+                <dt className="text-body-medium text-text-primary">{member.name}</dt>
+                <dd className="mt-1">{member.caption_plain || 'No specific interpretation has been recorded for this series.'}</dd>
+                {member.series_panel && <dd className="mt-1 text-caption-1-regular">Survey group: {member.series_panel}</dd>}
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
     </ChartCard>
   );
 }

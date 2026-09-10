@@ -449,18 +449,25 @@ const SELECT = [
  * @param {object} strand  one of STRANDS
  * @param {object} [options]
  * @param {string} [options.fromDate=CORPUS_START]
- * @param {number} [options.perPage=200]  OpenAlex maximum
- * @param {number} [options.maxPages=40]  hard stop; 40 pages is 8,000 works
+ * @param {number} [options.perPage=100]  OpenAlex maximum
+ * @param {number} [options.maxPages=40]  hard stop; 40 pages is 4,000 works
  */
 export async function fetchStrand(strand, options = {}) {
-  const { fromDate = CORPUS_START, perPage = 200, maxPages = 40 } = options;
+  const { fromDate = CORPUS_START, perPage = 100, maxPages = 40,
+    startCursor = '*', onPage, request = fetchJson, apiKey = config.keys.openalex } = options;
+  if (!Number.isInteger(perPage) || perPage < 1 || perPage > 100) {
+    throw new RangeError('OpenAlex perPage must be between 1 and 100');
+  }
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 100) {
+    throw new RangeError('OpenAlex maxPages must be between 1 and 100');
+  }
 
   const email = contactEmail();
   const filter = strand.filters({ fromDate }).join(',');
 
   /** @type {ReturnType<typeof toDocument>[]} */
   const documents = [];
-  let cursor = '*';
+  let cursor = startCursor;
   let pages = 0;
   let total = null;
   let vetoed = 0;
@@ -475,11 +482,14 @@ export async function fetchStrand(strand, options = {}) {
     });
     if (email) params.set('mailto', email);
 
-    const data = await fetchJson(`${BASE}/works?${params}`, {
+    const data = await request(`${BASE}/works?${params}`, {
       // OpenAlex answers a boolean-heavy search in 2-8 seconds and occasionally
       // much longer. The default 20s is not always enough for the first page.
       timeoutMs: 45_000,
-      headers: email ? { 'User-Agent': `Diffusion (mailto:${email})` } : {},
+      headers: {
+        ...(email ? { 'User-Agent': `Diffusion (mailto:${email})` } : {}),
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
     });
 
     if (!data || typeof data !== 'object' || !Array.isArray(data.results)) {
@@ -489,6 +499,7 @@ export async function fetchStrand(strand, options = {}) {
     }
 
     if (total === null) total = data.meta?.count ?? 0;
+    const pageDocuments = [];
 
     for (const work of data.results) {
       const title = work?.display_name ?? '';
@@ -502,10 +513,14 @@ export async function fetchStrand(strand, options = {}) {
         continue;
       }
       documents.push(document);
+      pageDocuments.push(document);
     }
 
     cursor = data.meta?.next_cursor ?? null;
     pages += 1;
+    // Persist documents before advancing a durable checkpoint. Replaying the
+    // last page after a failure is safe because document writes deduplicate.
+    if (onPage) await onPage({ strand: strand.id, documents: pageDocuments, nextCursor: cursor, pages });
     if (data.results.length === 0) break;
   }
 
@@ -514,6 +529,7 @@ export async function fetchStrand(strand, options = {}) {
     total,
     vetoed,
     unusable,
+    nextCursor: cursor,
     // A corpus silently capped at maxPages would look complete. Say so instead.
     truncated: Boolean(cursor) && pages >= maxPages,
   };

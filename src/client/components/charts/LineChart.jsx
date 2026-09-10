@@ -20,6 +20,7 @@ import {
 import ChartTooltip from './ChartTooltip';
 import ChartDataTable from './ChartDataTable';
 import SeriesLegend from './SeriesLegend';
+import { hasSeriesBreak } from '../../../shared/observationQuality.js';
 
 /*
  * The thirteen chart honesty behaviours this project treats as non-negotiable
@@ -110,6 +111,13 @@ export default function LineChart({
 
   return (
     <div className="min-w-0">
+      {series.some(s => s.points.some(hasSeriesBreak)) && (
+        <p className="mb-2 text-caption-1-medium text-warn">
+          Source-reported breaks in series: {series.flatMap(s => s.points.filter(hasSeriesBreak).map(p => `${s.label}, ${fmtDate(p.date, cadence)}`)).join('; ')}.
+          {' '}The line is interrupted at these observations; their values remain in the data table.
+          Changes across a break may reflect a change in definition or method.
+        </p>
+      )}
       {/* A padded floor moves the bottom of the frame off zero, which is the
           textbook way to exaggerate a trend. Allowed only for an index scale
           (see buildChartModel) — and even there, said out loud rather than

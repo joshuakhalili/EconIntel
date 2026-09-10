@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { RiExternalLinkLine } from '@remixicon/react';
 import { useCollapse, SeeMore } from '@/components/Collapsible';
+import { reviewLabel } from '@/lib/reviewLabel';
 
 /**
  * What other people have found.
@@ -134,9 +135,7 @@ export default function Reading({ items, scopeNote, accent, initial = 4 }) {
                   {item.takeaway_ref && (
                     <span className="mt-1.5 flex flex-wrap items-center gap-x-2 text-caption-1-regular text-text-tertiary">
                       <span>{item.takeaway_ref}</span>
-                      {item.takeaway_source === 'extracted' && (
-                        <span>· read from the source, not yet checked by a person</span>
-                      )}
+                      <span>· {reviewLabel(item.takeaway_source, item.review_actor)}</span>
                     </span>
                   )}
                 </span>
@@ -162,10 +161,8 @@ export default function Reading({ items, scopeNote, accent, initial = 4 }) {
 
       {anyUnreviewed && (
         <p className="prose-measure mt-3 text-caption-1-regular text-text-tertiary">
-          Takeaways marked as not yet checked were read out of the document itself, with the page
-          given, but nobody has verified them against it. They are shown rather than withheld
-          because a citation with no finding tells a reader less — and marked rather than shown
-          plainly because a claim that looks checked when it is not is worse than either.
+          Extracted takeaways include a source location so you can check the finding.
+          Verification pending means that a completed source check is not recorded.
         </p>
       )}
     </section>

@@ -93,6 +93,31 @@ function lastDayOf(year, month) {
  * @param {string} [options.indicatorId]
  * @param {string} [options.countryIso3]
  */
+export function observationStatus(series, dataset, index) {
+  return (series.observations_attributes ?? []).flatMap(([name, values]) => {
+    // DBnomics compresses attributes constant across a series into a scalar.
+    // Indexing a scalar string would turn a flag like "bu" into "b", "u",
+    // then missing for the remaining observations.
+    const code = Array.isArray(values) ? values[index] : values;
+    if (code === null || code === undefined || code === '') return [];
+    const label = dataset?.attributes_values_labels?.[name]?.[code];
+    return [`${name}=${code}${label ? ` (${label})` : ''}`];
+  }).join('; ') || null;
+}
+
+/** Reconstruct only what dates establish. For AMECO the unfinished annual
+ * total is a forecast; for other sources an unfinished period can be measured
+ * to date, so only a future START is sufficient. Past AMECO projection status
+ * is handled conservatively at persistence until explicit outturn evidence.
+ */
+export function dbnomicsValueStatus(seriesPath, bounds, value, providerStatus, today = new Date().toISOString().slice(0, 10)) {
+  if (value === null) return providerStatus;
+  if (bounds.periodStart > today || (seriesPath.startsWith('AMECO/') && bounds.periodEnd > today)) {
+    return ['projected', providerStatus].filter(Boolean).join(';');
+  }
+  return providerStatus;
+}
+
 export async function fetchSeries(seriesPath, options = {}) {
   const { indicatorId = `dbnomics.${seriesPath}`, countryIso3 = null } = options;
 
@@ -134,6 +159,7 @@ export async function fetchSeries(seriesPath, options = {}) {
       countryIso3,
       ...bounds,
       value: Number.isFinite(value) ? value : null,
+      valueStatus: dbnomicsValueStatus(seriesPath, bounds, Number.isFinite(value) ? value : null, observationStatus(series, data.dataset, i)),
       sourceRef: `https://db.nomics.world/${seriesPath}`,
     });
   }

@@ -54,6 +54,8 @@ export const APP_ROUTES = [
   '/q/:slug',
   '/explore',
   '/data',
+  '/countries',
+  '/country/:iso3',
   '/data/:id',
   '/news',
   '/pipeline',
@@ -81,7 +83,7 @@ const FUNCTION_ROUTES = ['/api/:path*', '/auth/:path*', '/healthz'];
  * before it consults this table. What reaches the function is an address that
  * is wrong, or one that is newer than the deploy.
  */
-const DYNAMIC_APP_ROUTES = new Set(['/lens/:slug', '/q/:slug', '/data/:id', '/simulate/:slug']);
+const DYNAMIC_APP_ROUTES = new Set(['/lens/:slug', '/q/:slug', '/data/:id', '/simulate/:slug', '/country/:iso3']);
 
 export function buildConfig() {
   const hashes = inlineScriptHashes([

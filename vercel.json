@@ -64,6 +64,14 @@
       "destination": "/app"
     },
     {
+      "source": "/countries",
+      "destination": "/app"
+    },
+    {
+      "source": "/country/:iso3",
+      "destination": "/api/index"
+    },
+    {
       "source": "/data/:id",
       "destination": "/api/index"
     },

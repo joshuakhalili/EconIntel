@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useIndicatorCountries } from '@/hooks/queries';
+import { selectCountry } from './countrySelection';
 
 /**
  * Country picker for one chosen indicator.
@@ -17,12 +18,9 @@ export default function CountrySelect({ indicator, value, onChange }) {
   // Choose on the indicator's behalf as soon as the list arrives, so a newly
   // added indicator draws something rather than sitting blank until touched.
   useEffect(() => {
-    if (value || countries.length < 2) return;
-    const preferred =
-      indicator.default_country_iso3 ??
-      countries.find((c) => c.country_iso3 === 'USA')?.country_iso3 ??
-      countries[0].country_iso3;
-    onChange(preferred);
+    if (!countries.length) return;
+    const preferred = selectCountry(countries, value, indicator.default_country_iso3);
+    if (preferred !== value) onChange(preferred);
   }, [value, countries, indicator.default_country_iso3, onChange]);
 
   if (countries.length < 2) return null;
@@ -34,10 +32,14 @@ export default function CountrySelect({ indicator, value, onChange }) {
       aria-label={`Country for ${indicator.name}`}
       className="min-h-8 rounded-md border border-border-button-default bg-background-primary-default px-2 text-caption-1-regular text-text-secondary"
     >
-      {countries.map((country) => (
+      {[false, true].map((aggregate) => (
+        <optgroup key={String(aggregate)} label={aggregate ? 'Regional and world aggregates' : 'Countries and economies'}>
+        {countries.filter((country) => Boolean(country.is_aggregate) === aggregate).map((country) => (
         <option key={country.country_iso3} value={country.country_iso3}>
           {country.name}
         </option>
+        ))}
+        </optgroup>
       ))}
     </select>
   );

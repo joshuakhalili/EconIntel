@@ -523,11 +523,16 @@ describe('behaviour 10 — the ranked bar form is what more than six series beco
   test('the form is read from the editorial layer, never inferred from a count', () => {
     const SRC = readFileSync(join(ROOT, 'src/client/components/charts/ChartGroup.jsx'), 'utf8');
     assert.match(SRC, /const declared = members\.map\(\(m\) => m\.chart_form\)\.find\(Boolean\);/);
+    // Only the form selector makes this decision. Counting members to reveal
+    // per-series captions is legitimate and says nothing about the chart form.
+    const selector = SRC.match(/function formOf\(members\) \{([\s\S]*?)\n\}/)?.[1];
+    assert.ok(selector, 'the editorial form selector must remain inspectable');
     assert.doesNotMatch(
-      SRC,
-      /members\.length\s*>\s*\d/,
+      selector,
+      /members\.length/,
       'the form must not be chosen by counting members — see HONESTY.md behaviour 10'
     );
+    assert.match(SRC, /const form = formOf\(members\);/);
   });
 
   test('the refusal is still there for a group with no ruling', () => {

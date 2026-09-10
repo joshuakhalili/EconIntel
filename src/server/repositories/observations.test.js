@@ -225,6 +225,13 @@ describe('batching', () => {
 });
 
 describe('what `written` actually counts', () => {
+  test('updates provider quality flags even when the numeric value is unchanged', async () => {
+    await upsertObservations([obs({ valueStatus: 'OBSV_STATUS=B (Break in series)' })]);
+    const statement = inserts()[0];
+    assert.equal(statement.params[7], 'OBSV_STATUS=B (Break in series)');
+    assert.match(statement.sql, /OR observations\.value_status IS DISTINCT FROM \(CASE/);
+    assert.match(statement.sql, /projected;status_unverified/);
+  });
   test('it is rows the database changed, not rows we sent', async () => {
     /*
      * The statement carries `WHERE observations.value IS DISTINCT FROM

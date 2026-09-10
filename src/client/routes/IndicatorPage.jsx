@@ -1,6 +1,8 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { RiArrowLeftLine, RiExternalLinkLine } from '@remixicon/react';
-import { useIndicator, useSeries } from '@/hooks/queries';
+import { useIndicator, useIndicatorCountries, useSeries } from '@/hooks/queries';
+import CountrySelect from '@/components/CountrySelect';
+import { selectCountry } from '@/components/countrySelection';
 import { usePageTitle } from '@/components/chrome/AppShell';
 import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
@@ -9,6 +11,7 @@ import SeriesChart from '@/components/charts/SeriesChart';
 import { readerDescription } from '@/components/indicatorProse';
 import { isFuturePeriod } from '@/components/periodModel';
 import { fmt, fmtDate, displayUnit } from '@/lib/format';
+import { isProjected } from '../../shared/observationQuality.js';
 
 /**
  * One series, on its own terms.
@@ -40,11 +43,17 @@ import { fmt, fmtDate, displayUnit } from '@/lib/format';
  */
 export default function IndicatorPage() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: indicator, isPending, isError, error } = useIndicator(id);
+  const { data: countryPayload, isPending: countriesPending, isError: countriesError, error: countryFailure } = useIndicatorCountries(id);
+  const countries = countryPayload?.countries ?? [];
+  const requestedCountry = searchParams.get('country')?.toUpperCase() ?? null;
+  const selectedCountry = selectCountry(countries, requestedCountry, indicator?.default_country_iso3);
+  const unavailableCountry = requestedCountry && !countriesPending && !countries.some((country) => country.country_iso3 === requestedCountry);
   const { open } = useContextDrawer();
 
-  const { data: payload, isPending: seriesPending } = useSeries(id ? [id] : [], {}, {
-    enabled: Boolean(id),
+  const { data: payload, isPending: seriesPending, isError: seriesError, error: seriesFailure } = useSeries(id ? [id] : [], { countries: selectedCountry ? [selectedCountry] : undefined }, {
+    enabled: Boolean(indicator) && !countriesPending && !unavailableCountry && (!indicator?.has_country_dim || Boolean(selectedCountry)),
   });
 
   usePageTitle(indicator?.name ?? 'Series', indicator?.source_name);
@@ -73,15 +82,15 @@ export default function IndicatorPage() {
    * period after today cannot be a measurement.
    */
   const points = payload?.series?.[0]?.points ?? [];
-  const measured = points.filter((p) => p.value != null && p.value_status !== 'projected');
+  const measured = points.filter((p) => p.value != null && !isProjected(p) && !isFuturePeriod(p.date));
   const measuredEnd = measured.length > 0 ? measured[measured.length - 1].date : null;
-  const coversEnd =
-    measuredEnd ?? (isFuturePeriod(indicator.last_period) ? null : indicator.last_period);
+  const lastPeriod = points.filter((point) => point.value != null).at(-1)?.date ?? null;
+  const coversEnd = measuredEnd;
   const forecastEnd =
-    indicator.last_period && coversEnd && indicator.last_period > coversEnd
-      ? indicator.last_period
-      : isFuturePeriod(indicator.last_period)
-        ? indicator.last_period
+    lastPeriod && coversEnd && lastPeriod > coversEnd
+      ? lastPeriod
+      : isFuturePeriod(lastPeriod)
+        ? lastPeriod
         : null;
 
   return (
@@ -102,12 +111,12 @@ export default function IndicatorPage() {
       )}
 
       <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
-        <Fact label="Observations" value={fmt(indicator.observation_count ?? 0, 0)} />
+        <Fact label="Observations" value={fmt(points.filter((point) => point.value != null).length, 0)} />
         <Fact
           label="Measured"
           value={
-            indicator.first_period && coversEnd
-              ? `${indicator.first_period.slice(0, 4)}–${coversEnd.slice(0, 4)}`
+            points[0]?.date && coversEnd
+              ? `${points[0].date.slice(0, 4)}–${coversEnd.slice(0, 4)}`
               : '—'
           }
         />
@@ -124,12 +133,16 @@ export default function IndicatorPage() {
       </dl>
 
       <div className="mt-6">
+        {indicator.has_country_dim && <div className="mb-4 flex flex-wrap items-center gap-3">
+          <CountrySelect indicator={indicator} value={selectedCountry} onChange={(country) => setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set('country', country); return next; }, { replace: true })} />
+          {selectedCountry && <Link className="text-caption-1-regular text-text-secondary underline" to={`/country/${selectedCountry}`}>More data for {countries.find((country) => country.country_iso3 === selectedCountry)?.name}</Link>}
+        </div>}
         <ChartCard
           label={indicator.name}
           caption={caption}
           footer={indicator.source_name}
         >
-          {seriesPending ? (
+          {countriesError ? <ErrorBlock error={countryFailure} what="the available countries" /> : unavailableCountry ? <p className="text-body-regular text-text-secondary">No non-missing data for the requested country ({requestedCountry}). {selectedCountry && <Link className="underline" to={`/data/${encodeURIComponent(id)}?country=${selectedCountry}`}>Show available data for {selectedCountry}.</Link>}</p> : indicator.has_country_dim && !countriesPending && !selectedCountry ? <p className="text-body-regular text-text-secondary">No non-missing country observations are available yet.</p> : seriesError ? <ErrorBlock error={seriesFailure} what="these observations" /> : seriesPending ? (
             <LoadingBlock rows={1} />
           ) : (
             <SeriesChart payload={payload} height={340} onPick={open} />

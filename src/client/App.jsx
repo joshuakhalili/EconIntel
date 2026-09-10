@@ -32,6 +32,7 @@ const LensPage = lazy(() => import('@/routes/LensPage'));
 const QuestionPage = lazy(() => import('@/routes/QuestionPage'));
 const ExplorePage = lazy(() => import('@/routes/ExplorePage'));
 const DataPage = lazy(() => import('@/routes/DataPage'));
+const CountriesPage = lazy(() => import('@/routes/CountriesPage'));
 const IndicatorPage = lazy(() => import('@/routes/IndicatorPage'));
 const NewsPage = lazy(() => import('@/routes/NewsPage'));
 const PipelinePage = lazy(() => import('@/routes/PipelinePage'));
@@ -79,6 +80,8 @@ const router = createBrowserRouter([
       { path: 'q/:slug', element: <QuestionPage /> },
       { path: 'explore', element: <ExplorePage /> },
       { path: 'data', element: <DataPage /> },
+      { path: 'countries', element: <CountriesPage /> },
+      { path: 'country/:iso3', element: <CountriesPage /> },
       { path: 'data/:id', element: <IndicatorPage /> },
       { path: 'news', element: <NewsPage /> },
       { path: 'pipeline', element: <PipelinePage /> },

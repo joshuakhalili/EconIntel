@@ -136,6 +136,14 @@ export function useIndicatorCountries(id) {
   });
 }
 
+export function useCountryCoverage(iso3) {
+  return useQuery({
+    queryKey: ['country-coverage', iso3 ?? 'all'],
+    queryFn: ({ signal }) => fetchJson(iso3 ? `/api/countries/${encodeURIComponent(iso3)}` : '/api/countries', { signal }),
+    ...CATALOGUE,
+  });
+}
+
 /**
  * Batch series fetch. `index` asks the server to rebase every series to 100 at
  * a shared base period — that is how charts with different units stay on ONE

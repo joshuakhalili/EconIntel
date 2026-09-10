@@ -17,6 +17,19 @@ import { withTransaction } from '../db/pool.js';
  */
 const BATCH_SIZE = 1000;
 
+// AMECO mixes outturns and forecasts without supplying release-vintage status
+// in the mirror. A year ending or its value changing does not establish an
+// outturn. When a formerly projected cell loses its positive forecast rule,
+// quarantine it explicitly until reviewed source evidence supplies the token
+// confirmed_outturn (or the source explicitly classifies it projected again).
+// Ordinary provider flags remain replaceable/clearable on every other source.
+const STATUS_UPDATE = `CASE
+  WHEN EXCLUDED.indicator_id LIKE 'dbn.AMECO.%'
+   AND observations.value_status ~ '^projected(;|$)'
+   AND COALESCE(EXCLUDED.value_status, '') !~ '^(projected|confirmed_outturn)(;|$)'
+  THEN 'projected;status_unverified' || CASE WHEN EXCLUDED.value_status IS NULL THEN '' ELSE ';' || EXCLUDED.value_status END
+  ELSE EXCLUDED.value_status END`;
+
 /**
  * @typedef {object} ObservationInput
  * @property {string}  indicatorId
@@ -107,14 +120,17 @@ export async function upsertObservations(observations) {
          )
          DO UPDATE SET
            value           = EXCLUDED.value,
-           value_status    = EXCLUDED.value_status,
+           value_status    = ${STATUS_UPDATE},
            confidence_tier = EXCLUDED.confidence_tier,
            source_ref      = EXCLUDED.source_ref,
            ingested_at     = now()
          -- Skip the write entirely when nothing changed. Most re-runs touch
          -- mostly-unchanged history; this keeps ingested_at meaningful as
          -- "when the value last actually moved" and avoids pointless WAL churn.
-         WHERE observations.value IS DISTINCT FROM EXCLUDED.value`,
+         WHERE observations.value IS DISTINCT FROM EXCLUDED.value
+            OR observations.value_status IS DISTINCT FROM (${STATUS_UPDATE})
+            OR observations.source_ref IS DISTINCT FROM EXCLUDED.source_ref
+            OR observations.confidence_tier IS DISTINCT FROM EXCLUDED.confidence_tier`,
         params
       );
 
