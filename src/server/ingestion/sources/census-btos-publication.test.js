@@ -23,3 +23,10 @@ test('suppression never becomes zero', () => {
   assert.equal(rows[1].value, null);
   assert.equal(rows[1].valueStatus, 'suppressed');
 });
+test('current-use estimates cannot become measurements of a future reference period', () => {
+  const now = new Date('2026-09-10T23:59:59Z');
+  assert.throws(() => parseBtosPublication([{ ...fixture[0], Date: '2030-01-13' }], { now }), /in the future/);
+  assert.throws(() => parseBtosPublication([{ ...fixture[0], Date: '2026-09-11' }], { now }), /in the future/);
+  assert.equal(parseBtosPublication([{ ...fixture[0], Date: '2026-09-10' }], { now }).length, 1);
+  assert.throws(() => parseBtosPublication(fixture, { now: new Date('invalid') }), /validation date/);
+});

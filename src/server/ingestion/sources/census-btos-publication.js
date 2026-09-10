@@ -9,7 +9,9 @@ export const BTOS_INDICATOR = 'census_btos.ai_use_current.USA';
 const CURRENT_LABEL = 'Current AI Use (Last Two Weeks)';
 const EXPECTED_LABEL = 'Expected AI Use (Next Six Months)';
 
-export function parseBtosPublication(rows) {
+export function parseBtosPublication(rows, { now = new Date() } = {}) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error('Invalid BTOS validation date');
+  const today = now.toISOString().slice(0, 10);
   if (!Array.isArray(rows) || rows.length === 0 || rows.length > 10000) throw new Error('Unexpected BTOS publication size or shape');
   const seen = new Set();
   const observations = [];
@@ -20,6 +22,7 @@ export function parseBtosPublication(rows) {
     const end = new Date(`${row.Date}T00:00:00Z`);
     if (!Number.isFinite(end.getTime()) || end.toISOString().slice(0, 10) !== row.Date) throw new Error('Invalid BTOS reference date');
     if (row.Date < '2025-11-30') throw new Error('BTOS publication crosses the questionnaire break');
+    if (row.Date > today) throw new Error('BTOS current-use reference period is in the future; review the publication before ingestion');
     if (seen.has(row.Date)) throw new Error('Duplicate BTOS reference date');
     seen.add(row.Date);
     const raw = row.Estimate;

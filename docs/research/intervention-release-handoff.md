@@ -24,11 +24,11 @@
 | Economies with six indicators or fewer | 56 | 1 |
 | Active questions | 23 | 23 |
 
-The increase is 8,580 World Bank records plus 20 Census observations. More macro context is not evidence of an AI effect. Taiwan remains thin; the country-depth export records the missing concepts in the nine priority economies. US BTOS's latest retrieved window is August 10–23, 2026, with 22.4% reporting current AI use. That survey has a different population/instrument from OECD and Eurostat.
+The increase is 8,580 World Bank records plus 20 Census observations. More macro context is not evidence of an AI effect. Taiwan remains thin; the country-depth export records the missing concepts in the nine priority economies. Staging's latest stored US BTOS window is August 10–23, 2026, with 22.4% reporting current AI use. That survey has a different population/instrument from OECD and Eurostat. A later read-only release-check fetch accepted 21 current-use records through September 6; that additional record has not been ingested into staging or production, so refresh and reconcile the counts before release.
 
 ## Verification
 
-- Final release-check suite: 749 tests, 748 passed, zero failed, one skipped (optional local mirror-cache fixture absent). Seven new regression/edge-case tests were added during the final review.
+- Final release-check suite: 750 tests, 749 passed, zero failed, one skipped (optional local mirror-cache fixture absent). Eight new regression/edge-case tests were added during the final review, including a guard rejecting future-dated Census current-use observations.
 - Production-mode Vercel build and static assembly passed; 326 shells generated.
 - Data integrity: all 12 checks passed, including the Census addition.
 - Production-style authentication exercised on isolated staging: signed-out protected endpoints return 401; signed-in requests validate all 23 active question packages and country-specific data.
