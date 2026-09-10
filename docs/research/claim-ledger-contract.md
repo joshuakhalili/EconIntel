@@ -47,9 +47,17 @@ editor considers that particular source unrelated. It does not silently certify
 source changes, nor automatically re-review a claim. The public dependency view
 retains `(question_id, snapshot)` and the claim API's existing snapshot shape.
 
+Migration 0031 adds `indicator_definitions` independently of observations, so
+empty-series placements are covered too. Indicator source identity/URL, quantity
+kind, units, dimensions, confidence and other semantic metadata participate, as do
+the source name, homepage, licence, attribution, credibility and notes. Observation
+confidence changes also invalidate. Indicator creation/update/fetch timestamps and
+refresh intervals are excluded: an operational refresh alone is not new evidence.
+
 Run `DIFFUSION_STAGING_TEST=1 node scripts/verify-research-review.js` only against
 an isolated staging database. Its transaction is rolled back and checks independent
-observation, caption, question/lens reading, report metadata/value, source-version
+observation, caption, indicator/source metadata (including empty series),
+question/lens reading, report metadata/value, source-version
 and editorial invalidation, plus append-only review-event enforcement.
 
 Legacy figure and reading flags are preserved. Seed 053 records the known agent

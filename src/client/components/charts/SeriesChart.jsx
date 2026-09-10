@@ -91,10 +91,17 @@ export default function SeriesChart({ payload, height, onPick }) {
     };
   }, [payload]);
 
+  const forecastDisclosures = <>
+    {projectedNote && <p className="mb-2 text-caption-1-medium text-warn">{projectedNote}</p>}
+    {series.some(s => s.points.some(p => /status_unverified/.test(p.value_status ?? ''))) && (
+      <p className="mb-2 text-caption-1-medium text-warn">Some previously projected values have no confirmed outturn classification. They remain dashed pending source verification; a past date alone does not make them measurements.</p>
+    )}
+  </>;
   if (payload?.indexBlocked) {
     return (
       <div className="space-y-4">
         <p className="text-caption-1-medium text-warn">{payload.indexNote}</p>
+        {forecastDisclosures}
         {(payload.series ?? []).map((s, index) => (
           <section key={`${s.id}-${s.country}-${index}`}>
             <h4 className="text-body-medium">{labelFor(s, payload.series)}</h4>
@@ -114,10 +121,7 @@ export default function SeriesChart({ payload, height, onPick }) {
           chart — spacing on this axis follows the finer one, not both evenly.
         </p>
       )}
-      {projectedNote && <p className="mb-2 text-caption-1-medium text-warn">{projectedNote}</p>}
-      {series.some(s => s.points.some(p => /status_unverified/.test(p.value_status ?? ''))) && (
-        <p className="mb-2 text-caption-1-medium text-warn">Some previously projected values have no confirmed outturn classification. They remain dashed pending source verification; a past date alone does not make them measurements.</p>
-      )}
+      {forecastDisclosures}
       <LineChart
         series={series}
         cadence={cadence}

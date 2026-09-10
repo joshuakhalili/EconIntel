@@ -137,8 +137,8 @@ Nothing stops a chart group pairing an annual series with a monthly one — only
 matching units are enforced. The axis follows the finer cadence, and that is
 said out loud rather than blended away.
 
-- `src/client/components/charts/SeriesChart.jsx:111` — contains `{cadenceMismatch && (`
-- `src/client/components/charts/SeriesChart.jsx:113` — contains `These series report at different cadences`
+- `src/client/components/charts/SeriesChart.jsx:118` — contains `{cadenceMismatch && (`
+- `src/client/components/charts/SeriesChart.jsx:120` — contains `These series report at different cadences`
 
 Coverage: `render-only — not covered here`
 

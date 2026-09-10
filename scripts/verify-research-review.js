@@ -45,6 +45,42 @@ try {
   await client.query("UPDATE question_indicators SET caption_plain=COALESCE(caption_plain,'') || ' revised' WHERE question_id=$1", [question.id]);
   assert.equal((await current()).review_status, 'stale');
   await client.query('ROLLBACK TO SAVEPOINT caption_check');
+  const { rows: [indicator] } = await client.query(`SELECT i.id, i.source_id FROM indicators i
+    JOIN question_indicators qi ON qi.indicator_id=i.id WHERE qi.question_id=$1
+    ORDER BY i.id LIMIT 1`, [question.id]);
+  const checkMetadataChange = async (sql, params) => {
+    await client.query('SAVEPOINT metadata_check');
+    await client.query(sql, params);
+    assert.equal((await current()).review_status, 'stale', 'indicator/source metadata invalidates');
+    await client.query('ROLLBACK TO SAVEPOINT metadata_check');
+    assert.equal((await current()).review_status, 'agent_checked');
+  };
+  await checkMetadataChange("UPDATE indicators SET source_url='https://example.org/revised-source' WHERE id=$1", [indicator.id]);
+  await checkMetadataChange("UPDATE indicators SET quantity_kind=CASE WHEN quantity_kind='rate' THEN 'magnitude'::quantity_kind ELSE 'rate'::quantity_kind END WHERE id=$1", [indicator.id]);
+  await checkMetadataChange("UPDATE sources SET attribution_text=COALESCE(attribution_text,'') || ' revised' WHERE id=$1", [indicator.source_id]);
+  // An empty indicator must have its own dependency, not rely on an observation
+  // join. The unique source ensures no populated series can mask this test.
+  await client.query('SAVEPOINT empty_indicator_check');
+  await client.query("INSERT INTO sources(id,name) VALUES ('integration-empty-source','Empty fixture source')");
+  await client.query(`INSERT INTO indicators(id,name,pillar,quantity_kind,cadence,confidence_tier,unit,source_id)
+    SELECT 'integration-empty-indicator','Empty fixture indicator',pillar,quantity_kind,cadence,confidence_tier,unit,'integration-empty-source'
+    FROM indicators WHERE id=$1`, [indicator.id]);
+  await client.query(`INSERT INTO question_indicators(question_id,indicator_id)
+    VALUES ($1,'integration-empty-indicator')`, [question.id]);
+  assert.equal((await current()).review_status, 'stale', 'new empty placement invalidates');
+  const emptyBaseline = await current();
+  await client.query(`INSERT INTO research_review_events
+    (claim_id,fingerprint,snapshot,actor_type,reviewer,notes)
+    VALUES ($1,$2,$3,'agent','integration fixture','Empty-series baseline test only')`,
+  [emptyBaseline.id,emptyBaseline.fingerprint,JSON.stringify(emptyBaseline)]);
+  assert.equal((await current()).review_status, 'agent_checked');
+  await checkMetadataChange("UPDATE indicators SET source_url='https://example.org/empty-revision' WHERE id='integration-empty-indicator'", []);
+  await checkMetadataChange("UPDATE sources SET name='Revised empty source' WHERE id='integration-empty-source'", []);
+  await checkMetadataChange("UPDATE indicators SET source_id=$1 WHERE id='integration-empty-indicator'", [indicator.source_id]);
+  await client.query("UPDATE indicators SET last_ingested_at=now(),updated_at=now(),refresh_interval=INTERVAL '2 days' WHERE id='integration-empty-indicator'");
+  assert.equal((await current()).review_status, 'agent_checked', 'operational refresh metadata does not invalidate');
+  await client.query('ROLLBACK TO SAVEPOINT empty_indicator_check');
+  assert.equal((await current()).review_status, 'agent_checked');
   for (const [scope, parentId] of [['question_id', question.id], ['lens_id', question.lens_id]]) {
     // Fixture inserts also prove newly linked evidence invalidates a review.
     // Rollback each change so subsequent assertions test independent causes.
@@ -89,7 +125,7 @@ try {
   await client.query('SAVEPOINT immutable_check');
   await assert.rejects(client.query('UPDATE research_review_events SET notes=$1 WHERE id=$2', ['changed', review.id]), /append-only/);
   await client.query('ROLLBACK TO SAVEPOINT immutable_check');
-  console.log('PASS: draft → agent checked; observation, caption, question/lens reading, report metadata/values, source and editorial changes invalidate; historical events immutable. Rolled back.');
+  console.log('PASS: draft → agent checked; observation, caption, indicator/source metadata (including empty series), question/lens reading, report metadata/values, source and editorial changes invalidate; operational refreshes do not; historical events immutable. Rolled back.');
 } finally {
   await client.query('ROLLBACK');
   client.release();

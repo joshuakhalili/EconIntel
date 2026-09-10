@@ -88,3 +88,68 @@ test('OpenAlex resumes a committed page after later failure, never skips an unco
   }), /database failed/);
   assert.deepEqual(saved.cursors, {});
 });
+
+test('OpenAlex completed and obsolete checkpoints restart the corpus', async () => {
+  const save = async () => {};
+  const insert = async () => ({ written: 0, duplicates: 0, skipped: 0 });
+  const finish = async (strand, options) => options.onPage({ documents: [], nextCursor: null });
+  const first = await ingestCheckpointedCorpus({ save, insert, fetch: finish });
+  for (const previous of [first.details.checkpoint, { ...first.details.checkpoint, complete: false, signature: 'obsolete-query' }]) {
+    let calls = 0;
+    const result = await ingestCheckpointedCorpus({ previous, save, insert, fetch: async (strand, options) => {
+      calls++;
+      assert.equal(options.startCursor, '*');
+      await finish(strand, options);
+    } });
+    assert.equal(calls, Object.keys(first.details.checkpoint.cursors).length);
+    assert.equal(result.details.truncated, false);
+  }
+});
+
+test('OpenAlex skips completed strands but retains bounded unfinished cursors', async () => {
+  const save = async () => {};
+  const insert = async () => ({ written: 0, duplicates: 1, skipped: 0 });
+  const initial = await ingestCheckpointedCorpus({ save, insert, fetch: async (strand, options) => {
+    await options.onPage({ documents: [{}], nextCursor: null });
+  } });
+  const previous = structuredClone(initial.details.checkpoint);
+  previous.complete = false;
+  const [pending] = Object.keys(previous.cursors);
+  previous.cursors[pending] = 'resume-me';
+  const visited = [];
+  const result = await ingestCheckpointedCorpus({ previous, save, insert, fetch: async (strand, options) => {
+    visited.push(strand.id);
+    assert.equal(options.startCursor, 'resume-me');
+    await options.onPage({ documents: [{}], nextCursor: 'still-pending' });
+  } });
+  assert.deepEqual(visited, [pending]);
+  assert.equal(result.details.truncated, true);
+  assert.equal(result.details.checkpoint.cursors[pending], 'still-pending');
+  assert.equal(result.skipped, 1);
+  assert.equal(previous.cursors[pending], 'resume-me');
+});
+
+test('OpenAlex checkpoint persistence failure stops before fetching another page', async () => {
+  let saves = 0, inserts = 0, fetches = 0;
+  await assert.rejects(ingestCheckpointedCorpus({
+    save: async () => { if (++saves === 2) throw new Error('checkpoint unavailable'); },
+    insert: async () => { inserts++; return { written: 1, skipped: 0, duplicates: 0 }; },
+    fetch: async (strand, options) => { fetches++; await options.onPage({ documents: [{}], nextCursor: 'next' }); },
+  }), /checkpoint unavailable/);
+  assert.equal(inserts, 1);
+  assert.equal(fetches, 1);
+});
+
+test('OpenAlex keyless access omits authorization and validates provider payloads', async () => {
+  const strand = { id: 'test', filters: () => [] };
+  const result = await fetchStrand(strand, { apiKey: '', request: async (url, options) => {
+    assert.equal(options.headers.Authorization, undefined);
+    return { results: [], meta: { next_cursor: null, count: 0 } };
+  } });
+  assert.deepEqual(result.documents, []);
+  assert.equal(result.truncated, false);
+  for (const payload of [null, {}, { results: {} }]) {
+    await assert.rejects(fetchStrand(strand, { request: async () => payload }), /unexpected response/);
+  }
+  await assert.rejects(fetchStrand(strand, { request: async () => { throw new Error('network unavailable'); } }), /network unavailable/);
+});
