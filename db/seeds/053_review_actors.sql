@@ -1,0 +1,67 @@
+-- Preserve the agent review documented in seed 050; no human review inferred.
+UPDATE report_figures SET review_actor = 'agent'
+WHERE review_actor IS NULL AND figure_source = 'reviewed' AND id IN (
+  'bis-equity-market-concentration',
+  'deloitte-agentic-ai-usage-today-vs-two-years',
+  'deloitte-ai-benefits-achieved-vs-hoped',
+  'deloitte-ai-risks-most-concerning',
+  'deloitte-depth-of-ai-transformation',
+  'deloitte-highly-prepared-for-ai-by-domain',
+  'deloitte-physical-ai-adoption-by-region',
+  'deloitte-physical-ai-greatest-expected-impact',
+  'deloitte-talent-strategy-adjustments',
+  'imf-macro-agi-forecast-horizon',
+  'imf-macro-frontier-model-query-price',
+  'imf-macro-inference-cost-decline',
+  'imf-skills-ai-exposed-employment-shortfall',
+  'imf-skills-ai-exposure-by-income-group',
+  'imf-skills-degree-share-by-new-skill-use',
+  'imf-skills-new-skill-rate-by-job-title',
+  'imf-skills-us-local-labour-market-effects',
+  'imf-skills-wage-premium-four-plus-new-skills',
+  'kpmg-ai-agent-deployment-rephasing',
+  'kpmg-ai-confidence-measures-q1-q2',
+  'kpmg-ai-decision-accountability',
+  'kpmg-ai-maturity-phase-q1-q2',
+  'kpmg-ai-operating-cost-visibility',
+  'kpmg-ai-priorities-q1-q2',
+  'kpmg-ai-strategy-influences-q1-q2',
+  'kpmg-outcomes-by-ceo-accountability',
+  'mckinsey-ai-and-gen-ai-adoption-over-time',
+  'mckinsey-ai-deployment-centralization',
+  'mckinsey-expected-headcount-change-from-gen-ai',
+  'mckinsey-gen-ai-content-types',
+  'mckinsey-gen-ai-cost-decrease-by-function',
+  'mckinsey-gen-ai-revenue-increase-by-function',
+  'mckinsey-gen-ai-use-by-industry',
+  'oecd-median-labour-productivity-growth',
+  'oecd-private-capital-assets-2012-2025',
+  'oecd-software-share-of-us-private-capital',
+  'pwc-ai-skill-wage-premium-by-sector',
+  'pwc-entry-level-postings-seniorised',
+  'pwc-headcount-growth-by-ai-exposure',
+  'pwc-human-intensive-new-tasks-by-exposure-quartile',
+  'pwc-job-share-by-expertise-category',
+  'pwc-productivity-growth-by-ai-exposure',
+  'pwc-professionalised-vs-democratised-growth',
+  'pwc-wage-growth-by-ai-exposure',
+  'hai-ai-funding-events-by-size-2024-2025',
+  'hai-ai-job-postings-share-by-country-2025',
+  'hai-ai-job-postings-share-by-us-sector',
+  'hai-ai-use-by-function-technology-sector',
+  'hai-measured-productivity-change-by-study',
+  'hai-organizational-ai-use-by-region',
+  'hai-private-ai-investment-by-country-2025',
+  'hai-workforce-reductions-observed-vs-expected',
+  'wef-business-ai-adoption-2022-2025',
+  'wef-executive-expectations-of-ai-impact',
+  'wef-jobs-created-vs-displaced-by-2030',
+  'wef-task-automation-age-of-displacement-2030'
+);
+
+-- Source-specific agent PDF checks documented in seed 051.
+UPDATE question_reading SET review_actor = 'agent'
+WHERE review_actor IS NULL AND takeaway_source = 'reviewed'
+AND (url = 'https://digitaleconomy.stanford.edu/publication/canaries-in-the-coal-mine-six-facts-about-the-recent-employment-effects-of-artificial-intelligence/'
+OR url = 'https://www.nber.org/papers/w33777');
+
