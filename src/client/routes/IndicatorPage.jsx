@@ -8,7 +8,7 @@ import { useContextDrawer } from '@/components/chrome/ContextDrawer';
 import { LoadingBlock, ErrorBlock } from '@/components/Page';
 import ChartCard from '@/components/charts/ChartCard';
 import SeriesChart from '@/components/charts/SeriesChart';
-import { readerDescription } from '@/components/indicatorProse';
+import { readerDescription, countryScopedCaption } from '@/components/indicatorProse';
 import { isFuturePeriod } from '@/components/periodModel';
 import { fmt, fmtDate, displayUnit } from '@/lib/format';
 import { isProjected } from '../../shared/observationQuality.js';
@@ -61,7 +61,7 @@ export default function IndicatorPage() {
   if (isPending) return <LoadingBlock rows={3} />;
   if (isError) return <ErrorBlock error={error} what="this series" />;
 
-  const caption = indicator.caption_plain;
+  const caption = countryScopedCaption(indicator, selectedCountry);
 
   /* The description column holds build notes as well as reader prose — see
      indicatorProse.js. Trimmed at render until the column is split. */
