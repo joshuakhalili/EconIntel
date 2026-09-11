@@ -68,6 +68,18 @@ const CLAUSE_END = /[,;:—]/g;
 /** Below this, what is left is a fragment rather than a description. */
 const TOO_SHORT = 30;
 
+/** A question placement's rationale cannot travel to a different country.
+ * Missing scope (including older API responses) is not proof of a match.
+ * Keep the source description above the chart; do not rewrite geography.
+ */
+export function countryScopedCaption(indicator, selectedCountry) {
+  if (!indicator?.has_country_dim) return indicator?.caption_plain ?? null;
+  if (!selectedCountry || !indicator.caption_country_iso3) return null;
+  return selectedCountry.toUpperCase() === indicator.caption_country_iso3.toUpperCase()
+    ? indicator.caption_plain ?? null
+    : null;
+}
+
 /** The last index at which `pattern` matches before `limit`, or -1. */
 function lastMatchBefore(text, pattern, limit) {
   pattern.lastIndex = 0;

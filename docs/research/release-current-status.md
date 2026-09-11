@@ -1,5 +1,19 @@
 # Diffusion intervention — current release record
 
+## Production rollout — 11 September 2026
+
+PR [#8](https://github.com/joshuakhalili/EconIntel/pull/8) merged at 16:05 UTC as `79966c792d812544c72ba304016bc0b0073cb585`. The approved Arman labs Vercel project serves this commit at https://trydiffusion.vercel.app. All eight additive migrations preceded deployment; the twelve new seeds committed together at 16:06 UTC only after the new null-safe reader was confirmed live. Historical seeds were not replayed.
+
+Production now holds 101,177 stored observations (96,263 nonnull), 99 economies and six aggregates. Ninety-eight economies have more than six usable active measures. Both new WDI series received 2,678 rows; Census has 21 current-use observations through 6 September. Existing production histories were retained. The guarded research import committed 756 families, 2,021 versions, 59 historical discovery runs, 5,147 placements and 910 source checks, with zero skipped bindings. Imported discovery costs and source checks retain staging provenance, not new production activity. Five lens and four scenario narrations were regenerated deterministically.
+
+Production CI and scheduled-deployment smoke passed. A separate authenticated canonical-URL run passed 30 checks, including the exact merge SHA, countries, current editorial dispositions, research, narration, app routes and CSP; the optional durable-error sink remains unconfigured and its assertion is skipped. All 12 production data-integrity gates, 39 chart-group checks and exact editorial bindings pass. GDELT freshness passes for the retained August history (11 days old against the 75-day limit), but its live refresh and provider probe returned HTTP 429 and wrote no observations. Availability is explicitly failed; freshness is not a new daily-completeness certification. World Bank, DBnomics, Census and the post-import OpenAlex citation probes passed.
+
+Browser verification identified a US-specific question-placement caption reused on a correctly selected UK indicator page. A scoped follow-up corrects caption selection without changing data or country selection. The final deployment report records its verification. Existing recoverable homepage hydration/WebGL warnings and the stated economic evidence limits remain disclosed; no human review, causal identification or independent study replication is claimed.
+
+Fresh recovery branch `br-icy-scene-zargns8u` remains available until 25 September 16:49 London time. Application-only rollback is unsafe after the qualitative seeds; recovery must account for intervening production writes. The original local checkout is preserved.
+
+## Historical pre-production checkpoint
+
 11 September 2026, checkpoint after the 16:51 London recovery-branch creation. Branch `codex/diffusion-intervention`, based on `a93ea26`, with current packaged-runtime commit `897bd87`. **Release verification in progress, not production deployment confirmation.** The user requires all original deliverables before publication; none are deferred. Version 1.1.0 and the GitHub/Vercel destination are approved. Optional project settings remain unchanged.
 
 ## Implemented and verified locally

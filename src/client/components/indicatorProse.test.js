@@ -12,7 +12,24 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { readerDescription } from './indicatorProse.js';
+import { readerDescription, countryScopedCaption } from './indicatorProse.js';
+
+describe('indicator captions retain their question-placement country scope', () => {
+  const indicator = { has_country_dim: true, caption_country_iso3: 'USA', caption_plain: 'This chart initially shows the US.' };
+  test('UK data never inherits the US question caption', () => {
+    assert.equal(countryScopedCaption(indicator, 'GBR'), null);
+    assert.equal(countryScopedCaption(indicator, 'USA'), indicator.caption_plain);
+    assert.equal(countryScopedCaption(indicator, 'usa'), indicator.caption_plain);
+  });
+  test('unknown scope and older server payloads fail closed', () => {
+    assert.equal(countryScopedCaption({ ...indicator, caption_country_iso3: null }, 'GBR'), null);
+    assert.equal(countryScopedCaption({ has_country_dim: true, caption_plain: 'US.' }, 'GBR'), null);
+    assert.equal(countryScopedCaption(indicator, null), null);
+  });
+  test('non-country series preserve their caption without changing its words', () => {
+    assert.equal(countryScopedCaption({ ...indicator, has_country_dim: false }, null), indicator.caption_plain);
+  });
+});
 
 /* dbn.AMECO.ZVGDF.GBR.3.0.0.0.ZVGDF */
 const AMECO =

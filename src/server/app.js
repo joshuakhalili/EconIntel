@@ -1403,7 +1403,8 @@ app.get('/api/indicators/:id', route(async (req, res) => {
             o.n AS observation_count,
             o.first_period, o.last_period,
             q.slug AS question_slug, q.question,
-            qi.caption_plain, qi.caption_expert
+            qi.caption_plain, qi.caption_expert,
+            qi.country_iso3 AS caption_country_iso3
        FROM indicators i
        LEFT JOIN sources s ON s.id = i.source_id
        LEFT JOIN LATERAL (
