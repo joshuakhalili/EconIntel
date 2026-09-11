@@ -5,8 +5,8 @@
  * RSS feeds have no memory: they return the most recent items and nothing
  * older. An indicator built from them starts empty on first run and grows one
  * day at a time, so you would wait a year to see a year of trend. GDELT indexes
- * global news back to 2017 and will count matches server-side, which means a
- * full history arrives in one request instead of being accumulated.
+ * news and counts matches server-side. Stored history starts in2017; normal
+ * scheduled recovery now fetches one complete month under a strict budget.
  *
  * WHAT WE STORE, AND WHY IT IS SMALL
  * We do not download articles. We ask GDELT for a timeline and receive one
@@ -57,7 +57,7 @@ export const AI_ECONOMY_QUERY =
 /**
  * GDELT publishes 1 request / 5 seconds. Observed behaviour is stickier than
  * that: a short burst produced roughly 100 seconds of refusal. 8 seconds is
- * deliberately slack — this job runs on a schedule with no deadline, and being
+ * deliberately slack — the retry budget accounts for this spacing, and being
  * throttled costs far more time than waiting.
  */
 const REQUEST_SPACING_MS = 8_000;
@@ -79,7 +79,7 @@ async function paced() {
  * never fires. So the body is inspected before parsing, and a throttle is
  * raised as a retryable condition rather than a parse failure.
  */
-async function fetchTimeline(url) {
+async function fetchTimeline(url, { timeoutMs = 90_000 } = {}) {
   await paced();
 
   let response;
@@ -88,7 +88,7 @@ async function fetchTimeline(url) {
       headers: {
         'User-Agent': USER_AGENT,
       },
-      signal: AbortSignal.timeout(240_000),
+      signal: AbortSignal.timeout(timeoutMs),
       // The whole reason this adapter was broken. See SLOW_CONNECT in
       // lib/http.js: Node applies its own ~10s connect ceiling underneath the
       // signal above, so every request to this host failed at 10.5s no matter
@@ -163,25 +163,28 @@ async function fetchTimeline(url) {
 }
 
 /** Retry on throttling with escalating backoff. */
-async function fetchWithBackoff(url, { retries = 3 } = {}) {
+export async function fetchWithBackoff(url, { retries = 1, totalBudgetMs = 180_000,
+  request = fetchTimeline, now = Date.now, wait = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+  if (!Number.isInteger(retries) || retries < 0 || retries > 3) throw new RangeError('GDELT retries must be 0–3');
+  if (!Number.isFinite(totalBudgetMs) || totalBudgetMs < 1 || totalBudgetMs > 240_000) throw new RangeError('GDELT budget must be 1–240000ms');
+  const deadline = now() + totalBudgetMs;
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      return await fetchTimeline(url);
+      const remaining = deadline - now() - REQUEST_SPACING_MS;
+      if (remaining <= 0) throw new HttpError('GDELT recovery budget exhausted', { url });
+      return await request(url, { timeoutMs: Math.min(90_000, remaining) });
     } catch (error) {
       lastError = error;
       // 429 throttle, 502 unparseable, 504 connect timeout — all transient.
-      if (![429, 502, 504].includes(error.status)) throw error;
-      /*
-       * 15s, 30s, 60s, 120s. The ladder used to start at 30s and run to 240s
-       * — 450 seconds of pure sleeping — because it was tuned for a connect
-       * timeout that fired on every attempt. That failure is fixed at the
-       * transport now, so the only transient left is GDELT's real throttle,
-       * which is documented at one request per five seconds and was observed
-       * clearing inside 90 seconds. Halving the worst case.
-       */
-      const delay = 15_000 * 2 ** attempt;
-      if (attempt < retries) await new Promise((r) => setTimeout(r, delay));
+      if (![429, 500, 502, 503, 504].includes(error.status)) throw error;
+      // Default one retry after15 seconds; any larger opt-in count still
+      // shares the same total budget and caps individual waits at30 seconds.
+      const delay = Math.min(30_000, 15_000 * 2 ** attempt);
+      if (attempt < retries) {
+        if (now() + delay + REQUEST_SPACING_MS >= deadline) throw new HttpError('GDELT recovery budget exhausted', { url });
+        await wait(delay);
+      }
     }
   }
   throw lastError;
@@ -201,7 +204,7 @@ function stamp(date) {
  * @param {string} [options.query]
  * @returns {Promise<Array<{date: string, value: number, norm: number, share: number}>>}
  */
-export async function fetchDailyVolume({ from, to, query = AI_ECONOMY_QUERY } = {}) {
+export async function fetchDailyVolume({ from, to, query = AI_ECONOMY_QUERY, request = fetchWithBackoff, requireDaily = false } = {}) {
   if (config.useFixtures) {
     throw new HttpError('Fixture mode: no recorded GDELT response', { url: BASE });
   }
@@ -244,7 +247,7 @@ export async function fetchDailyVolume({ from, to, query = AI_ECONOMY_QUERY } = 
       `&mode=TimelineVolRaw&format=json` +
       `&STARTDATETIME=${stamp(cursor)}&ENDDATETIME=${stamp(chunkEnd)}`;
 
-    const data = await fetchWithBackoff(url);
+    const data = await request(url);
     const chunk = data?.timeline?.[0]?.data;
 
     if (!Array.isArray(chunk)) {
@@ -258,6 +261,7 @@ export async function fetchDailyVolume({ from, to, query = AI_ECONOMY_QUERY } = 
   const seen = new Set();
 
   for (const point of series) {
+    if (requireDaily && !/^\d{8}T000000Z$/.test(String(point.date))) throw new HttpError('GDELT recovery requires daily resolution', { url: BASE });
     // Dates arrive as 'YYYYMMDDTHHMMSSZ'.
     const iso = String(point.date ?? '').slice(0, 8);
     if (iso.length !== 8) continue;
@@ -333,6 +337,25 @@ export function toMonthlyObservations(points, indicatorId = 'derived.ai_news_vol
 
 /** Fetch and shape in one call, for the runner. */
 export async function ingestNewsVolume() {
-  const points = await fetchDailyVolume();
+  return recoverLatestCompleteMonth();
+}
+
+/** Recovery is intentionally one complete month, not a nine-year replay. A
+ * missing daily denominator is an outage, not zero attention. Fail before any
+ * upsert when the provider returns a partial month or a different resolution.
+ */
+export async function recoverLatestCompleteMonth({ now = new Date(), fetch = fetchDailyVolume } = {}) {
+  const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const first = from.toISOString().slice(0, 10), limit = to.toISOString().slice(0, 10);
+  const points = (await fetch({ from, to, requireDaily: true })).filter((p) => p.date >= first && p.date < limit);
+  const days = (to - from) / 86400000;
+  const dates = new Set(points.map((p) => p.date));
+  if (points.length !== days || dates.size !== days || points.some((p) => !Number.isFinite(p.value) || p.value < 0 || !Number.isFinite(p.norm) || p.norm <= 0 || p.value > p.norm)) {
+    throw new HttpError('GDELT recovery returned incomplete/invalid daily coverage; historical data preserved', { url: BASE });
+  }
+  for (let i = 0; i < days; i++) {
+    if (!dates.has(new Date(+from + i * 86400000).toISOString().slice(0, 10))) throw new HttpError('GDELT daily calendar has gaps', { url: BASE });
+  }
   return toMonthlyObservations(points);
 }

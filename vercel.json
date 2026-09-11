@@ -11,7 +11,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 15,
-      "includeFiles": "public/index.html"
+      "includeFiles": "{public/index.html,docs/research/editorial-review-ledger.json,docs/research/country-measurement-dispositions.json}"
     }
   },
   "redirects": [
@@ -62,6 +62,14 @@
     {
       "source": "/data",
       "destination": "/app"
+    },
+    {
+      "source": "/countries",
+      "destination": "/app"
+    },
+    {
+      "source": "/country/:iso3",
+      "destination": "/api/index"
     },
     {
       "source": "/data/:id",

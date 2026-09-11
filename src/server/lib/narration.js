@@ -1,4 +1,9 @@
 /**
+ * VERSION 2: production narration now uses typed fact IDs and deterministic
+ * rendering (narration-facts.js). The legacy numeric/direction validators and
+ * historical notes below remain as a regression corpus, NOT a truth gate for
+ * new prose. No model-generated sentence reaches the storage or reader path.
+ *
  * Grounded narration — the LLM layer, and the gate that makes it safe.
  *
  * ─────────────────────────────────────────────────────────────────────────────
@@ -79,7 +84,7 @@
 
 import { createHash } from 'node:crypto';
 import { query } from '../db/pool.js';
-import { config } from '../config.js';
+import { FACT_NARRATION_VERSION, typedNarration, verifiedNarration } from './narration-facts.js';
 
 /**
  * Bump to invalidate every cached narration at once.
@@ -89,7 +94,7 @@ import { config } from '../config.js';
  * cache, indefinitely, which is the kind of bug that is discovered months
  * later by reading something that sounds wrong.
  */
-export const PROMPT_VERSION = 'v1-2026-08-30';
+export const PROMPT_VERSION = FACT_NARRATION_VERSION;
 
 /** Never invent, never cite, never round. Short because the model is 8B. */
 const SYSTEM_PROMPT = [
@@ -258,7 +263,7 @@ export function allowedNumbers(grounding) {
  * Capped at six series. The whole point is a summary, and an 8B model handed
  * fourteen rows writes a list — which the labour lens proved on the first run.
  */
-export function buildLensGrounding(lens, tickers) {
+export function buildLensGrounding(lens, tickers, today = new Date().toISOString().slice(0, 10)) {
   const usable = (tickers ?? [])
     .filter((t) => Number.isFinite(t.latest_value))
     .slice(0, 6);
@@ -272,11 +277,22 @@ export function buildLensGrounding(lens, tickers) {
   return {
     lens: lens.name,
     series: usable.map((t) => ({
+      indicator_id: t.indicator_id ?? null,
       name: t.label ?? t.name,
-      unit: t.unit_symbol ?? t.unit ?? null,
+      unit: t.unit ?? t.unit_symbol ?? null,
+      country: t.latest_country ?? t.default_country_iso3 ?? null,
+      source_url: t.source_url ?? null,
+      value_status: t.latest_period_end && t.latest_period_end >= today
+        ? [t.latest_status, 'reference_period_not_complete'].filter(Boolean).join(';')
+        : t.latest_status ?? null,
+      previous_status: t.previous_status ?? null,
+      comparison_blocked: t.latest_country !== t.previous_country || (t.has_country_dim === true && !t.default_country_iso3)
+        || Boolean(t.latest_period_end && t.latest_period_end >= today),
       latest: asDisplayed(t.latest_value, t.decimals),
       previous: asDisplayed(t.previous_value, t.decimals),
       period: t.latest_period ?? null,
+      period_end: t.latest_period_end ?? null,
+      previous_period: t.previous_period ?? null,
     })),
   };
 }
@@ -405,7 +421,8 @@ export function buildSimulationGrounding(scenarioName, countryIso3, run) {
 
   for (const { key, label, unit } of SIMULATION_SERIES) {
     if (!Number.isFinite(last[key])) continue;
-    series.push({ name: label, previous: baselineOf(key), latest: last[key], unit, period });
+    series.push({ indicator_id: key, name: label, previous: baselineOf(key), latest: last[key], unit, period,
+      previous_period: 'no-injection baseline' });
   }
 
   /*
@@ -836,55 +853,6 @@ function flatten(node, out = {}, prefix = '') {
  * the output is usable, and a more capable model would fail it in subtler ways
  * rather than fewer.
  */
-async function callModel(prompt, { signal } = {}) {
-  const { accountId, model } = config.cloudflare;
-  const token = config.keys.cloudflare;
-
-  if (!accountId || !token) {
-    throw new Error(
-      'Workers AI is not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN.'
-    );
-  }
-
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-        // Two sentences. A larger budget produces a third that wanders.
-        max_tokens: 160,
-        // Low but not zero: at 0 this model repeats stock phrasings across
-        // every lens, which reads worse than variation.
-        temperature: 0.3,
-      }),
-      signal: signal ?? AbortSignal.timeout(30_000),
-    }
-  );
-
-  if (!response.ok) {
-    // The token is in the header, not the URL, so the message is safe to store.
-    throw new Error(`Workers AI returned ${response.status}`);
-  }
-
-  const payload = await response.json();
-  const content =
-    payload?.result?.choices?.[0]?.message?.content ??
-    payload?.result?.response ??
-    null;
-
-  if (typeof content !== 'string') {
-    throw new Error('Workers AI returned no content');
-  }
-  return content.trim();
-}
 
 /**
  * Render a grounding payload as the DATA block the model sees.
@@ -921,7 +889,7 @@ function renderGrounding(grounding) {
  * @param {object} options
  * @param {string} options.scope        e.g. 'lens:prices'
  * @param {object} options.grounding    SQL-computed facts, the only numbers allowed
- * @param {string} options.instruction  what to write, one line
+ * @param {object} [options.selection]  one or two known fact IDs; never prose
  * @param {string[]} [options.indicatorIds] what it was allowed to discuss
  * @param {boolean} [options.force]     bypass the cache
  * @param {string} [options.inputHash]  cache key, when the caller addresses this
@@ -936,11 +904,11 @@ function renderGrounding(grounding) {
 export async function narrate({
   scope,
   grounding,
-  instruction,
   indicatorIds = [],
   force = false,
-  attempts = 2,
   inputHash: inputHashOverride,
+  selection,
+  read = query,
 }) {
   /*
    * The cache key. Normally the grounding's own hash — same numbers, same
@@ -951,80 +919,44 @@ export async function narrate({
    * slider values, and the run they identify has to resolve to a narration
    * without the page reconstructing the exact grounding object this script
    * built. Overriding the key is safe because the guarantee that matters is
-   * unchanged — the stored `grounding` column still holds the numbers the prose
-   * was checked against, and `validate()` still ran against them.
+   * unchanged — the stored `grounding` column holds the bound fact tuples and
+   * readers reconstruct the deterministic rendering against current facts.
    */
   const inputHash = inputHashOverride ?? groundingHash(grounding);
 
-  if (!force) {
-    const { rows } = await query(
-      `SELECT body FROM narrations
+  if (!force && !selection) {
+    const { rows } = await read(
+      `SELECT body, grounding FROM narrations
         WHERE scope = $1 AND input_hash = $2 AND prompt_version = $3
           AND (expires_at IS NULL OR expires_at > now())
         LIMIT 1`,
       [scope, inputHash, PROMPT_VERSION]
     );
-    if (rows.length > 0) return { body: rows[0].body, cached: true };
+    const cached = verifiedNarration(rows[0], grounding);
+    if (cached) return { body: cached.body, cached: true };
   }
 
-  const prompt = [
-    instruction,
-    '',
-    'DATA (these are the only numbers you may write):',
-    renderGrounding(grounding),
-  ].join('\n');
-
-  /*
-   * Retried, but never repaired. A failed narration is regenerated from the
-   * same prompt — it is not handed its own mistake and asked to fix it, which
-   * turns the gate into a negotiation and tends to produce output that games
-   * the check rather than obeying the rule.
-   */
-  const failures = [];
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    let body;
-    try {
-      body = await callModel(prompt);
-    } catch (error) {
-      failures.push(`call failed: ${error.message}`);
-      continue;
-    }
-
-    const verdict = validate(body, grounding);
-    if (!verdict.ok) {
-      failures.push(
-        `${verdict.reason}${verdict.offending.length ? `: ${verdict.offending.join(', ')}` : ''}`
-      );
-      continue;
-    }
-
-    await query(
+  const result = typedNarration(grounding, selection);
+  if (!result) return null;
+  await read(
       `INSERT INTO narrations
          (scope, input_hash, body, grounding, indicator_ids, model, prompt_version)
        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
        ON CONFLICT (scope, input_hash, prompt_version) DO UPDATE
-         SET body = EXCLUDED.body, generated_at = now()`,
+         SET body = EXCLUDED.body, grounding = EXCLUDED.grounding,
+             model = EXCLUDED.model, generated_at = now(), expires_at = NULL`,
       [
         scope,
         inputHash,
-        body,
-        JSON.stringify(grounding),
+        result.body,
+        JSON.stringify(result.grounding),
         indicatorIds,
-        config.cloudflare.model,
+        'deterministic:typed-facts',
         PROMPT_VERSION,
       ]
     );
 
-    return { body, cached: false };
-  }
-
-  /*
-   * Nothing is stored and nothing is returned. The page renders without a
-   * narration, which is the correct outcome: the reader loses a paragraph of
-   * summary and keeps every guarantee the site makes about its numbers.
-   */
-  console.warn(`[narration] ${scope} produced nothing usable — ${failures.join(' | ')}`);
-  return null;
+  return { body: result.body, cached: false };
 }
 
 export const __testing = { numericForms, renderGrounding, SYSTEM_PROMPT };

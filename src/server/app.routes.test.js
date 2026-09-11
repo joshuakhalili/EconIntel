@@ -309,10 +309,11 @@ describe('/api/questions/:slug — the editorial page', () => {
       ['FROM question_indicators qi', over.indicators ?? []],
       ['FROM questions\n      WHERE lens_id', over.siblings ?? []],
       ['FROM report_figures f', over.figures ?? []],
+      ['FROM research_claim_snapshots c', over.research ?? []],
     ]);
   }
 
-  test('answers 200 with the question and its four attached collections', async () => {
+  test('answers 200 with the question and its five attached collections', async () => {
     stubQuestion({
       indicators: [{ indicator_id: 'x', role: 'hero', sort_order: 1, name: 'X' }],
       siblings: [{ slug: 'entry-level', question: 'Are entry-level jobs disappearing?', sort_order: 1 }],
@@ -324,7 +325,7 @@ describe('/api/questions/:slug — the editorial page', () => {
     const body = await response.json();
     assert.equal(body.slug, 'entry-level');
     assert.equal(typeof body.question, 'string');
-    for (const key of ['indicators', 'reading', 'siblings', 'figures']) {
+    for (const key of ['indicators', 'reading', 'siblings', 'figures', 'research']) {
       assert.ok(Array.isArray(body[key]), `${key} should be an array`);
     }
     assert.equal(body.indicators[0].role, 'hero');
@@ -379,6 +380,7 @@ describe('/api/questions/:slug — the editorial page', () => {
     assert.deepEqual(body.reading, []);
     assert.deepEqual(body.siblings, []);
     assert.deepEqual(body.figures, []);
+    assert.deepEqual(body.research, []);
   });
 });
 
@@ -472,7 +474,7 @@ describe('caching headers, which are the gate\'s second line', () => {
   function stubStatus({ counts = {}, runs = [], stale = [], sources = [] } = {}) {
     stub([
       ['AS sources_registered', [{ observations: 0, documents: 0, indicators: 0, ...counts }]],
-      ['FROM ingestion_runs', runs],
+      ['SELECT job_name, source_id, status, started_at', runs],
       ['AS ingest_gap_days', stale],
       ['WITH catalogued AS', sources],
     ]);
@@ -524,7 +526,8 @@ describe('caching headers, which are the gate\'s second line', () => {
      */
     stubStatus({
       counts: { sources_registered: 25 },
-      sources: [{ id: 'fred' }, { id: 'eurostat' }, { id: 'worldbank' }],
+      sources: [{ id: 'fred', observations: 1 }, { id: 'eurostat', observations: 1 }, { id: 'worldbank', observations: 1 },
+        { id: 'gdelt', observations: 0, documents: 0, verification_state: 'failed', verified_at: '2026-09-10' }],
     });
 
     const { counts } = await (await get('/api/status', { signedIn: false })).json();

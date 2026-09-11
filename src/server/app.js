@@ -32,6 +32,8 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 import { config, describeIntegrations } from './config.js';
+import { sourceCapabilities } from './lib/source-capabilities.js';
+import { hasSeriesBreak } from '../shared/observationQuality.js';
 import { query } from './db/pool.js';
 import { securityHeaders, rateLimit, sameOriginOnly } from './lib/security.js';
 import { recentDocuments, documentsInWindow, documentsForLens } from './repositories/documents.js';
@@ -46,6 +48,8 @@ import {
 } from './repositories/simulations.js';
 import cookieParser from 'cookie-parser';
 import { globe } from './repositories/globe.js';
+import { listCountryCoverage, countryCoverage } from './repositories/countries.js';
+import { researchWorkflowForQuestion } from './repositories/research-workflow.js';
 import * as auth from './lib/auth.js';
 import { reportServerError, describeErrorSink, redact } from './lib/observability.js';
 
@@ -486,7 +490,8 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
            ), measured AS (
              SELECT i.source_id,
                     count(*)::int                                                AS observations,
-                    max(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period
+                    max(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period,
+                    max(o.period_end) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period_end
                FROM observations o
                JOIN indicators i ON i.id = o.indicator_id AND i.is_active
               GROUP BY i.source_id
@@ -495,18 +500,29 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
                FROM documents
               GROUP BY source_id
            )
+           , successful AS (
+             SELECT source_id, max(finished_at) AS last_success
+               FROM ingestion_runs WHERE status = 'succeeded' GROUP BY source_id
+           )
            SELECT s.id, s.name, s.homepage_url, s.licence, s.attribution_text,
                   s.credibility,
+                  success.last_success,
+                  verification.state AS verification_state, verification.checked_at AS verified_at,
+                  verification.scope AS verification_scope,
                   COALESCE(m.observations, 0) AS observations,
                   COALESCE(c.indicators, 0)   AS indicators,
                   m.latest_period,
+                  m.latest_period_end,
                   COALESCE(d.documents, 0)    AS documents
              FROM sources s
              LEFT JOIN catalogued c ON c.source_id = s.id
              LEFT JOIN measured   m ON m.source_id = s.id
              LEFT JOIN reported   d ON d.source_id = s.id
+             LEFT JOIN successful success ON success.source_id = s.id
+             LEFT JOIN source_verifications verification ON verification.source_id = s.id
             WHERE COALESCE(m.observations, 0) > 0
                OR COALESCE(d.documents, 0) > 0
+               OR verification.source_id IS NOT NULL
             ORDER BY COALESCE(m.observations, 0) DESC,
                      COALESCE(d.documents, 0) DESC, s.name`),
   ]);
@@ -530,14 +546,16 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
          Several rows in `sources` — nasa_gibs, copernicus and a set of gov:
          entries — back no observation and no document at all. Naming an
          institution as a source while holding none of its data is a
-         credibility claim rather than a coverage one, so the query above
-         already excludes them and this counts what survives. */
-      sources_supplying: sources.rows.length,
+         credibility claim rather than a coverage one. Verification-only rows
+         feed the capability register but are excluded from this count and
+         the supplying-source list below. */
+      sources_supplying: sources.rows.filter((source) => source.observations > 0 || source.documents > 0).length,
     },
     recentRuns: runs.rows,
     staleIndicators: stale.rows,
-    sources: sources.rows,
+    sources: sources.rows.filter((source) => source.observations > 0 || source.documents > 0),
     integrations: describeIntegrations(),
+    capabilities: sourceCapabilities(describeIntegrations(), sources.rows),
   });
 }));
 
@@ -983,6 +1001,12 @@ app.get('/api/questions', route(async (_req, res) => {
   res.json({ questions: await listQuestions() });
 }));
 
+app.get('/api/questions/:slug/research-workflow', route(async (req,res) => {
+  const result=await researchWorkflowForQuestion(req.params.slug);
+  if(!result)return res.status(404).json({error:'Question not found'});
+  res.json(result);
+}));
+
 app.get('/api/questions/:slug', route(async (req, res) => {
   const question = await getQuestion(req.params.slug);
   if (!question) return res.status(404).json({ error: `No question "${req.params.slug}"` });
@@ -1244,6 +1268,11 @@ app.get('/api/series', route(async (req, res) => {
 
   if (!rebase && !squashed) return res.json({ series, indexed: false });
 
+  if (series.some(s => s.points.some(hasSeriesBreak))) {
+    return res.json({ series, indexed: false, indexBlocked: true,
+      indexNote: 'Rebasing withheld because a source reports a break in series. Raw series are shown separately; changes across the break are not comparable.' });
+  }
+
   /**
    * Index every series to 100 at the first period they ALL cover.
    *
@@ -1418,13 +1447,25 @@ app.get('/api/indicators/:id', route(async (req, res) => {
  * an identifier terminates the string, and the file stops parsing — which is
  * exactly how this endpoint shipped broken once.
  */
+app.get('/api/countries', route(async (req, res) => {
+  res.json({ countries: await listCountryCoverage() });
+}));
+
+app.get('/api/countries/:iso3', route(async (req, res) => {
+  const iso3 = req.params.iso3.toUpperCase();
+  if (!/^[A-Z]{3}$/.test(iso3)) return res.status(400).json({ error: 'Use a three-letter country code' });
+  const result = await countryCoverage(iso3);
+  if (!result) return res.status(404).json({ error: 'Country not found' });
+  res.json(result);
+}));
+
 app.get('/api/indicators/:id/countries', route(async (req, res) => {
   const { rows } = await query(
-    `SELECT o.country_iso3, c.name, count(*)::int AS n
+    `SELECT o.country_iso3, c.name, c.is_aggregate, count(*)::int AS n
        FROM observations o
        JOIN countries c ON c.iso3 = o.country_iso3
-      WHERE o.indicator_id = $1 AND o.country_iso3 IS NOT NULL
-      GROUP BY o.country_iso3, c.name
+      WHERE o.indicator_id = $1 AND o.country_iso3 IS NOT NULL AND o.value IS NOT NULL
+      GROUP BY o.country_iso3, c.name, c.is_aggregate
       ORDER BY lower(c.name)`,
     [req.params.id]
   );

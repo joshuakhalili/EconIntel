@@ -113,6 +113,7 @@ export default function DataPage() {
         it can be reused. Nothing here is filtered by argument — this is the
         whole catalogue, including the series that turned out to show nothing.
       </PageHero>
+      <Link to="/countries" className="mt-5 inline-flex min-h-11 items-center text-body-regular text-text-secondary underline underline-offset-4">Browse coverage by country →</Link>
 
       {/* The controls sit in the page rather than in a panel. A filter bar
           boxed in its own surface is a dashboard convention; here it is one

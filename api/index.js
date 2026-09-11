@@ -83,6 +83,7 @@ const DYNAMIC_ROUTES = [
   { prefix: '/q/', sql: 'SELECT 1 FROM questions WHERE slug = $1 AND is_active' },
   { prefix: '/lens/', sql: 'SELECT 1 FROM lenses WHERE slug = $1 AND is_active' },
   { prefix: '/data/', sql: 'SELECT 1 FROM indicators WHERE id = $1' },
+  { prefix: '/country/', sql: 'SELECT 1 FROM countries WHERE iso3 = upper($1)' },
   {
     prefix: '/simulate/',
     sql: "SELECT 1 FROM simulation_scenarios WHERE slug = $1 AND status = 'published'",

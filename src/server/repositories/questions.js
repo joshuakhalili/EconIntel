@@ -12,6 +12,7 @@
 
 import { query } from '../db/pool.js';
 import { figuresForQuestion } from './figures.js';
+import { researchForQuestion } from './research.js';
 
 /** All active questions, for navigation. */
 export async function listQuestions() {
@@ -72,11 +73,11 @@ export async function getQuestion(slug) {
   const { rows: reading } = await query(
     `SELECT DISTINCT ON (url)
             id, title, publisher, published::text, url, kind, stance, takeaway,
-            takeaway_source, takeaway_ref,
+            takeaway_source, takeaway_ref, review_actor, sort_order,
             CASE WHEN question_id IS NULL THEN 'lens' ELSE 'question' END AS scope
        FROM question_reading
       WHERE question_id = $1 OR lens_id = $2
-      ORDER BY url, (question_id IS NULL)`,
+      ORDER BY url, (question_id IS NULL), sort_order, id`,
     [questions[0].id, questions[0].lens_id]
   );
 
@@ -88,12 +89,13 @@ export async function getQuestion(slug) {
   reading.sort(
     (a, b) =>
       (a.scope === 'lens') - (b.scope === 'lens') ||
+      (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
       (b.published ?? '').localeCompare(a.published ?? '')
   );
 
   const { rows: indicators } = await query(
     `SELECT qi.indicator_id, qi.role, qi.sort_order, qi.chart_group,
-            qi.country_iso3, qi.caption_plain, qi.caption_expert,
+            qi.country_iso3, qi.caption_plain, qi.caption_expert, qi.series_panel,
             i.name, i.description, i.unit, i.unit_symbol, i.decimals,
             i.cadence, i.quantity_kind, i.confidence_tier, i.source_id,
             i.source_url, i.higher_is_better, i.has_country_dim,
@@ -107,12 +109,13 @@ export async function getQuestion(slug) {
        JOIN indicators i ON i.id = qi.indicator_id
        LEFT JOIN sources s ON s.id = i.source_id
        LEFT JOIN LATERAL (
-         SELECT count(*)::int          AS n,
-                min(period_start)::text AS first_period,
+         SELECT count(*) FILTER (WHERE value IS NOT NULL)::int AS n,
+                min(period_start) FILTER (WHERE value IS NOT NULL)::text AS first_period,
                 -- Non-null only: an empty placeholder period is not coverage.
                 max(period_start) FILTER (WHERE value IS NOT NULL)::text AS last_period
            FROM observations
           WHERE indicator_id = i.id
+            AND (NOT i.has_country_dim OR country_iso3 = COALESCE(qi.country_iso3, i.default_country_iso3))
        ) o ON true
       WHERE qi.question_id = $1 AND i.is_active
       ORDER BY
@@ -156,8 +159,14 @@ export async function getQuestion(slug) {
    * kind of object.
    */
   const figures = await figuresForQuestion(questions[0].id);
+  // The review exporter retains full snapshots. The reading UI already has
+  // the figures, captions and readings, so repeating that history per claim
+  // would inflate every page without adding reader-visible information.
+  const research = (await researchForQuestion(questions[0].id)).map(
+    ({ editorial_snapshot, fingerprint, ...claim }) => claim
+  );
 
-  return { ...questions[0], indicators, reading, siblings, figures };
+  return { ...questions[0], indicators, reading, siblings, figures, research };
 }
 
 /**

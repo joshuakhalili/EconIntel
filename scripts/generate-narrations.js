@@ -1,4 +1,7 @@
 /**
+ * V2: stores deterministic fact-ID summaries; no language-model call or API key.
+ * The operational rationale below is historical context from the retired V1.
+ *
  * Write the lens narrations, offline.
  *
  * WHY THIS IS A SCRIPT AND NOT A REQUEST HANDLER

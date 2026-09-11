@@ -27,7 +27,8 @@ import {
 } from '../lib/simulation.js';
 /* Only the version constant — importing narration's module does NOT bring a
    model call into the web tier. Nothing here calls `narrate()`. */
-import { PROMPT_VERSION } from '../lib/narration.js';
+import { PROMPT_VERSION, buildSimulationGrounding } from '../lib/narration.js';
+import { verifiedNarration } from '../lib/narration-facts.js';
 
 /**
  * Which real series and which real deals sit alongside each scenario.
@@ -309,7 +310,7 @@ export async function runSimulation(slug, countryIso3, suppliedInputs) {
      */
     input_hash: inputHash,
     ...results,
-    narration: narrations[0] ?? null,
+    narration: verifiedNarration(narrations[0], buildSimulationGrounding(scenario.name, country, results)),
   };
 }
 

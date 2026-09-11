@@ -235,12 +235,11 @@ export default function OverviewPage() {
               No figure here is invented — and where a machine wrote the prose, it says so
             </dt>
             <dd className="mt-1 text-body-regular text-text-secondary">
-              Every figure is computed in SQL from a named source, and every claim is written by
-              a person — with one exception, labelled wherever it appears. Each lens page
-              carries a short summary paragraph written by a language model from at most six of
-              that lens&rsquo;s own ticker figures. It sits below the figures it describes, under
-              a heading saying a machine wrote it, and the exact numbers the model was handed are
-              one click away underneath it
+              Indicators retain named sources; report figures retain their report references.
+              Research claims show their review status, including agent-drafted material awaiting
+              verification. Automated summaries use fixed templates from source-bound facts, not
+              free-form language-model prose. Values remain tied to their country, unit, period
+              and provider qualifications. The exact facts and selected IDs are available underneath
               {lenses[0]?.slug && (
                 <>
                   {' — '}

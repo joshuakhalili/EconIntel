@@ -92,6 +92,10 @@ describe('a bad request body is the caller\'s fault, and is answered as one', ()
 });
 
 describe('the provenance endpoint is reachable without an account', () => {
+  test('research workflow remains behind the reader gate',async()=>{
+    const response=await fetch(`${base}/api/questions/productivity/research-workflow`);
+    assert.equal(response.status,401);
+  });
   test('/api/status is registered above the auth gate', async () => {
     /*
      * Structural rather than a request, because /api/status is the one route

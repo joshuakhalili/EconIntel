@@ -133,7 +133,7 @@ export default function RankedBarChart({ members = [], onPick }) {
       };
     });
     // `requests` is rebuilt every render; the payloads are what actually change.
-  }, [a.data, b.data, c.data, members]);
+  }, [a.data, b.data, c.data, d.data, members]);
 
   const isPending = !tooWide && !nothingToDraw && requests.some((r) => r.isPending);
   const failed = requests.find((r) => r.isError);
@@ -261,6 +261,7 @@ export default function RankedBarChart({ members = [], onPick }) {
                         {fmtDate(entity.latest.date, cadence)} reading — no newer one exists
                       </span>
                     )}
+                    {entity.breakBetween && <p className="text-caption-1-medium text-warn">Earlier comparison withheld: source-reported break in series.</p>}
                     {entity.baseline ? (
                       <span className="block text-caption-1-regular text-text-tertiary">
                         from {fmt(entity.baseline.value, decimals)}

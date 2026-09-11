@@ -1,8 +1,8 @@
 import { RiExternalLinkLine } from '@remixicon/react';
 import { SERIES_COLORS } from '@/lib/format';
-import { figureBasisNote, describeFigureChart, figureTableModel } from './chartModel';
+import { figureBasisNote, describeFigureChart, figureTableModel, figureValueLabel } from './chartModel';
 import ChartDataTable from './ChartDataTable';
-
+import { reviewLabel } from '@/lib/reviewLabel';
 /*
  * The thirteen chart honesty behaviours this project treats as non-negotiable
  * are written down once, next to this file, in HONESTY.md. Four of them are
@@ -99,7 +99,7 @@ export default function FigureChart({ figure }) {
    */
   const tooManySeries = series.length > SERIES_COLORS.length;
 
-  const values = points.map((p) => Number(p.value));
+  const values = points.filter((p) => p.value != null && Number.isFinite(Number(p.value))).map((p) => Number(p.value));
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);
   const span = max - min || 1;
@@ -187,15 +187,18 @@ export default function FigureChart({ figure }) {
                 {label}
               </span>
 
-              {/* The track stops short of the right edge so the direct label on
-                  the longest bar has somewhere to go. Margin rather than
-                  padding: the bars are absolutely positioned, and a percentage
-                  width resolves against the padding box, so padding here would
-                  not shrink them. */}
-              <div className="mr-11 flex flex-col gap-[2px]">
+              {/* Labels follow each bar in normal flow: their full value and
+                  forecast wording can wrap without overrunning a narrow card. */}
+              <div className="min-w-0 flex flex-col gap-[2px]">
                 {series.map((name, i) => {
                   const point = points.find((p) => p.label === label && (p.series ?? '') === name);
                   if (!point) return null;
+                  if (point.value == null || !Number.isFinite(Number(point.value))) {
+                    return <p key={name} className="text-caption-1-regular text-text-secondary" data-qualitative-finding>
+                      {figureValueLabel(point)}
+                      {BASIS_MARK[point.basis] && <span className="text-warn"> · {BASIS_MARK[point.basis]}</span>}
+                    </p>;
+                  }
                   const value = Number(point.value);
                   // Bars are positioned from the zero line rather than from the
                   // left edge, so a negative value grows leftwards from it.
@@ -203,7 +206,8 @@ export default function FigureChart({ figure }) {
                   const left = value >= 0 ? zeroAt : zeroAt - width;
 
                   return (
-                    <div key={name} className="relative h-6">
+                    <div key={name}>
+                    <div className="relative h-6">
                       {/* The zero line, drawn only when there is something on
                           both sides of it — otherwise it is just the left edge
                           and a rule there reads as a chart border. */}
@@ -233,12 +237,12 @@ export default function FigureChart({ figure }) {
                         }}
                         aria-hidden
                       />
-                      {/* Direct label on every bar. With this few values a
-                          legend-and-axis arrangement costs a lookup and gives
-                          nothing back. */}
+                    </div>
+                      {/* Direct label remains attached to every bar, including
+                          negative values and full forecast/scenario wording. */}
                       <span
-                        className="figure absolute top-1/2 -translate-y-1/2 whitespace-nowrap pl-2 text-caption-1-regular text-text-primary"
-                        style={{ left: `${value >= 0 ? left + width : zeroAt}%` }}
+                        className="figure mt-1 block min-w-0 break-words text-caption-1-regular text-text-primary"
+                        data-figure-value-label=""
                       >
                         {format(value, figure.decimals)}
                         {figure.unit_symbol}
@@ -246,6 +250,7 @@ export default function FigureChart({ figure }) {
                           <span className="text-warn"> · {BASIS_MARK[point.basis]}</span>
                         )}
                       </span>
+                    {point.value_note && <p className="mt-1 text-caption-1-regular text-text-secondary">{point.value_note}</p>}
                     </div>
                   );
                 })}
@@ -259,7 +264,7 @@ export default function FigureChart({ figure }) {
             decimals: figure.decimals,
             unitSymbol: figure.unit_symbol,
           })}
-          caption={`Every bar in this figure as numbers: ${figure.title}.`}
+          caption={`Every numeric or qualitative finding in this figure: ${figure.title}.`}
         />
         </>
       )}
@@ -288,9 +293,7 @@ export default function FigureChart({ figure }) {
             <RiExternalLinkLine className="size-3.5" aria-hidden />
           </a>
           <span>· {figure.page_ref}</span>
-          {figure.figure_source === 'extracted' && (
-            <span>· read from the source, not yet checked by a person</span>
-          )}
+          <span>· {reviewLabel(figure.figure_source, figure.review_actor)}</span>
         </p>
       </div>
     </figure>

@@ -54,8 +54,8 @@ second axis lets any two series be made to cross wherever the author wants.
 Series on different scales are rebased server-side to index 100 at a shared
 base period instead (`/api/series?index=true`).
 
-- `src/client/components/charts/LineChart.jsx:34` — contains `ONE Y-AXIS, ALWAYS.`
-- `src/client/components/charts/LineChart.jsx:168` — contains `<YAxis`
+- `src/client/components/charts/LineChart.jsx:35` — contains `ONE Y-AXIS, ALWAYS.`
+- `src/client/components/charts/LineChart.jsx:176` — contains `<YAxis`
 
 Coverage: `render-only — not covered here`
 
@@ -66,8 +66,8 @@ technique. It is permitted only for an index moving in a tight band around 100,
 where forcing zero flattens the whole shape into a line at the top of the
 frame — and even then only with behaviour 3.
 
-- `src/client/components/charts/chartModel.js:104` — contains `const nearZero = min >= 0 && min < range * 0.35;`
-- `src/client/components/charts/chartModel.js:105` — contains `const floor = nearZero ? 0 : indexed ? niceFloor(min, range) : Math.min(0, min);`
+- `src/client/components/charts/chartModel.js:107` — contains `const nearZero = min >= 0 && min < range * 0.35;`
+- `src/client/components/charts/chartModel.js:108` — contains `const floor = nearZero ? 0 : indexed ? niceFloor(min, range) : Math.min(0, min);`
 
 Coverage: `unit`
 
@@ -76,9 +76,9 @@ Coverage: `unit`
 Not in a caption, not in a footnote — above the frame, where the reader is
 looking at the shape it changes.
 
-- `src/client/components/charts/chartModel.js:112` — contains `axisTruncated: floor > 0,`
-- `src/client/components/charts/LineChart.jsx:117` — contains `{axisTruncated && (`
-- `src/client/components/charts/LineChart.jsx:119` — contains `Axis does not start at 0`
+- `src/client/components/charts/chartModel.js:115` — contains `axisTruncated: floor > 0,`
+- `src/client/components/charts/LineChart.jsx:125` — contains `{axisTruncated && (`
+- `src/client/components/charts/LineChart.jsx:127` — contains `Axis does not start at 0`
 
 Coverage: `unit (partial)`
 
@@ -93,7 +93,7 @@ clamp is inside `rankEntities` so there is nowhere for a prop to be added.
 - `src/client/components/charts/FigureChart.jsx:41` — contains `THE ZERO BASELINE IS NOT A DEFAULT HERE, IT IS THE RULE`
 - `src/client/components/charts/FigureChart.jsx:103` — contains `const max = Math.max(0, ...values);`
 - `src/client/components/charts/FigureChart.jsx:104` — contains `const min = Math.min(0, ...values);`
-- `src/client/components/charts/chartModel.js:308` — contains `domain: [Math.min(0, ...values), Math.max(0, ...values)],`
+- `src/client/components/charts/chartModel.js:313` — contains `domain: [Math.min(0, ...values), Math.max(0, ...values)],`
 
 Coverage: `unit`
 
@@ -103,9 +103,9 @@ A straight segment across missing months asserts data that was never collected.
 A date missing for one series becomes `null` in the row rather than a skipped
 key, which is what lets `connectNulls={false}` break it.
 
-- `src/client/components/charts/chartModel.js:79` — contains `row[s.label] = split.projectedDates.has(date) ? null : value;`
-- `src/client/components/charts/LineChart.jsx:202` — contains `connectNulls={false}`
-- `src/client/components/charts/LineChart.jsx:224` — contains `connectNulls={false}`
+- `src/client/components/charts/chartModel.js:82` — contains `row[s.label] = split.projectedDates.has(date) || hasSeriesBreak(point) ? null : value;`
+- `src/client/components/charts/LineChart.jsx:210` — contains `connectNulls={false}`
+- `src/client/components/charts/LineChart.jsx:232` — contains `connectNulls={false}`
 
 Coverage: `unit (partial)`
 
@@ -116,8 +116,8 @@ period) it shares an axis with true index points while meaning something else.
 The dash is not the disclosure: a reader who does not know the convention reads
 a dashed line as a line, so the label says "(raw units)" too.
 
-- `src/client/components/charts/SeriesChart.jsx:51` — contains `(raw units)`
-- `src/client/components/charts/LineChart.jsx:199` — contains `strokeDasharray={s.raw ? '5 4' : undefined}`
+- `src/client/components/charts/SeriesChart.jsx:52` — contains `(raw units)`
+- `src/client/components/charts/LineChart.jsx:207` — contains `strokeDasharray={s.raw ? '5 4' : undefined}`
 
 Coverage: `render-only — not covered here`
 
@@ -137,8 +137,8 @@ Nothing stops a chart group pairing an annual series with a monthly one — only
 matching units are enforced. The axis follows the finer cadence, and that is
 said out loud rather than blended away.
 
-- `src/client/components/charts/SeriesChart.jsx:95` — contains `{cadenceMismatch && (`
-- `src/client/components/charts/SeriesChart.jsx:97` — contains `These series report at different cadences`
+- `src/client/components/charts/SeriesChart.jsx:118` — contains `{cadenceMismatch && (`
+- `src/client/components/charts/SeriesChart.jsx:120` — contains `These series report at different cadences`
 
 Coverage: `render-only — not covered here`
 
@@ -157,11 +157,11 @@ title. `basis` (db/migrations/0025) is the per-point counterpart of
 `value_status`: a projected, scenario or expectation bar is hatched, marked in
 words at the end of the bar, and named in a note ABOVE the chart.
 
-- `src/client/components/charts/chartModel.js:130` — contains `export function splitProjected(points) {`
-- `src/client/components/charts/chartModel.js:141` — contains `bridgeDates.add(previous.date);`
-- `src/client/components/charts/LineChart.jsx:221` — contains `strokeDasharray="5 4"`
-- `src/client/components/charts/SeriesChart.jsx:70` — contains `const forecasts = mapped`
-- `src/client/components/charts/chartModel.js:546` — contains `export function figureBasisNote(points) {`
+- `src/client/components/charts/chartModel.js:133` — contains `export function splitProjected(points) {`
+- `src/client/components/charts/chartModel.js:144` — contains `bridgeDates.add(previous.date);`
+- `src/client/components/charts/LineChart.jsx:229` — contains `strokeDasharray="5 4"`
+- `src/client/components/charts/SeriesChart.jsx:71` — contains `const forecasts = mapped`
+- `src/client/components/charts/chartModel.js:563` — contains `export function figureBasisNote(points) {`
 - `src/client/components/charts/FigureChart.jsx:128` — contains `const basisNote = figureBasisNote(points);`
 
 Coverage: `unit (partial)`
@@ -197,8 +197,8 @@ silently choosing between them. It means the request was missing a filter,
 usually a country. Detected, never resolved — collapsing duplicates would hide
 the missing filter behind a plausible-looking line.
 
-- `src/client/components/charts/chartModel.js:58` — contains `const duplicateDates = series.some((s) => {`
-- `src/client/components/charts/LineChart.jsx:87` — contains `if (duplicateDates) {`
+- `src/client/components/charts/chartModel.js:59` — contains `const duplicateDates = series.some((s) => {`
+- `src/client/components/charts/LineChart.jsx:88` — contains `if (duplicateDates) {`
 
 Coverage: `unit (partial)`
 
@@ -207,7 +207,7 @@ Coverage: `unit (partial)`
 Identity never rests on colour alone. A reader who cannot separate two hues can
 still read the label, and can switch one off to see the other on its own.
 
-- `src/client/components/charts/LineChart.jsx:243` — contains `{series.length > 1 && (`
+- `src/client/components/charts/LineChart.jsx:251` — contains `{series.length > 1 && (`
 - `src/client/components/charts/SeriesLegend.jsx:14` — contains `Present whenever there is more than one series`
 
 Coverage: `render-only — not covered here`
@@ -228,10 +228,10 @@ relax because the output is a sentence rather than a line.
 The ranked bar form's label is the one that matters most, because its dates are
 load-bearing — see behaviour 10 and the note in `rankEntities`.
 
-- `src/client/components/charts/chartModel.js:362` — contains `export function describeSeriesChart(series, {`
-- `src/client/components/charts/chartModel.js:461` — contains `export function seriesTableModel(series, {`
-- `src/client/components/charts/ChartDataTable.jsx:38` — contains `<table className="sr-only">`
-- `src/client/components/charts/LineChart.jsx:134` — contains `aria-label={describeSeriesChart(series, { cadence, unit, indexed })}`
+- `src/client/components/charts/chartModel.js:367` — contains `export function describeSeriesChart(series, {`
+- `src/client/components/charts/chartModel.js:469` — contains `export function seriesTableModel(series, {`
+- `src/client/components/charts/ChartDataTable.jsx:38` — contains `<div className="sr-only">`
+- `src/client/components/charts/LineChart.jsx:142` — contains `aria-label={describeSeriesChart(series, { cadence, unit, indexed })}`
 - `src/client/components/charts/FigureChart.jsx:178` — contains `aria-label={describeFigureChart(points, {`
 - `src/client/components/charts/RankedBarChart.jsx:233` — contains `aria-label={describeRankedChart(ranked, { unit, cadence, decimals })}`
 - `src/client/components/charts/SimulationChart.jsx:97` — contains `aria-label={describeSimulation(rows, series, baseline)}`

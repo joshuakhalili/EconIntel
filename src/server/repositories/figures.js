@@ -34,7 +34,7 @@ async function figuresWhere(column, id) {
   const { rows } = await query(
     `SELECT f.id, f.publisher, f.source_title, f.source_url, f.published::text,
             f.title, f.subtitle, f.unit, f.unit_symbol, f.decimals,
-            f.axis_kind, f.note, f.page_ref, f.quote, f.figure_source,
+            f.axis_kind, f.note, f.page_ref, f.quote, f.figure_source, f.review_actor,
             COALESCE(
               (SELECT json_agg(json_build_object(
                         'series', p.series,
@@ -44,7 +44,9 @@ async function figuresWhere(column, id) {
                         -- computed from "42.1". The values are printed
                         -- decimals off a page, so a double holds them exactly
                         -- enough for a chart; the stored column stays NUMERIC.
-                        'value',  p.value::float8)
+                        'value',  p.value::float8,
+                        'basis', p.basis,
+                        'value_note', p.value_note)
                       ORDER BY p.sort_order, p.label)
                  FROM report_figure_points p
                 WHERE p.figure_id = f.id),

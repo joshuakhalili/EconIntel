@@ -35,7 +35,8 @@ export default function ChartDataTable({ model, caption }) {
   if (!model || model.rows.length === 0) return null;
 
   return (
-    <table className="sr-only">
+    <div className="sr-only">
+    <table>
       <caption>
         {caption}
         {model.truncated && (
@@ -74,5 +75,6 @@ export default function ChartDataTable({ model, caption }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

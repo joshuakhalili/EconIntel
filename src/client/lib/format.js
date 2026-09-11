@@ -71,6 +71,7 @@ export function fmtDate(iso, cadence) {
   if (cadence === 'quarterly') {
     return `${d.getUTCFullYear()} Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
   }
+  if (['daily', 'weekly', 'fortnightly'].includes(cadence)) return fmtDay(iso);
   return d.toLocaleDateString(LOCALE, { month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
@@ -112,7 +113,7 @@ export function inferCadence(points) {
   }
   gaps.sort((a, b) => a - b);
   const m = gaps[Math.floor(gaps.length / 2)];
-  return m > 200 ? 'annual' : m > 60 ? 'quarterly' : m > 20 ? 'monthly' : m > 4 ? 'weekly' : 'daily';
+  return m > 200 ? 'annual' : m > 60 ? 'quarterly' : m > 20 ? 'monthly' : m > 10 ? 'fortnightly' : m > 4 ? 'weekly' : 'daily';
 }
 
 /**

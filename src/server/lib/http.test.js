@@ -12,7 +12,42 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { redactUrl, HttpError, __testing } from './http.js';
+import { redactUrl, HttpError, __testing, fetchJson, retryDelayMs } from './http.js';
+
+test('Retry-After accepts seconds/dates and caps hostile delays', () => {
+  assert.equal(retryDelayMs('99999999', 0, 0), 30_000);
+  assert.equal(retryDelayMs('Thu, 01 Jan 1970 00:00:05 GMT', 0, 0), 5000);
+  assert.equal(retryDelayMs('0', 0, 0), 0);
+  for (const value of [null, '', 'nonsense', '-1']) assert.ok(retryDelayMs(value, 0, 0) <= 30_000);
+});
+
+test('HTTP retries consume a total budget, including Retry-After waits', async () => {
+  let clock = 0, calls = 0;
+  await assert.rejects(fetchJson('https://fixture.invalid/test', {
+    totalBudgetMs: 35_000, now: () => clock, rateLimit: async () => {},
+    wait: async (ms) => { clock += ms; },
+    request: async () => { calls++; return new Response('unavailable', { status: 503, headers: { 'retry-after': '30' } }); },
+  }), /budget exhausted/);
+  assert.equal(calls, 2);
+  assert.equal(clock, 30_000);
+});
+test('an excessive server Retry-After fails instead of retrying earlier than allowed', async () => {
+  let calls = 0;
+  await assert.rejects(fetchJson('https://fixture.invalid/test', { rateLimit: async () => {},
+    request: async () => { calls++; return new Response('slow down', { status: 429, headers: { 'retry-after': '999999' } }); },
+  }), /Retry-After exceeds bounded/);
+  assert.equal(calls, 1);
+});
+
+test('HTTP retries are bounded and stop immediately on nonretryable response', async () => {
+  let calls = 0;
+  await assert.rejects(fetchJson('https://fixture.invalid/test', { rateLimit: async () => {},
+    request: async () => { calls++; return new Response('denied', { status: 403 }); },
+  }), /HTTP 403/);
+  assert.equal(calls, 1);
+  await assert.rejects(fetchJson('https://fixture.invalid/test', { retries: 100 }), /retries/);
+  await assert.rejects(fetchJson('https://fixture.invalid/test', { totalBudgetMs: Infinity }), /totalBudgetMs/);
+});
 
 describe('redactUrl', () => {
   test('redacts api_key while preserving other parameters', () => {

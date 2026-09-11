@@ -3,7 +3,9 @@ import { RiSparkling2Line, RiArrowDownSLine } from '@remixicon/react';
 import { displayUnit, fmtDate, fmtDay, narrationStaleness, prefixSymbol } from '@/lib/format';
 
 /**
- * The one piece of prose on this site written by a machine, labelled as such.
+ * V2 renders source-bound facts with deterministic templates and exposes the
+ * exact tuples and IDs. Research text elsewhere may be agent-drafted and has
+ * its own review labels. The notes below document the retired V1 presentation.
  *
  * WHY THE LABEL IS NOT NEGOTIABLE
  *
@@ -60,6 +62,7 @@ export default function NarrationBlock({ narration, tickers }) {
   if (!narration?.body) return null;
 
   const series = narration.grounding?.series ?? [];
+  const deterministic = narration.grounding?.renderer_version?.startsWith('typed-facts-');
 
   // The comparison lives in lib/format.js so it can be tested without a DOM.
   const { narrationPeriod, tickerPeriod, stale } = narrationStaleness(series, tickers);
@@ -68,7 +71,7 @@ export default function NarrationBlock({ narration, tickers }) {
     <section className="mt-10 border-t border-border-button-default pt-6">
       <h2 className="eyebrow flex items-center gap-2 text-text-tertiary">
         <RiSparkling2Line className="size-3.5 shrink-0" aria-hidden />
-        Written by a machine from the figures above
+        {deterministic ? 'Automatically rendered from source-bound facts' : 'Legacy machine-written summary'}
         {narrationPeriod ? `, as they stood in ${fmtDate(narrationPeriod, 'monthly')}` : ''}
       </h2>
 
@@ -108,11 +111,9 @@ export default function NarrationBlock({ narration, tickers }) {
           {showGrounding && (
             <div className="mt-4 rounded-2xl border border-border-button-default p-4">
               <p className="prose-measure text-caption-1-regular text-text-tertiary">
-                This is the whole of what the model received. It was permitted to
-                write these numbers and no others, and every statement it made about
-                something rising or falling was checked against them before this was
-                stored. That is a guarantee about the arithmetic, not about the
-                sentence — a real number can still be used to say something wrong.
+                {deterministic
+                  ? 'This summary uses fixed templates, not generated prose. Fact IDs bind each value to its indicator, country, unit, period and provider qualifications. Cached text is checked against current facts before display. This does not establish causality or guarantee the source measurement is correct.'
+                  : 'This legacy summary was machine-written. Numeric checks alone do not establish that its interpretation is correct.'}
               </p>
 
               <ul className="mt-4 flex flex-col">
@@ -121,7 +122,7 @@ export default function NarrationBlock({ narration, tickers }) {
                     key={row.name}
                     className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-border-button-default py-2 first:border-t-0 first:pt-0"
                   >
-                    <span className="text-caption-1-regular text-text-secondary">{row.name}</span>
+                    <span className="text-caption-1-regular text-text-secondary">{row.name}{row.country || narration.grounding?.country ? ` — ${row.country ?? narration.grounding.country}` : ''}</span>
                     <span className="figure text-caption-1-regular text-text-tertiary">
                       <GroundingValue value={row.previous} unit={row.unit} arrow />
                       <span className="text-text-primary">
@@ -133,10 +134,18 @@ export default function NarrationBlock({ narration, tickers }) {
                           and neither is reformatted here — this panel's promise
                           is that it shows the payload, not a reading of it. */}
                       {row.period ? ` · ${row.period}` : ''}
+                      {row.previous_period ? ` · prior: ${row.previous_period}` : ''}
+                      {row.value_status ? ` · ${row.value_status}` : ''}
+                      {row.previous_status ? ` · prior status: ${row.previous_status}` : ''}
+                      {row.comparison_blocked ? ' · comparison withheld' : ''}
                     </span>
                   </li>
                 ))}
               </ul>
+              {deterministic && <details className="mt-3 text-caption-1-regular text-text-tertiary">
+                <summary>Exact fact IDs, selections and source references</summary>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify({ facts: narration.grounding.facts, selection: narration.grounding.selection }, null, 2)}</pre>
+              </details>}
 
               <p className="mt-4 text-caption-1-regular text-text-tertiary">
                 {narration.model}

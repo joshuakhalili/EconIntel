@@ -17,12 +17,9 @@
 # inline-script hashes to build the CSP — so Vercel needs both directories
 # present during the build itself, even though the function never imports them.
 #
-# One consequence worth stating: with landing/ and public/ absent from the
-# function bundle, `securityHeaders` finds no HTML and emits a CSP with no
-# inline-script hashes. That is correct rather than a degradation — the
-# function returns JSON, which has no inline scripts to permit. The HTML pages
-# get their CSP from the headers block in vercel.json, which is generated from
-# the same scan and gated by `npm run check:vercel`.
+# The dynamic-route fallback also needs public/index.html. Keep that exact
+# generated shell eligible; the rest of public remains static-only. HTML CSP
+# headers are generated from the same scan and gated by check:vercel.
 
 # EVERY PATTERN IS ANCHORED WITH A LEADING SLASH, AND THAT IS NOT STYLE.
 #
@@ -38,8 +35,16 @@
 #
 # A leading slash anchors to the project root, which is what was meant in
 # every case here.
-/public/
-/docs/
+/public/*
+!/public/index.html
+# Runtime evidence is read by the function. Ignore contents, not the parent
+# directory: Vercel cannot upload a file inside an excluded parent, even when
+# includeFiles names it. Only these two reviewed JSON inputs are admitted.
+/docs/*
+!/docs/research/
+/docs/research/*
+!/docs/research/editorial-review-ledger.json
+!/docs/research/country-measurement-dispositions.json
 /db/
 /.githooks/
 /landing/.mirror-cache/

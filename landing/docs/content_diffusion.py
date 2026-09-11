@@ -48,7 +48,7 @@ The template ships invented proof, and the rule is remove rather than invent:
 FIGURES, ALL READ FROM THE DATABASE ON 2026-09-03
   75,934 observations · 134 series with data · 17 sources · 44 countries
   AI adoption by firms, Eurostat/OECD 2025: Denmark 42.0%, Finland 37.8%,
-  Poland 8.4%. 16 of 44 countries have any adoption survey, 28 have none.
+  Poland 8.4%. 16 country scope varies have any adoption survey, 28 have none.
   Contested questions: 4. Institutional reports cited: 10, across 9 publishers.
   Every one of those queries is written out beside the string that uses it, so
   a later reader can re-run it rather than trust this paragraph.
@@ -143,7 +143,7 @@ HERO = {
     # before anyone noticed. Until the pill reads from /api/status it carries
     # the same "as of" date as the stats card further down the page, and the
     # two are updated together.
-    "System active": "134 series · 17 sources · 3 Sep 2026",
+    "System active": "Named sources · Dated evidence · Stated limits",
 
     # Every primary CTA — the header button and the ones dotted through the
     # page. The template points them at a waitlist; there is nothing to wait
@@ -202,7 +202,7 @@ HOW_IT_WORKS = {
     #       or exists (select 1 from documents d where d.source_id = s.id);
     #   -> 17   (8 with series, 9 documents-only)   read 2026-09-03
     "Collect emissions and environmental data from sensors, infrastructure, and external sources in real time.":
-        "Eight publishers behind the series — FRED, the World Bank, DBnomics, SEC EDGAR, Epoch AI, the US Federal Register, GDELT and the LBMA — and nine news and research feeds behind the reading list. Every series links back to its publisher with its licence stated.",
+        "Statistical agencies, public data services and research publishers supply the evidence. Series link to their sources and state their licences; the source register separates working feeds from unverified or unavailable connections.",
 
     "System Analysis": "Stated reasoning",
     "Analyze environmental performance, detect patterns, and monitor system behavior continuously.":
@@ -257,7 +257,7 @@ DEMO = {
     # oldest of them — the weakest guarantee, not the flattering one:
     #   select min(last_reviewed), max(last_reviewed) from questions
     #    where is_active;   -> 2026-08-28 .. 2026-09-02   read 2026-09-03
-    "Data is updated in real time": "Prose on every question rechecked since 28 August 2026",
+    "Data is updated in real time": "Evidence and review status shown on each question",
 }
 
 # ---------------------------------------------------------------------------
@@ -298,9 +298,9 @@ FEATURES = {
     #     (all 44 carry observations; the six aggregate rows — World, EU,
     #      Euro area, OECD, High income, Low & middle income — are not
     #      countries and are not counted as such)
-    "Unified system overview": "What this site holds",
+    "Unified system overview": "Historical dashboard illustration",
     "Real-time metrics across all connected sources.":
-        "Read from the database on 3 September 2026.",
+        "Illustration using the 3 September 2026 database snapshot, not live coverage. Open the app for current scope.",
     "42.1 g/kWh": "75,934",
     "Carbon intensity": "Observations",
     "1.8k MW": "134",
@@ -319,7 +319,7 @@ FEATURES = {
     # (the IMF appears twice with two different reports, which is why the two
     # counts differ and why both are given)
     "Collaborate on data, share insights and align decisions across your entire organization.":
-        "Ten institutional and consulting reports from nine publishers, cited and linked. Labelled by who produced it, never ranked.",
+        "Institutional and consulting reports, cited and linked. Claims are distinguished from extracted figures, with evidence scope and review status shown. A publisher name is not a quality guarantee.",
 
     # THE THREE SUB-LINES ARE NOT DECORATION EITHER. Each of these six rows is
     # a title and a description, and only the titles were ever mapped — so a
@@ -397,9 +397,9 @@ FEATURES = {
     # counts can be checked.
     "Early Alerts": "When sources disagree",
     "Detect potential issues before they impact your operations":
-        "Four pages are marked contested, and that is the finding",
+        "Disagreement needs a scope check, not a vote",
     "Stay ahead of risks by identifying anomalies and unusual patterns as they emerge.":
-        "Where credible sources reach opposite conclusions, the disagreement is reported rather than resolved.",
+        "Results can differ because populations, outcomes, methods and periods differ. The source scope is checked before treating findings as contradictions.",
     "Monitor unusual patterns": "Evidence strength on every page",
     "Track unexpected changes in your data":
         "Consistent, suggestive, insufficient or contested, printed beside the answer.",
@@ -412,7 +412,7 @@ FEATURES = {
         "When the series cannot separate the answers, the page says so instead of picking one.",
     "Act before it escalates": "Contested is stated, not smoothed over",
     "Respond early and reduce impact":
-        "Averaging two opposite findings into a middle number would be the dishonest option.",
+        "Unlike outcomes and populations are not averaged into a single economic effect.",
 
     "Monitoring": "Contested",
     "Emissions spike detected": "Sources disagree",
@@ -426,7 +426,7 @@ FEATURES = {
     # reads, and never matched the card, which is the first thing a reader
     # sees: an invented +18% carbon-intensity figure presented as a live alert,
     # directly above a section headed "The rules are the point" whose first
-    # rule is "No number is written by a model".
+    # rule is "Source-linked numbers, explicit review".
     #
     # The three fragments are keyed separately and the flat key is kept in step
     # with them, so all four surfaces say the same thing. The ", " between them
@@ -440,12 +440,12 @@ FEATURES = {
     #   IMF, Bridging Skill Gaps for the Future, p. 20 — "Estimated employment
     #     shortfall in AI-exposed occupations five years after AI skills appear
     #     locally"                                          read 2026-09-03
-    "Carbon intensity increased by ": "On whether AI-exposed jobs are shrinking, ",
-    "+18% in EU Central (Frankfurt)": "PwC and the IMF point opposite ways",
+    "Carbon intensity increased by ": "For AI and employment, ",
+    "+18% in EU Central (Frankfurt)": "PwC and IMF results cover different populations and outcomes",
     "driven by industrial output over the last 24 hours.":
-        "so the page shows both and stays marked contested.",
+        "so they are presented separately, not as opposing estimates of one effect.",
     "Carbon intensity increased by +18% in EU Central (Frankfurt), driven by industrial output over the last 24 hours.":
-        "On whether AI-exposed jobs are shrinking, PwC and the IMF point opposite ways, so the page shows both and stays marked contested.",
+        "For AI and employment, PwC and IMF results cover different populations and outcomes, so they are presented separately, not as opposing estimates of one effect.",
 }
 
 # ---------------------------------------------------------------------------
@@ -473,7 +473,7 @@ CAPABILITIES = {
     # Both are anchored in PAIRED on their neighbour in this section, which is
     # unique to it. Adding either one back here is now a build failure rather
     # than a silent overwrite.
-    "Connect all sources": "No number is written by a model",
+    "Connect all sources": "Source-linked numbers, explicit review",
     "Understand patterns": "Caveats are sections, not footnotes",
     "Turn raw data into clear, useful insights": "Stated under the answer and above every chart.",
     "Monitor in real time": "Evidence strength is always stated",
@@ -494,7 +494,7 @@ GLOBAL_STATS = {
     #   select min(period_start), max(period_start) from observations
     #    where indicator_id like '%.ai_any.%';   -> 2017-01-01 .. 2025-01-01
     "Track emissions, energy and system activity in real time across regions":
-        "The share of firms using AI, 2017 to 2025, from national statistical surveys",
+        "Enterprise AI-use survey examples. Populations and reference periods differ; these are not a global adoption ranking.",
 
     # THESE THREE ARE THE TILE LABELS ONLY. Their values are in PAIRED, because
     # the template uses the same two strings for the stats-card figures higher
@@ -512,16 +512,16 @@ GLOBAL_STATS = {
     #   select count(*) from countries where not is_aggregate;   -> 44
     #                                                       read 2026-09-03
     "EU Central": "measured",
-    "US West": "of 44 countries",
+    "US West": "country scope varies",
     "Asia Pacific": "annual surveys",
-    "+18% emissions": "16",
-    "Stable grid": "28 unmeasured",
+    "+18% emissions": "Survey",
+    "Stable grid": "gaps remain",
     # Not "4 points deep". Four is the Eurostat series' depth; across all
     # sixteen countries it runs from one point to six:
     #   select min(n), max(n) from (select count(*) n from observations
     #     where indicator_id like '%.ai_any.%' group by indicator_id) t;
     #   -> 1 (United Kingdom, 2020 only) .. 6 (South Korea, 2019-2024)
-    "+9% surge": "1 to 6 points",
+    "+9% surge": "uneven histories",
     "Active regions": "Eurostat and OECD enterprise surveys",
 }
 
@@ -540,19 +540,19 @@ FAQ = {
     # It said twenty-four, which was every row in the sources table including
     # eight that have never returned anything.
     "Data is gathered from sensors, infrastructure systems, and external providers, then unified into a single real-time stream.":
-        "From seventeen public sources — FRED, the World Bank, DBnomics, SEC EDGAR, Epoch AI, the US Federal Register and others. Nothing is redistributed: every series links back to its publisher with its licence stated, so you can take the data on the publisher's terms rather than trusting a chart here.",
+        "From named public sources including FRED, the World Bank, Census, DBnomics and SEC EDGAR, alongside research publishers. Series link to their sources and state their licences. The source register shows what is implemented, verified and current; a configured connection alone is not evidence of coverage.",
 
     "How often is the data updated?": "How often does it update?",
     "Data is continuously updated in real time, reflecting live changes across regions and systems.":
-        "Ingestion runs nightly. The prose does not — numbers move on their own and sentences do not follow them, so every page shows the date a person last checked its writing against its data.",
+        "A scheduled ingestion workflow checks available sources; successful runs and reference dates are shown separately. Data can lag its publication schedule. Numerical summaries are reconstructed from current facts, while research and editorial claims have separate review states.",
 
     "What kind of data can I track?": "Is any of this written by AI?",
     "You can monitor emissions, energy usage, industrial activity, and environmental signals across multiple regions.":
-        "No figure is. Every number is computed in SQL from a named source, and every claim is written by a person and dated. Where a takeaway from an outside report was read out of the document by a machine, the page says so and gives the page number so you can check it.",
+        "AI assists research and drafting. Numerical summaries use validated data facts rather than unconstrained generated numbers. Research claims and report extractions carry evidence and review states; machine extraction or a citation alone is not proof that a claim has been verified.",
 
     "How does the platform generate insights?": "What does 'contested' mean?",
     "The system analyzes incoming data, detects patterns, and highlights meaningful changes you can act on.":
-        "That credible sources reach opposite conclusions, and the disagreement is the finding. Four pages currently carry it. The alternative — picking whichever result is tidier — is the thing this site exists not to do.",
+        "That evidence supports competing interpretations. Different populations, methods or time periods may explain a disagreement; results are not treated as direct contradictions until their scope is checked. The unresolved question and limitations remain visible.",
 
     "Can I connect my own data sources?": "Can I use the data?",
     "Yes, you can integrate your own systems and combine them with external data for a complete view.":
@@ -560,7 +560,7 @@ FAQ = {
 
     "Is the data reliable?": "Where is this weakest?",
     "Data is validated and processed from multiple sources to ensure accuracy and consistency.":
-        "Country coverage. One country has real depth; thirteen of the forty-four carry six annual World Bank series and nothing else, and only the United States carries more than sixteen. Policy is thin. Occupation-level employment, which is what several questions actually need, is largely missing. All of that is stated on the pages it affects rather than hidden.",
+        "Coverage is uneven by country and question. Broad macroeconomic series are not direct evidence of AI adoption or impact. Comparable adoption surveys, occupation-level outcomes and causal identification remain limited. Country pages show usable series, reference dates and source-specific gaps rather than treating every country as equally measured.",
 
     "Didn’t find what you were looking for?": "Found something wrong?",
     "Reach out and we’ll help you get the answers you need.":
@@ -1418,7 +1418,7 @@ PAIRED = (
     # title; the lens list's near-identical "Connect all data sources" is a
     # different string and is not matched by it.
     ("Connect all sources", "Sync data from multiple systems",
-     "Computed in SQL from a named series, and dated where it is prose."),
+     "Series calculations and machine-assisted report extractions have different provenance. Review states and source locators show what has actually been checked."),
 )
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,513 @@
+{
+  "purpose": "Candidate alignment only; manually checked expert answers override these rules.",
+  "rules": [
+    {
+      "id": "construct-0",
+      "pattern": "\\b(?:filings?\\b|SEC\\b|public.company|corporate mention|disclos)",
+      "source_ids": [
+        "sec-edgar"
+      ],
+      "assessment": "The implemented numerator counts keyword-matching 10-K documents and the denominator counts 10-K filings. Documents can discuss risk or plans without adoption, and a document rate is not a unique-company deployment rate.",
+      "allowed_questions": [
+        "adoption",
+        "expectations",
+        "policy-lag",
+        "growth",
+        "who-funds-it"
+      ]
+    },
+    {
+      "id": "construct-1",
+      "pattern": "\\b(?:cloud uptake|cloud use|cloud services can|cloud.*adoption|cloud.*enabling)",
+      "source_ids": [
+        "eurostat-cloud"
+      ],
+      "assessment": "Paid cloud includes ordinary email, office software and storage. Therefore its use measures access to rented digital services, not the amount of AI work performed; comparing it with AI use does not identify an adoption gap."
+    },
+    {
+      "id": "construct-2",
+      "pattern": "\\b(?:surveys?\\b|enterprise.*use|adopt.*population|size threshold|sector.*threshold|(?:use|adoption|deployment) intensity|diffusion|adopter)",
+      "source_ids": [
+        "eurostat-ai",
+        "eurostat-cloud"
+      ],
+      "assessment": "A survey prevalence numerator is defined over eligible enterprises, not tasks or individuals. Matched size, sector, reference year and question wording are required; use frequency or intensity cannot be recovered from a yes/no use share.",
+      "allowed_questions": [
+        "adoption",
+        "diffusion-speed",
+        "rules-vs-adoption",
+        "policy-lag",
+        "growth"
+      ]
+    },
+    {
+      "id": "construct-3",
+      "pattern": "\\b(?:nominal|deflat|asset price|price adjustment|real investment|spending.*GDP|GDP.*spending)",
+      "source_ids": [
+        "bea-real"
+      ],
+      "assessment": "Nominal expenditure combines prices and quantities. Dividing by the matched asset-price index gives real investment; dividing nominal spending by nominal GDP answers a different share question. Unmatched baskets can reverse a historical size inference.",
+      "allowed_questions": [
+        "money",
+        "dot-com",
+        "software-not-steel",
+        "the-buildings",
+        "is-europe-in-this",
+        "computer-dividend",
+        "investment"
+      ]
+    },
+    {
+      "id": "construct-4",
+      "pattern": "\\b(?:capital stock|capital service|capital deepening|depreciation|stocks and|productive stocks)",
+      "source_ids": [
+        "bea-real",
+        "bls-productivity"
+      ],
+      "assessment": "Investment is a period flow, whereas a productive stock accumulates investment net of depreciation. Capital services per labour input additionally require asset weights and labour input; a spending change alone is not capital deepening."
+    },
+    {
+      "id": "construct-5",
+      "pattern": "\\b(?:labour productivity|output per hour|output per worker|hours worked|hours.*employment|employment.*hours)",
+      "source_ids": [
+        "bls-productivity"
+      ],
+      "assessment": "Output per worker and output per hour differ when hours per worker change. Productivity accounting requires matched real output and labour coverage; employment counts do not supply hours or an AI counterfactual."
+    },
+    {
+      "id": "construct-6",
+      "pattern": "\\b(?:unit labour cost|ULC\\b|compensation.*output|compensation.*productivity)",
+      "source_ids": [
+        "bls-productivity"
+      ],
+      "assessment": "Unit labour cost is labour compensation divided by real output. Its change combines compensation and productivity, so it is neither hourly pay nor uniquely the result of AI; faster compensation growth can raise it despite productivity gains."
+    },
+    {
+      "id": "construct-7",
+      "pattern": "\\b(?:TFP\\b|total factor|residual|growth.accounting|percentage points.*contribution|contribution.*percentage points)",
+      "source_ids": [
+        "bls-productivity"
+      ],
+      "assessment": "Growth-accounting contributions are weighted input-growth terms and TFP is the remaining output-growth residual. An unmatched contribution denominator or residual is not a financial return or a direct technology-treatment estimate."
+    },
+    {
+      "id": "construct-8",
+      "pattern": "\\b(?:J-curve|complementary investment|intangibl|organisational change|implementation.*resources|implementation cost)",
+      "source_ids": [
+        "jcurve",
+        "acemoglu"
+      ],
+      "assessment": "Complementary intangible investment can precede measured gains, which makes delay a possible mechanism. The framework does not prove hidden benefits, rule out weak usefulness, or establish the timing or magnitude in these aggregate series."
+    },
+    {
+      "id": "construct-9",
+      "pattern": "\\b(?:tasks?\\b|substitut|automati|displac|complementar|AI\\b.*demand|demand.*\\bAI\\b)",
+      "source_ids": [
+        "acemoglu"
+      ],
+      "assessment": "Task substitution and complementarity can push labour demand in opposite directions; demand expansion and implementation costs affect the net result. A task mechanism is logically possible but is not a measured net employment or output effect.",
+      "allowed_questions": [
+        "adoption",
+        "productivity",
+        "total-factor-productivity",
+        "jobs",
+        "entry-level",
+        "vacancies",
+        "aggregate-unemployment",
+        "ai-wages",
+        "clerical",
+        "sector-jobs",
+        "sector-output",
+        "exposed-productivity",
+        "labour-vs-compute",
+        "skills-shortage",
+        "growth",
+        "labour"
+      ]
+    },
+    {
+      "id": "construct-10",
+      "pattern": "\\b(?:unemployment|labour force|payroll|participation|employed.person)",
+      "source_ids": [
+        "bls-cps"
+      ],
+      "assessment": "Unemployment is defined relative to the labour force; employment counts, payroll jobs and population-adjusted rates differ. Changes in participation or multiple jobholding mean an aggregate rate cannot settle foregone hiring or occupation-specific losses."
+    },
+    {
+      "id": "construct-11",
+      "pattern": "\\b(?:vacanc|hires|hiring|separation|recruitment|opening)",
+      "source_ids": [
+        "bls-jolts",
+        "bls-cps"
+      ],
+      "assessment": "Vacancies are an unfilled-position stock, while hires and separations are period flows. A fall can follow weaker demand or changed matching and does not by itself identify redundancies, AI substitution or easier recruitment."
+    },
+    {
+      "id": "construct-12",
+      "pattern": "\\b(?:youth|graduate|new entrant|novice|less.experienced|entry.level)",
+      "source_ids": [
+        "bls-cps",
+        "ai-work"
+      ],
+      "assessment": "Age or education identifies a demographic group, not task exposure. Workplace gains among existing less-experienced employees concern their task performance, not whether employers create or remove entry-level vacancies."
+    },
+    {
+      "id": "construct-13",
+      "pattern": "\\b(?:advert|posting|wage premium|training|skill.*premium|premium.*skill)",
+      "source_ids": [
+        "report-pwc",
+        "report-imf-skills"
+      ],
+      "assessment": "Advertised wages and skill requirements describe selected vacancies. Occupation, employer and applicant selection can generate premiums; AI-specific requirements and all new skills are different regressors, so the estimates are not causal training returns.",
+      "allowed_questions": [
+        "ai-wages",
+        "entry-level",
+        "jobs",
+        "skills-shortage",
+        "labour",
+        "vacancies"
+      ]
+    },
+    {
+      "id": "construct-14",
+      "pattern": "\\b(?:SOC\\b|ISCO\\b|classification|industry boundar|occupational definition|sector composition)",
+      "source_ids": [
+        "bls-cps",
+        "bls-productivity"
+      ],
+      "assessment": "Classification and population boundaries determine which workers and output are counted. Similar labels or rebased levels do not supply a crosswalk; changes in outsourcing or composition can move averages without within-task productivity changes."
+    },
+    {
+      "id": "construct-15",
+      "pattern": "\\b(?:sector.*economy|employment share|sector.minus|share.*shock|pre.trend|control|counterfactual|causal|attribut|identification|(?:identify|identifies|identified|identifying)\\b.*(?:AI\\b|effect|caus))",
+      "source_ids": [
+        "acemoglu"
+      ],
+      "assessment": "A plotted difference is descriptive unless the comparison identifies the unobserved outcome without AI. Normalisation does not remove sector-specific shocks; attribution requires an exposure design, comparison assumptions and evidence against rival trends."
+    },
+    {
+      "id": "construct-16",
+      "pattern": "\\b(?:flat(?:ten(?:s|ed|ing)?)?\\b|zero effect|detectab|power analysis|null test|weak.*signal|no positive effect)",
+      "source_ids": [
+        "acemoglu",
+        "jcurve"
+      ],
+      "assessment": "Failure to see an aggregate change is not an estimated zero treatment effect. A detectable-effect claim needs a specified estimand, uncertainty and power; offsetting shocks or measurement alone do not establish a positive hidden effect either."
+    },
+    {
+      "id": "construct-17",
+      "pattern": "\\b(?:facility|facilities|register|nameplate|capacity|megawatt|construction|announcement|commission)",
+      "source_ids": [
+        "epoch-clusters",
+        "iea-energy"
+      ],
+      "assessment": "A public capacity listing may describe a plan or a discovered older site. Nameplate power, commissioned capacity, utilisation and energy consumed are distinct; inventory additions cannot be treated as newly completed or AI-only output.",
+      "allowed_questions": [
+        "building",
+        "frontier-compute",
+        "the-buildings",
+        "money",
+        "power",
+        "investment",
+        "materials"
+      ]
+    },
+    {
+      "id": "construct-18",
+      "pattern": "\\b(?:electric|(?:industrial|retail|wholesale|firm|available|nuclear) power|power (?:capacity|availability|supply|price|rating)|grid|tariff|connection|load\\b|fuel)",
+      "source_ids": [
+        "iea-energy",
+        "eurostat-power"
+      ],
+      "assessment": "Local grid and connection constraints can differ from national average tariffs. A price, a power rating and metered energy are different quantities, and fuel/network/contract conditions can change them without an AI-specific demand shock."
+    },
+    {
+      "id": "construct-19",
+      "pattern": "\\b(?:consumption band|band average|tax basis|tax treatment|semester|country mix|consumption weight|large buyer|purchas.*advantage)",
+      "source_ids": [
+        "eurostat-power"
+      ],
+      "assessment": "Price-band averages compare different customer groups with changing consumption weights, contracts and taxes. Holding thresholds fixed does not follow the same buyer, so a gap or inversion is not a causal quantity-discount estimate."
+    },
+    {
+      "id": "construct-20",
+      "pattern": "\\b(?:commodity|commodities|copper|nickel|aluminium|lithium|uranium|gold|silver)",
+      "source_ids": [
+        "iea-energy"
+      ],
+      "assessment": "A traded input price does not reveal the quantity or expenditure share attributable to computing facilities. Other industries, supply conditions and financial demand remain uncontrolled; the series is cost context, not verified construction or an AI-demand estimate."
+    },
+    {
+      "id": "construct-21",
+      "pattern": "\\b(?:semiconductor|microprocessor|chip price|chip count|hedonic|GPU)",
+      "source_ids": [
+        "bls-chip"
+      ],
+      "assessment": "A published semiconductor basket and a quality-adjusted microprocessor comparison do not equal current GPU performance per dollar. Historical matched-model bias motivates checking quality methods but cannot supply a corrected present-day index."
+    },
+    {
+      "id": "construct-22",
+      "pattern": "\\b(?:hosting|cloud.*price|compute.*price|price.*compute|software.development|service basket|equivalent.*task|quality.adjust|rebasing.*product)",
+      "source_ids": [
+        "bls-cloud",
+        "bls-chip"
+      ],
+      "assessment": "Hosting, applications and software-development contracts purchase different services. Index rebasing only rescales a series; constant-quality cost per AI task requires a matched benchmark, product coverage and quality method."
+    },
+    {
+      "id": "construct-23",
+      "pattern": "\\b(?:rule|regulat|president|proposal|document|publication|keyword|agency|legal|docket|effective date|policy)",
+      "source_ids": [
+        "nara"
+      ],
+      "assessment": "Federal Register records publications with different document types and legal functions. Publication date is not necessarily effectiveness; keyword matches and unlinked annual flows do not establish in-force obligations, conversion cohorts, burden or international absence.",
+      "allowed_questions": [
+        "policy",
+        "policy-lag",
+        "rules-vs-adoption",
+        "rule-conversion",
+        "executive-action",
+        "when-noticed",
+        "cost-of-compliance",
+        "regulation"
+      ]
+    },
+    {
+      "id": "construct-24",
+      "pattern": "\\b(?:cash flow|financ|venture|borrowing|equity|leases?\\b|debt|capex\\b|capital expenditure)",
+      "source_ids": [
+        "sec-finance"
+      ],
+      "assessment": "Capital expenditure is a use of funds, while operating cash flow, debt and equity are financing sources. Totals for different firms or national assets cannot be reconciled into a financing share without common scope and instruments."
+    },
+    {
+      "id": "construct-25",
+      "pattern": "\\b(?:stock.market|stock market|valuation|discount.rate|asset price|expected.*profit|share.price|market index)",
+      "source_ids": [
+        "sec-finance"
+      ],
+      "assessment": "A broad asset price combines expected cash flows and required returns across many firms. Without an AI-exposure universe and benchmark, it does not identify an AI valuation premium or separate expectations from discount-rate movements.",
+      "allowed_questions": [
+        "expectations",
+        "prices",
+        "who-funds-it"
+      ]
+    },
+    {
+      "id": "construct-26",
+      "pattern": "\\b(?:forecast|projected|scenario|outturn|partial.year|partial.month|vintage|revision|discontinued|endpoint|old observation|short histor|post.adoption histor)",
+      "source_ids": [
+        "bls-productivity"
+      ],
+      "assessment": "Observation date and evidence status must be preserved separately. A forecast does not become an outturn when its period begins, and unmatched or revised endpoints cannot establish a current common-window growth comparison."
+    },
+    {
+      "id": "construct-27",
+      "pattern": "\\b(?:percent|ratios?\\b|denominator|growth rate|growth window|time window|period.*match|matching.*period|common.*window)",
+      "source_ids": [
+        "bls-productivity"
+      ],
+      "assessment": "Levels, proportional changes and percentage-point differences use different denominators. A comparison requires the same outcome, base and overlapping period; arithmetic consistency alone does not establish an economic mechanism."
+    },
+    {
+      "id": "construct-28",
+      "pattern": "\\b(?:China|Chinese|urban.unit|chip output|currency conversion)",
+      "source_ids": [
+        "bls-productivity"
+      ],
+      "assessment": "The claim requires national industry and population definitions, not merely currency conversion. A generic productivity methodology cannot establish the exact Chinese coverage or current trend; the relevant series metadata must carry that evidence."
+    },
+    {
+      "id": "construct-29",
+      "pattern": "\\b(?:software investment|own.account|purchased.*software|custom software)",
+      "source_ids": [
+        "bea-real"
+      ],
+      "assessment": "Purchased and own-account software are investment-account categories, not simply retained programmers' salaries. Valuation and components need separate documentation before inferring labour retention or a real-volume change.",
+      "allowed_questions": [
+        "money",
+        "software-not-steel",
+        "dot-com",
+        "the-buildings",
+        "investment",
+        "is-europe-in-this"
+      ]
+    },
+    {
+      "id": "construct-30",
+      "pattern": "\\b(?:broad uptake|rank.*benefit|size of productivity|equal AI capability|Information is not synonymous|information sector)",
+      "source_ids": [
+        "eurostat-ai",
+        "acemoglu"
+      ],
+      "assessment": "Binary adoption and industry labels do not encode affected task shares or savings. Two industries with the same adoption rate can have different task mixes; an adoption ranking cannot imply a productivity-effect ranking."
+    },
+    {
+      "id": "construct-31",
+      "pattern": "\\b(?:distributional|net employment|net effect on jobs|firm.*expand|estimates have different estimands)",
+      "source_ids": [
+        "acemoglu",
+        "report-imf-skills",
+        "report-pwc"
+      ],
+      "assessment": "A net employment total sums gains and losses across firms and workers. PwC surviving-firm totals and IMF local exposure estimates concern different selected units, so neither disproves heterogeneous losses or can be averaged as one treatment effect."
+    },
+    {
+      "id": "construct-32",
+      "pattern": "\\b(?:new skills|different treatments|same return|Observed premiums|employer.*selection)",
+      "source_ids": [
+        "report-pwc",
+        "report-imf-skills"
+      ],
+      "assessment": "The IMF new-skill count is not restricted to AI, whereas PwC AI-posting comparisons use an AI skill definition. Selection and control sets differ; these are conditional advertised-wage associations, not alternative estimates of one training return."
+    },
+    {
+      "id": "construct-33",
+      "pattern": "\\b(?:band threshold|The bands|EU average.*composition)",
+      "source_ids": [
+        "eurostat-power"
+      ],
+      "assessment": "Consumption bands contain different customers rather than following identical firms. Aggregate weights and national mixes can change the mean price, so a change between bands cannot isolate a buyer-size discount."
+    },
+    {
+      "id": "construct-34",
+      "pattern": "\\b(?:occupational group|occupations|definitional|how jobs are classified|Levels can differ)",
+      "source_ids": [
+        "bls-cps"
+      ],
+      "assessment": "Occupational counts depend on survey concepts and classification membership. Two related occupation labels can cover different workers; reconciling the crosswalk is necessary before treating their level gap as substantive disagreement."
+    },
+    {
+      "id": "construct-35",
+      "pattern": "\\b(?:manufacturing.equipment|advanced equipment|product mix|productivity also changes)",
+      "source_ids": [
+        "bls-chip",
+        "bls-productivity"
+      ],
+      "assessment": "Product-basket composition and productive input mix affect the measured price or productivity aggregate. A change cannot be assigned to performance improvements or AI without matching those products and inputs."
+    },
+    {
+      "id": "construct-36",
+      "pattern": "\\b(?:dearer|basket definitions|service prices|these channels|useful computation|Producer price|index origin|indices.*cause|supply chain)",
+      "source_ids": [
+        "bls-cloud",
+        "bls-chip"
+      ],
+      "assessment": "Rebasing preserves each index's original product content. Equipment, hosting and services are different purchased outputs, so their growth gap cannot identify a common-task price or uniquely allocate energy, labour and margin effects.",
+      "allowed_questions": [
+        "markets",
+        "chip-prices",
+        "compute-price-abroad",
+        "prices",
+        "labour-vs-compute"
+      ]
+    },
+    {
+      "id": "construct-37",
+      "pattern": "\\b(?:margins|Pass-through|pass-through|purchase prices|capability|reliability|hour of labour|replace a worker)",
+      "source_ids": [
+        "acemoglu",
+        "bls-cloud"
+      ],
+      "assessment": "A substitution decision compares total costs for equivalent useful output, including implementation, reliability and supervision. Unmatched input-price growth does not provide that comparison, and pass-through requires market-demand and supply assumptions.",
+      "allowed_questions": [
+        "labour-vs-compute",
+        "cost-of-compliance"
+      ]
+    },
+    {
+      "id": "construct-38",
+      "pattern": "\\b(?:One counts people|long decline before|historical benchmark|earlier.*paper|versions of a paper|own sample|age ranges|education groups)",
+      "source_ids": [
+        "eurostat-ai",
+        "ai-work",
+        "bls-cps"
+      ],
+      "assessment": "Differences in population, outcome, exposure and paper version must be kept explicit. Earlier trends are baselines, not post-treatment effects; alternative versions are revisions of evidence rather than independent bounds."
+    },
+    {
+      "id": "construct-39",
+      "pattern": "\\b(?:definitions.*episodes|annualised|ICT flows|structures spending|ICT is broader|infrastructure around AI|different uses and sources|rented infrastructure|investment flow)",
+      "source_ids": [
+        "bea-real"
+      ],
+      "assessment": "Investment accounts classify assets and measure a flow over a specified period. Structures exclude installed equipment; broad ICT includes non-AI uses, and annualised quarterly flows must not be treated as unscaled quarterly totals or a complete project budget."
+    },
+    {
+      "id": "construct-40",
+      "pattern": "\\b(?:current cycle is unfinished|overshoot|overoptimism|spending growth|intellectual property|local productive|European and US investment)",
+      "source_ids": [
+        "bea-real",
+        "jcurve"
+      ],
+      "assessment": "Accounting scope and the location of recorded assets need not equal the location of productive use. This is a comparability or risk hypothesis, not a finding that a specific national difference is caused by IP relocation or that the current cycle must reverse."
+    },
+    {
+      "id": "construct-41",
+      "pattern": "\\b(?:whole.market|transparent universe|interest rates|non-AI earnings|these prices)",
+      "source_ids": [
+        "sec-finance"
+      ],
+      "assessment": "Observed broad equity prices are compatible with changed expected earnings or discount rates outside AI. An exposure universe and benchmark are necessary before decomposing the movement into an AI premium."
+    },
+    {
+      "id": "construct-42",
+      "pattern": "\\b(?:imports?\\b|imported\\b|new orders|real.orders|nominal orders|orders.output|delivery lag)",
+      "source_ids": [
+        "bea-real",
+        "bls-chip"
+      ],
+      "assessment": "Domestic production, imported equipment and orders cover different flows and timing. A nominal order value is not a real-volume production index; inventories and delivery lags prevent a mechanical one-to-one mapping.",
+      "allowed_questions": [
+        "orders-and-output",
+        "building",
+        "materials",
+        "investment"
+      ]
+    },
+    {
+      "id": "construct-43",
+      "pattern": "\\b(?:first.attention|term collision|Government may|shared attention|compliance burden|three channels|logical contradiction|coincident step|common technology|prevalence needs)",
+      "source_ids": [
+        "nara"
+      ],
+      "assessment": "Publication activity and search vocabulary are not a chronology of institutional awareness or a linked cohort of substantive obligations. Shared attention, prior proposals and terminology changes provide alternatives that counts alone cannot distinguish."
+    },
+    {
+      "id": "construct-44",
+      "pattern": "\\b(?:industrial price|local bottleneck|national shortage|contracts and geography)",
+      "source_ids": [
+        "iea-energy",
+        "eurostat-power"
+      ],
+      "assessment": "National industrial averages do not observe each facility's contract, connection queue or firm supply. A local bottleneck can coexist with adequate national capacity, and a price change alone does not locate that constraint."
+    },
+    {
+      "id": "construct-45",
+      "pattern": "\\b(?:National accounts|historical estimates|revised|Seasonally|matching the season|Rates and counts)",
+      "source_ids": [
+        "bls-productivity",
+        "bls-jolts"
+      ],
+      "assessment": "Release revisions, seasonal comparisons and rate denominators alter what a latest observation means. A claimed extreme requires the relevant full history and seasonal basis; metadata or an old endpoint alone cannot certify the result."
+    },
+    {
+      "id": "construct-46",
+      "pattern": "\\b(?:no.*treatment group|AI-specific treatment|trends.*already|long.run growth|visual change in slope|difference.*estimate|efficiency, scale)",
+      "source_ids": [
+        "acemoglu",
+        "bls-productivity"
+      ],
+      "assessment": "A descriptive trend or residual contains multiple influences and is not an untreated comparison. The absence of a tested break or exposure design prevents attribution of the observed aggregate difference to AI."
+    },
+    {
+      "id": "construct-47",
+      "pattern": "\\b(?:workers recruiting|employers recruiting|employment.retention)",
+      "source_ids": [
+        "bls-jolts",
+        "bea-real"
+      ],
+      "assessment": "Recruitment incidence, success at filling vacancies and retention of existing employees are separate margins. Fewer vacancies or resilient software spending cannot establish the employment-retention mechanism without matched employer evidence."
+    }
+  ]
+}

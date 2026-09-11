@@ -23,6 +23,7 @@
  */
 
 import { fmt, fmtDate, displayUnit } from '../../lib/format.js';
+import { hasSeriesBreak, crossesSeriesBreak, isProjected } from '../../../shared/observationQuality.js';
 
 /**
  * Row key for the dashed projected half of a series.
@@ -76,11 +77,13 @@ export function buildChartModel(series, cadence, indexed) {
 
       // A projected value is withheld from the solid line entirely, so the
       // measured line stops where the measurements stop.
-      row[s.label] = split.projectedDates.has(date) ? null : value;
+      // Preserve the observation in the data table, but leave a visible gap:
+      // joining it to the preceding point would imply a comparable change.
+      row[s.label] = split.projectedDates.has(date) || hasSeriesBreak(point) ? null : value;
 
       if (projected.has(s.label)) {
         row[projectedKey(s.label)] =
-          split.projectedDates.has(date) || split.bridgeDates.has(date) ? value : null;
+          !hasSeriesBreak(point) && (split.projectedDates.has(date) || split.bridgeDates.has(date)) ? value : null;
       }
     }
     return row;
@@ -132,12 +135,12 @@ export function splitProjected(points) {
   const bridgeDates = new Set();
 
   points.forEach((p, i) => {
-    if (p.value == null || p.value_status !== 'projected') return;
+    if (p.value == null || !isProjected(p)) return;
     projectedDates.add(p.date);
     // The measured point immediately before is drawn on both lines: without
     // it the forecast floats detached from the history it continues.
     const previous = points[i - 1];
-    if (previous && previous.value != null && previous.value_status !== 'projected') {
+    if (previous && previous.value != null && !isProjected(previous)) {
       bridgeDates.add(previous.date);
     }
   });
@@ -194,7 +197,7 @@ export function pickTicks(dates, maxLabels = 6) {
  * behind" rather than "more than the average period behind". A December-to-
  * January pair of annual surveys must not read as stale.
  */
-const PERIOD_DAYS = { daily: 1, weekly: 7, monthly: 31, quarterly: 92, annual: 366 };
+const PERIOD_DAYS = { daily: 1, weekly: 7, fortnightly: 14, monthly: 31, quarterly: 92, annual: 366 };
 
 const DAY = 86400000;
 
@@ -267,7 +270,8 @@ export function rankEntities(series, { cadence = 'annual' } = {}) {
       const baseline = sharedBaselineDate
         ? s.values.find((p) => p.date === sharedBaselineDate)
         : s.values[0];
-      const usable = baseline && baseline.date !== latest.date ? baseline : null;
+      const breakBetween = baseline && crossesSeriesBreak(s.points, baseline.date, latest.date);
+      const usable = baseline && baseline.date !== latest.date && !breakBetween ? baseline : null;
       const behind = daysBetween(latest.date, newestDate);
 
       return {
@@ -276,6 +280,7 @@ export function rankEntities(series, { cadence = 'annual' } = {}) {
         latest: { date: latest.date, value: latest.value },
         baseline: usable ? { date: usable.date, value: usable.value } : null,
         readings: s.values.length,
+        breakBetween: Boolean(breakBetween),
         // Strictly MORE than one whole period, so the ordinary publication lag
         // between two monthly releases is not dressed up as a warning.
         stale: behind > (PERIOD_DAYS[cadence] ?? PERIOD_DAYS.annual),
@@ -361,7 +366,7 @@ export function panelsOf(entities) {
  */
 export function describeSeriesChart(series, { cadence = 'annual', unit = '', indexed = false } = {}) {
   const drawn = series
-    .map((s) => ({ label: s.label, values: s.points.filter((p) => p.value != null) }))
+    .map((s) => ({ label: s.label, points: s.points, values: s.points.filter((p) => p.value != null) }))
     .filter((s) => s.values.length > 0);
 
   if (drawn.length === 0) return 'Line chart with no data drawn.';
@@ -379,6 +384,9 @@ export function describeSeriesChart(series, { cadence = 'annual', unit = '', ind
     const last = s.values.at(-1);
     if (s.values.length === 1) {
       return `${s.label}: one reading, ${fmt(last.value)} in ${fmtDate(last.date, cadence)}.`;
+    }
+    if (crossesSeriesBreak(s.points, first.date, last.date)) {
+      return `${s.label}: latest reading ${fmt(last.value)} in ${fmtDate(last.date, cadence)}. Historical comparison withheld because the source reports a break in series.`;
     }
     const direction =
       last.value > first.value ? 'up from' : last.value < first.value ? 'down from' : 'level with';
@@ -462,7 +470,7 @@ export function seriesTableModel(series, { cadence = 'annual', cap = TABLE_ROW_C
   const dates = [...new Set(series.flatMap((s) => s.points.map((p) => p.date)))].sort();
   const kept = dates.slice(Math.max(0, dates.length - cap));
 
-  const byLabel = series.map((s) => [s.label, new Map(s.points.map((p) => [p.date, p.value]))]);
+  const byLabel = series.map((s) => [s.label, new Map(s.points.map((p) => [p.date, p]))]);
 
   return {
     columns: ['Period', ...series.map((s) => s.label)],
@@ -471,8 +479,9 @@ export function seriesTableModel(series, { cadence = 'annual', cap = TABLE_ROW_C
       cells: [
         fmtDate(date, cadence),
         ...byLabel.map(([, points]) => {
-          const value = points.get(date);
-          return value == null ? 'no data' : fmt(value);
+          const point = points.get(date);
+          const value = point?.value;
+          return (value == null ? 'no data' : fmt(value)) + (point?.value_status ? ` — ${point.value_status}` : '');
         }),
       ],
     })),
@@ -500,7 +509,15 @@ export function rankedTableModel(ranked, { cadence = 'annual', decimals = 1 } = 
   };
 }
 
-/** A report figure's bars as a table. `basis` is a column only when one is recorded. */
+/** Missing/qualitative findings must never pass through Number(null) → 0. */
+export function figureValueLabel(point, { decimals = 0, unitSymbol = '' } = {}) {
+  if (point.value == null || !Number.isFinite(Number(point.value))) {
+    return point.value_note || 'No numeric estimate reported';
+  }
+  return `${fmt(Number(point.value), decimals)}${unitSymbol ?? ''}${point.value_note ? ` — ${point.value_note}` : ''}`;
+}
+
+/** A report figure's findings as a table. `basis` is a column only when recorded. */
 export function figureTableModel(points, { decimals = 0, unitSymbol = '' } = {}) {
   const hasSeries = points.some((p) => (p.series ?? '') !== '');
   const hasBasis = points.some((p) => p.basis);
@@ -517,7 +534,7 @@ export function figureTableModel(points, { decimals = 0, unitSymbol = '' } = {})
       cells: [
         p.label,
         ...(hasSeries ? [p.series || '—'] : []),
-        `${fmt(Number(p.value), decimals)}${unitSymbol ?? ''}`,
+        figureValueLabel(p, { decimals, unitSymbol }),
         ...(hasBasis ? [BASIS_WORDS[p.basis] ?? 'not recorded'] : []),
       ],
     })),
@@ -576,14 +593,14 @@ export function describeFigureChart(points, { unit = '', decimals = 0, unitSymbo
 
   const seriesNames = [...new Set(points.map((p) => p.series ?? '').filter(Boolean))];
   const head =
-    `Bar chart, ${points.length} bars` +
+    `Bar chart, ${points.filter((p) => p.value != null && Number.isFinite(Number(p.value))).length} numeric bars` +
     (seriesNames.length > 1 ? ` across ${seriesNames.length} series` : '') +
     `, measured in ${displayUnit(unit) || 'unstated units'}, drawn from a zero baseline.`;
 
   const bars = points.map((p) => {
     const name = p.series ? `${p.series}, ${p.label}` : p.label;
     const basis = p.basis && p.basis !== 'measured' ? ` — ${BASIS_WORDS[p.basis]}` : '';
-    return `${name}: ${fmt(Number(p.value), decimals)}${unitSymbol}${basis}.`;
+    return `${name}: ${figureValueLabel(p, { decimals, unitSymbol })}${basis}.`;
   });
 
   return [head, ...bars].join(' ');

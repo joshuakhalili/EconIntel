@@ -1,6 +1,11 @@
 # The research layer, and what it may and may not be used for
 
-## What is in here
+The 1.1.0 intervention adds the [claim-review ledger](claim-review-completion.md),
+[review contract](claim-ledger-contract.md), [research workflow](research-workflow-completion.md)
+and [current release record](release-current-status.md). These distinguish
+agent assessment from human approval and source fidelity from causal validity.
+
+## Historical research inputs
 
 `blocked-questions-2026-08-30-raw.md` is **Perplexity deep-research output**,
 commissioned to answer eight questions the database could not settle from its
@@ -9,10 +14,11 @@ up as prompts on the Desktop, and it is filed verbatim.
 
 ## The rule that governs it
 
-> No figure or claim on this site is written by a language model.
-
-That rule does not have an exception for research assistants, and this file is
-a language model's output. So:
+The original research policy prohibited model-authored claims. The 1.1.0
+intervention instead records agent-drafted and agent-assessed prose explicitly;
+it does not label that work human-reviewed. Numbers must still be bound to
+their primary sources or labelled scenario assumptions. Model output is not
+itself a source, so the following restrictions on these historical inputs remain:
 
 **It may be used to decide things.** Whether a break in a series is a
 methodology change or real diffusion; whether a plateau is a plateau or a
@@ -33,7 +39,7 @@ written down. Fifteen were checked; fifteen resolved.
 
 ## How it was actually used
 
-Eight verdicts, mapped onto the eight drafted questions they unblock. The
+The August 30 work produced eight verdicts, mapped onto eight drafted questions. The
 mapping and what each one changed is in
 `blocked-questions-2026-08-30-verdicts.md`, and the caveats themselves are in
 `db/seeds/030_research_caveats.sql`.
@@ -44,8 +50,7 @@ document.
 
 ## What it did NOT do
 
-It did not activate any question. Six of the eight are now unblocked in the
-sense that their methodological objection has an answer, but publishing a
-claim about the economy is Joshua's call and the prose on those pages is still
-Claude-drafted and unreviewed. The activation statement is written out at the
-end of the verdicts file, ready to run, and deliberately not run.
+That historical work did not activate any question. Its verdicts described six
+methodological objections as answered, not six verified economic findings.
+The 1.1.0 intervention retains all 17 inactive questions, records their current
+evidence gaps and does not execute the historical activation proposal.

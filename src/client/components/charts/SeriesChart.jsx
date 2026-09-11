@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import LineChart from './LineChart';
+import { isProjected } from '../../../shared/observationQuality.js';
 import { inferCadence, displayUnit, fmtDate } from '@/lib/format';
 
-const CADENCE_RANK = { daily: 0, weekly: 1, monthly: 2, quarterly: 3, annual: 4 };
+const CADENCE_RANK = { daily: 0, weekly: 1, fortnightly: 1.5, monthly: 2, quarterly: 3, annual: 4 };
 
 /*
  * The thirteen chart honesty behaviours this project treats as non-negotiable
@@ -70,7 +71,7 @@ export default function SeriesChart({ payload, height, onPick }) {
     const forecasts = mapped
       .map((s) => ({
         label: s.label,
-        from: s.points.find((p) => p.value != null && p.value_status === 'projected')?.date,
+        from: s.points.find((p) => p.value != null && isProjected(p))?.date,
       }))
       .filter((f) => f.from);
 
@@ -90,6 +91,28 @@ export default function SeriesChart({ payload, height, onPick }) {
     };
   }, [payload]);
 
+  const forecastDisclosures = <>
+    {projectedNote && <p className="mb-2 text-caption-1-medium text-warn">{projectedNote}</p>}
+    {series.some(s => s.points.some(p => /status_unverified/.test(p.value_status ?? ''))) && (
+      <p className="mb-2 text-caption-1-medium text-warn">Some previously projected values have no confirmed outturn classification. They remain dashed pending source verification; a past date alone does not make them measurements.</p>
+    )}
+  </>;
+  if (payload?.indexBlocked) {
+    return (
+      <div className="space-y-4">
+        <p className="text-caption-1-medium text-warn">{payload.indexNote}</p>
+        {forecastDisclosures}
+        {(payload.series ?? []).map((s, index) => (
+          <section key={`${s.id}-${s.country}-${index}`}>
+            <h4 className="text-body-medium">{labelFor(s, payload.series)}</h4>
+            <LineChart series={[{ label: labelFor(s, payload.series), points: s.points ?? [] }]}
+              cadence={inferCadence(s.points ?? [])} unit={displayUnit(s.meta?.unit)} height={height} onPick={onPick} />
+          </section>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div>
       {cadenceMismatch && (
@@ -98,7 +121,7 @@ export default function SeriesChart({ payload, height, onPick }) {
           chart — spacing on this axis follows the finer one, not both evenly.
         </p>
       )}
-      {projectedNote && <p className="mb-2 text-caption-1-medium text-warn">{projectedNote}</p>}
+      {forecastDisclosures}
       <LineChart
         series={series}
         cadence={cadence}

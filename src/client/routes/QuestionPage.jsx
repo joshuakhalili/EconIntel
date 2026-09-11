@@ -9,6 +9,7 @@ import ChartGroup from '@/components/charts/ChartGroup';
 import FigureChart from '@/components/charts/FigureChart';
 import StrengthBadge, { STRENGTH } from '@/components/StrengthBadge';
 import Reading from '@/components/Reading';
+import ResearchReview from '@/components/ResearchReview';
 import { groupIndicators } from '@/lib/groupIndicators';
 import { LENS_ACCENT } from '@/lib/lensAccent';
 import { useReveal, revealClass } from '@/hooks/useReveal';
@@ -197,7 +198,7 @@ export default function QuestionPage() {
       )}
 
       {groups.supporting.length > 0 && (
-        <Band accent={accent} eyebrow="Supporting series" title="What else points the same way">
+        <Band accent={accent} eyebrow="Additional evidence" title="Other evidence to consider">
           <div className="grid gap-3 lg:grid-cols-2">
             {groups.supporting.map((group) => (
               <ChartGroup key={group.key} members={group.members} onPick={open} />
@@ -227,6 +228,7 @@ export default function QuestionPage() {
           report — mostly surveys of executives and model results — and each
           one says on its face which it is, what page it came from, and that
           no person here has checked it yet. */}
+      <ResearchReview claims={question.research} />
       {question.figures?.length > 0 && (
         <Band
           accent={accent}

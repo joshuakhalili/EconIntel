@@ -11,7 +11,8 @@ import { query } from '../db/pool.js';
 import { figuresForLens } from './figures.js';
 /* Only the version constant. Importing the module does NOT bring a model call
    into the web tier — `narrate()` lives there too but nothing here calls it. */
-import { PROMPT_VERSION } from '../lib/narration.js';
+import { PROMPT_VERSION, buildLensGrounding } from '../lib/narration.js';
+import { verifiedNarration } from '../lib/narration-facts.js';
 
 /** All active lenses, for navigation. */
 export async function listLenses() {
@@ -140,7 +141,7 @@ export async function getLens(slug) {
   // make a lens look better read than it is.
   const { rows: reading } = await query(
     `SELECT id, title, publisher, published::text, url, kind, stance, takeaway,
-            takeaway_source, takeaway_ref
+            takeaway_source, takeaway_ref, review_actor
        FROM question_reading
       WHERE lens_id = $1
       ORDER BY sort_order, published DESC NULLS LAST`,
@@ -181,7 +182,7 @@ export async function getLens(slug) {
     questions,
     reading,
     figures,
-    narration: narrations[0] ?? null,
+    narration: verifiedNarration(narrations[0], buildLensGrounding(lenses[0], await getLensTickers(slug))),
   };
 }
 
@@ -215,19 +216,31 @@ export async function getLensTickers(slug) {
             i.decimals,
             i.quantity_kind,
             i.source_url,
+            i.has_country_dim,
+            i.default_country_iso3,
             recent.latest_value,
             recent.latest_period,
             recent.previous_value,
-            recent.previous_period
+            recent.previous_period,
+            recent.latest_country,
+            recent.previous_country,
+            recent.latest_status,
+            recent.previous_status,
+            recent.latest_period_end
        FROM placements p
        JOIN indicators i ON i.id = p.indicator_id
        LEFT JOIN LATERAL (
          SELECT max(value)      FILTER (WHERE rn = 1) AS latest_value,
                 max(period_start) FILTER (WHERE rn = 1) AS latest_period,
                 max(value)      FILTER (WHERE rn = 2) AS previous_value,
-                max(period_start) FILTER (WHERE rn = 2) AS previous_period
+                max(period_start) FILTER (WHERE rn = 2) AS previous_period,
+                max(country_iso3) FILTER (WHERE rn = 1) AS latest_country,
+                max(country_iso3) FILTER (WHERE rn = 2) AS previous_country,
+                max(value_status) FILTER (WHERE rn = 1) AS latest_status,
+                max(value_status) FILTER (WHERE rn = 2) AS previous_status,
+                max(period_end) FILTER (WHERE rn = 1) AS latest_period_end
            FROM (
-             SELECT o.value, o.period_start,
+             SELECT o.value, o.period_start, o.period_end, o.country_iso3, o.value_status,
                     row_number() OVER (ORDER BY o.period_start DESC) AS rn
                FROM observations o
               WHERE o.indicator_id = i.id
@@ -254,5 +267,6 @@ export async function getLensTickers(slug) {
     previous_value: r.previous_value === null ? null : Number(r.previous_value),
     latest_period: r.latest_period ? String(r.latest_period).slice(0, 10) : null,
     previous_period: r.previous_period ? String(r.previous_period).slice(0, 10) : null,
+    latest_period_end: r.latest_period_end ? String(r.latest_period_end).slice(0, 10) : null,
   }));
 }

@@ -111,6 +111,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Select isolated database by exact branch
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESEARCH_STAGING_DATABASE_URL: ${{ secrets.DIFFUSION_STAGING_DATABASE_URL }}
+        run: |
+          case "$GITHUB_REF" in
+            refs/heads/main) selected_database="$PRODUCTION_DATABASE_URL" ;;
+            refs/heads/codex/diffusion-intervention) selected_database="$RESEARCH_STAGING_DATABASE_URL" ;;
+            *) echo "Unsupported ingestion branch; refusing database access."; exit 1 ;;
+          esac
+          if [ -z "$selected_database" ] || [[ "$selected_database" == *$'\n'* ]] || [[ "$selected_database" == *$'\r'* ]]; then
+            echo "Required branch-specific database secret missing or invalid."; exit 1
+          fi
+          printf 'DATABASE_URL=%s\n' "$selected_database" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
@@ -138,8 +153,8 @@ jobs:
           # That is not hypothetical: the repository had NO Actions secrets set
           # at all, and every scheduled run since this file was added failed.
           NODE_ENV: production
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
           # Ingestion legitimately runs long statements and has no request
@@ -386,7 +401,6 @@ jobs:
           # Same reason as above. This step runs on failure, which is exactly
           # when a wrong-database fallback would be most misleading.
           NODE_ENV: production
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set +e
           node scripts/ingestion-summary.js > ingestion-summary.md 2> ingestion-summary.err
@@ -472,7 +486,6 @@ jobs:
         if: always()
         env:
           NODE_ENV: production
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set +e
           npm run check:data 2>&1 | tee check-data.log
@@ -525,7 +538,6 @@ jobs:
         if: always()
         env:
           NODE_ENV: production
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set +e
           npm run check:charts 2>&1 | tee check-charts.log
@@ -558,6 +570,47 @@ jobs:
           exit 0
 
       # LAST, so everything above has already been written to the summary.
+      - name: Bounded GDELT recovery lane
+        if: always() && (github.event_name == 'schedule' || inputs.source == '' || inputs.source == 'gdelt')
+        timeout-minutes: 4
+        continue-on-error: true
+        env:
+          NODE_ENV: production
+        run: |
+          # One completed month, at most two bounded attempts. Preserve the
+          # earlier regression verdict: this lane cannot erase that failure.
+          node src/server/ingestion/runner.js gdelt --force
+
+      - name: Verify provider contracts
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 7
+        env:
+          NODE_ENV: production
+        run: node scripts/verify-source-providers.js --record worldbank dbnomics census_btos gdelt
+
+      - name: Source freshness alert
+        id: freshness
+        if: always()
+        env:
+          NODE_ENV: production
+        run: |
+          set +e
+          node scripts/check-source-freshness.js 2>&1 | tee source-freshness.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat source-freshness.log >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Bounded research discovery and source review rotation
+        if: success() && (github.event_name == 'schedule' || inputs.source == '' || inputs.source == 'openalex')
+        timeout-minutes: 12
+        env:
+          NODE_ENV: production
+          OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+          DB_STATEMENT_TIMEOUT_MS: '120000'
+        run: node scripts/research-rotate.js --execute
+
       - name: Apply the failure policy
         if: always()
         env:
@@ -565,6 +618,7 @@ jobs:
           REASON: ${{ steps.policy.outputs.reason }}
           DATA_STATUS: ${{ steps.data.outputs.status }}
           CHARTS_STATUS: ${{ steps.charts.outputs.status }}
+          FRESHNESS_STATUS: ${{ steps.freshness.outputs.status }}
         run: |
           echo "ingestion  — $VERDICT — $REASON"
           echo "check:data — exit ${DATA_STATUS:-'(never reported)'}"
@@ -577,5 +631,6 @@ jobs:
           # crashed, or the job was cut short. An absent answer is not a pass.
           if [ "${DATA_STATUS:-1}" != "0" ]; then failed=1; fi
           if [ "${CHARTS_STATUS:-1}" != "0" ]; then failed=1; fi
+          if [ "${FRESHNESS_STATUS:-1}" != "0" ]; then failed=1; fi
 
           exit "$failed"
