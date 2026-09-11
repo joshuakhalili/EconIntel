@@ -1,4 +1,5 @@
 import { query } from '../db/pool.js';
+import { measurementDefinition } from '../lib/measurement-definitions.js';
 
 export async function listCountryCoverage() {
   const { rows } = await query(`SELECT c.iso3, c.name, c.region, c.is_aggregate,
@@ -16,7 +17,7 @@ export async function listCountryCoverage() {
 export async function countryCoverage(iso3) {
   const { rows: countries } = await query('SELECT iso3, name, region, is_aggregate FROM countries WHERE iso3 = $1', [iso3]);
   if (!countries.length) return null;
-  const { rows: indicators } = await query(`SELECT i.id, i.name, i.pillar, i.unit, i.cadence,
+  const { rows: indicators } = await query(`SELECT i.id, i.name, i.pillar, i.unit, i.cadence, i.source_url,
       s.name AS source_name, s.licence AS source_licence,
       array_agg(DISTINCT o.value_status) FILTER (WHERE o.value_status IS NOT NULL) AS quality_flags,
       (SELECT jsonb_agg(jsonb_build_object('slug', q.slug, 'question', q.question, 'role', qi.role))
@@ -28,7 +29,7 @@ export async function countryCoverage(iso3) {
     JOIN sources s ON s.id = i.source_id
     WHERE o.country_iso3 = $1 AND o.value IS NOT NULL AND i.is_active
     GROUP BY i.id, s.name, s.licence ORDER BY i.pillar, lower(i.name)`, [iso3]);
-  return { country: countries[0], indicators };
+  return { country: countries[0], indicators: indicators.map((row) => ({ ...row, ...measurementDefinition(row) })) };
 }
 
 /** Complete placement matrix, including missing country/indicator cells. Global
@@ -51,5 +52,5 @@ export async function countryEvidenceMatrix() {
   JOIN sources s ON s.id = i.source_id
   LEFT JOIN coverage o ON o.country_iso3 = c.iso3 AND o.indicator_id = i.id
   WHERE NOT c.is_aggregate ORDER BY c.iso3, q.id, i.id`);
-  return rows;
+  return rows.map((row) => ({ ...row, ...measurementDefinition(row) }));
 }

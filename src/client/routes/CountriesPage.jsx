@@ -28,6 +28,15 @@ export default function CountriesPage() {
           <p className="mt-1 text-caption-1-regular text-text-secondary">{indicator.source_name} · {indicator.cadence} · {displayUnit(indicator.unit)} · {indicator.observation_count} values</p>
           <p className="mt-1 text-caption-1-regular text-text-tertiary">{indicator.first_period} to {indicator.last_period}</p>
           {indicator.source_licence && <p className="mt-1 text-caption-1-regular text-text-tertiary">Licence: {indicator.source_licence}</p>}
+          <p className="mt-1 text-caption-1-regular text-text-secondary">Population: {indicator.population ?? 'Not independently verified in the definition register'}. {indicator.estimand && `Measure: ${indicator.estimand}.`}</p>
+          {indicator.population && <p className="mt-1 text-caption-1-regular text-text-tertiary">{indicator.limitations} <a className="underline" href={indicator.definition_source}>Source definition</a></p>}
+          <details className="mt-2 text-caption-1-regular text-text-secondary"><summary>Measurement definition audit</summary>
+            <p className="mt-2">{indicator.definition_status?.replaceAll('_', ' ')} · {indicator.definition_checked ?? 'date not recorded'}</p>
+            {indicator.attempted && <p className="mt-1">{indicator.attempted}</p>}
+            {!indicator.population && <p className="mt-1">{indicator.limitations}</p>}
+            {indicator.provider_notes && <p className="mt-2 whitespace-pre-wrap">{indicator.provider_notes}</p>}
+            {indicator.definition_source && <a className="mt-2 inline-block underline" href={indicator.definition_source}>Provider / definition reference</a>}
+          </details>
           {indicator.quality_flags?.length > 0 && <p className="mt-1 text-caption-1-regular text-text-secondary">Provider flags: {indicator.quality_flags.join('; ')}</p>}
           {indicator.questions?.length > 0 && <p className="mt-2 text-caption-1-regular text-text-secondary">Used in: {indicator.questions.map((question, index) => <span key={question.slug}>{index > 0 && ' · '}<Link className="underline" to={`/q/${question.slug}`}>{question.question}</Link> ({question.role})</span>)}</p>}
         </li>)}

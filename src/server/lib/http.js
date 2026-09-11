@@ -104,7 +104,8 @@ class RateLimiter {
     this.lastRefill = Date.now();
   }
 
-  async take() {
+  async take(maxWaitMs = Infinity) {
+    const deadline = Date.now() + maxWaitMs;
     for (;;) {
       const now = Date.now();
       const elapsedSeconds = (now - this.lastRefill) / 1000;
@@ -120,6 +121,7 @@ class RateLimiter {
       }
 
       const waitMs = ((1 - this.tokens) / this.refillPerSecond) * 1000;
+      if (Date.now() + waitMs >= deadline) throw new HttpError('HTTP rate-limit wait exceeds request budget');
       await sleep(Math.ceil(waitMs));
     }
   }
@@ -231,6 +233,7 @@ export const SLOW_CONNECT = new Agent({
  * @param {Record<string,string>} [options.headers]
  * @param {number}  [options.timeoutMs=20000]
  * @param {number}  [options.retries=3]
+ * @param {number}  [options.totalBudgetMs=120000] elapsed request/retry budget, at most600000
  * @param {boolean} [options.record]  write the response to a fixture file
  * @param {boolean} [options.slowConnect]  use the raised-timeout dispatcher
  * @returns {Promise<unknown>}
@@ -242,24 +245,39 @@ export async function fetchJson(url, options = {}) {
     retries = 3,
     record = false,
     slowConnect = false,
+    totalBudgetMs = 120_000,
+    request = slowConnect ? undiciFetch : fetch,
+    wait = sleep,
+    now = Date.now,
+    rateLimit = (remaining) => limiterFor(url).take(remaining),
   } = options;
+
+  if (!Number.isInteger(retries) || retries < 0 || retries > 5) throw new RangeError('HTTP retries must be 0–5');
+  if (!Number.isFinite(totalBudgetMs) || totalBudgetMs <= 0 || totalBudgetMs > 600_000) throw new RangeError('HTTP totalBudgetMs must be 1–600000');
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('HTTP timeoutMs must be positive');
 
   if (config.useFixtures) {
     return readFixture(url);
   }
 
-  await limiterFor(url).take();
-
+  const deadline = now() + totalBudgetMs;
   let lastError;
+  const remaining = () => Math.max(0, deadline - now());
+  const pause = async (delay) => {
+    if (delay >= remaining()) throw new HttpError('HTTP retry budget exhausted', { url, status: lastError?.status });
+    await wait(delay);
+  };
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
+    if (!remaining()) throw new HttpError('HTTP request budget exhausted', { url, status: lastError?.status });
+    await rateLimit(remaining());
+    if (!remaining()) throw new HttpError('HTTP request budget exhausted during rate limiting', { url });
     // A fresh AbortController per attempt — reusing an aborted one would make
     // every retry fail instantly.
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), Math.min(timeoutMs, remaining()));
 
     try {
-      const request = slowConnect ? undiciFetch : fetch;
       const response = await request(url, {
         headers: { Accept: 'application/json', ...headers },
         signal: controller.signal,
@@ -270,18 +288,17 @@ export async function fetchJson(url, options = {}) {
         const body = await response.text().catch(() => '');
 
         if (isRetryable(response.status) && attempt < retries) {
-          // Honour Retry-After when the server sends it; the server knows
-          // better than our backoff curve does.
-          const retryAfter = Number(response.headers.get('retry-after'));
-          const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
-            ? retryAfter * 1000
-            : backoffMs(attempt);
+          if (retryAfterMs(response.headers.get('retry-after'), now()) > 30_000) {
+            throw new HttpError('Retry-After exceeds bounded retry wait; retry on a later run', { url, status: response.status });
+          }
+          const delayMs = retryDelayMs(response.headers.get('retry-after'), attempt, now());
 
           lastError = new HttpError(
             `HTTP ${response.status} from ${new URL(url).hostname}`,
             { url, status: response.status, body: body.slice(0, 500) }
           );
-          await sleep(delayMs);
+          clearTimeout(timer);
+          await pause(delayMs);
           continue;
         }
 
@@ -303,7 +320,8 @@ export async function fetchJson(url, options = {}) {
         { url }
       );
       if (attempt < retries) {
-        await sleep(backoffMs(attempt));
+        clearTimeout(timer);
+        await pause(Math.min(30_000, backoffMs(attempt)));
         continue;
       }
       throw lastError;
@@ -313,6 +331,18 @@ export async function fetchJson(url, options = {}) {
   }
 
   throw lastError;
+}
+
+/** RFC Retry-After supports seconds and HTTP dates. Never sleep longer than
+ * 30 seconds for one retry; the enclosing request budget caps total work.
+ */
+export function retryDelayMs(value, attempt, now = Date.now()) {
+  const requested = retryAfterMs(value, now);
+  return Math.min(30_000, Number.isFinite(requested) && requested >= 0 ? requested : backoffMs(attempt));
+}
+function retryAfterMs(value, now) {
+  const seconds = value == null || value.trim() === '' ? NaN : Number(value);
+  return Number.isFinite(seconds) ? (seconds >= 0 ? seconds * 1000 : NaN) : Date.parse(value) - now;
 }
 
 /**

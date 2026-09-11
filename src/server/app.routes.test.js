@@ -526,7 +526,8 @@ describe('caching headers, which are the gate\'s second line', () => {
      */
     stubStatus({
       counts: { sources_registered: 25 },
-      sources: [{ id: 'fred' }, { id: 'eurostat' }, { id: 'worldbank' }],
+      sources: [{ id: 'fred', observations: 1 }, { id: 'eurostat', observations: 1 }, { id: 'worldbank', observations: 1 },
+        { id: 'gdelt', observations: 0, documents: 0, verification_state: 'failed', verified_at: '2026-09-10' }],
     });
 
     const { counts } = await (await get('/api/status', { signedIn: false })).json();

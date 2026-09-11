@@ -142,12 +142,12 @@ export default function LensPage() {
             pairs the eyebrow with a real H2; these two were the exceptions.
           */}
           <p className="eyebrow" style={{ color: accent.hex }}>
-            The prices underneath
+            The measures underneath
           </p>
           <h2 className="mt-3 text-title-1-medium text-text-primary">
             {tickers.length === 1
-              ? 'One price is tracked under this lens'
-              : `${tickers.length} prices are tracked under this lens`}
+              ? 'One measure is tracked under this lens'
+              : `${tickers.length} measures are tracked under this lens`}
           </h2>
           <p className="prose-measure mt-2 text-body-regular text-text-tertiary">
             Each one is here for a reason specific to this lens, not as a market feed. Open any of

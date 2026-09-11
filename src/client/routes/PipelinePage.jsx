@@ -106,6 +106,8 @@ export default function PipelinePage() {
             <p className="text-body-medium text-text-primary">{capability.name}</p>
             <p className="mt-1 text-caption-1-regular text-text-secondary">Adapter: {capability.implemented ? 'implemented' : 'not implemented'} · Configuration: {capability.configured === 'not_required' ? 'no key required' : capability.configured ? 'present' : 'absent'}</p>
             <p className="mt-1 text-caption-1-regular text-text-tertiary">Last successful ingestion: {capability.latest_success?.slice(0, 10) ?? 'not recorded'} · Latest reference period: {capability.latest_period ?? 'not applicable or unavailable'}</p>
+            <p className="mt-1 text-caption-1-regular text-text-secondary">Provider check: {capability.provider_verification?.replaceAll('_', ' ') ?? 'not checked'}{capability.verified_at ? ` (${capability.verified_at.slice(0, 10)})` : ''}. {capability.verification_scope ?? 'No live contract probe recorded; credentials alone do not verify access.'}</p>
+            {capability.freshness && <p className="mt-1 text-caption-1-regular text-text-secondary">Freshness: {capability.freshness.state} · operational threshold {capability.freshness.threshold_days} days. Complete-month recovery cannot repair an inaccessible historical archive.</p>}
           </li>)}
         </ul>
       </Band>}

@@ -42,6 +42,7 @@
 
 import { createHash } from 'node:crypto';
 import { APP_ROUTES } from './vercel-config.js';
+import { smokeResponseBody } from './smoke-response.js';
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -69,7 +70,7 @@ async function get(path, extra = {}) {
   // of anything 4xx or 5xx except a 404, which threw away the one thing worth
   // reading when a data endpoint breaks: the error message naming the cause.
   // Capped, because a platform error page can be large.
-  const body = (await response.text()).slice(0, 20_000);
+  const body = await smokeResponseBody(response);
   return { status: response.status, body, location: response.headers.get('location') };
 }
 
@@ -309,6 +310,22 @@ const AUTHED = [
     path: '/api/questions/adoption',
     ok: (j) => typeof j?.slug === 'string',
     say: (j) => (j?.slug ? `slug ${j.slug}` : 'no slug'),
+  },
+  {
+    path: '/api/countries/GBR',
+    ok: j => Array.isArray(j?.indicators) && j.indicators.length > 0,
+    say: j => `${j.indicators.length} country-specific measures`,
+  },
+  {
+    path: '/api/lenses/growth',
+    ok: j => j?.narration?.grounding?.renderer_version === 'typed-facts-v2-2026-09-10',
+    say: () => 'current source-bound narration',
+  },
+  {
+    path: '/api/questions/productivity/research-workflow',
+    ok: j => j?.candidates?.length > 0 && j?.runs?.some(r => ['bounded', 'complete'].includes(r.status))
+      && j?.granular_review?.status === 'current_agent_disposition' && j?.granular_review?.gate?.ok === true,
+    say: j => `${j.candidates.length} candidates; exact current editorial dispositions (not human certification)`,
   },
 ];
 

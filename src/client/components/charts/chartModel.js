@@ -509,7 +509,15 @@ export function rankedTableModel(ranked, { cadence = 'annual', decimals = 1 } = 
   };
 }
 
-/** A report figure's bars as a table. `basis` is a column only when one is recorded. */
+/** Missing/qualitative findings must never pass through Number(null) → 0. */
+export function figureValueLabel(point, { decimals = 0, unitSymbol = '' } = {}) {
+  if (point.value == null || !Number.isFinite(Number(point.value))) {
+    return point.value_note || 'No numeric estimate reported';
+  }
+  return `${fmt(Number(point.value), decimals)}${unitSymbol ?? ''}${point.value_note ? ` — ${point.value_note}` : ''}`;
+}
+
+/** A report figure's findings as a table. `basis` is a column only when recorded. */
 export function figureTableModel(points, { decimals = 0, unitSymbol = '' } = {}) {
   const hasSeries = points.some((p) => (p.series ?? '') !== '');
   const hasBasis = points.some((p) => p.basis);
@@ -526,7 +534,7 @@ export function figureTableModel(points, { decimals = 0, unitSymbol = '' } = {})
       cells: [
         p.label,
         ...(hasSeries ? [p.series || '—'] : []),
-        `${fmt(Number(p.value), decimals)}${unitSymbol ?? ''}`,
+        figureValueLabel(p, { decimals, unitSymbol }),
         ...(hasBasis ? [BASIS_WORDS[p.basis] ?? 'not recorded'] : []),
       ],
     })),
@@ -585,14 +593,14 @@ export function describeFigureChart(points, { unit = '', decimals = 0, unitSymbo
 
   const seriesNames = [...new Set(points.map((p) => p.series ?? '').filter(Boolean))];
   const head =
-    `Bar chart, ${points.length} bars` +
+    `Bar chart, ${points.filter((p) => p.value != null && Number.isFinite(Number(p.value))).length} numeric bars` +
     (seriesNames.length > 1 ? ` across ${seriesNames.length} series` : '') +
     `, measured in ${displayUnit(unit) || 'unstated units'}, drawn from a zero baseline.`;
 
   const bars = points.map((p) => {
     const name = p.series ? `${p.series}, ${p.label}` : p.label;
     const basis = p.basis && p.basis !== 'measured' ? ` — ${BASIS_WORDS[p.basis]}` : '';
-    return `${name}: ${fmt(Number(p.value), decimals)}${unitSymbol}${basis}.`;
+    return `${name}: ${figureValueLabel(p, { decimals, unitSymbol })}${basis}.`;
   });
 
   return [head, ...bars].join(' ');

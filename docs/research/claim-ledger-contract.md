@@ -64,3 +64,16 @@ Legacy figure and reading flags are preserved. Seed 053 records the known agent
 reviews documented in seeds 050 and 051. Unidentified legacy reviewers remain
 unknown and are labelled accordingly. Source fidelity, economic interpretation and
 human sign-off are separate facts.
+
+Migration 0034 adds explicit study families/versions and structured evidence fields
+(`sample`, `exposure`, `outcome`, `estimate`, `estimate_unit`, `uncertainty`,
+`identification`, `geography_studied`, `study_period`). Missing values remain
+unassessed. Author affiliation countries never fill study geography. Provider work
+identity groups locations; cross-work family merges require a recorded review.
+The latest source-byte hash/access state and linked study-version metadata enter
+the claim fingerprint. A repeated unchanged fetch does not stale a review; changed
+bytes, inaccessibility or semantic version metadata do. Immutable source refreshes
+and `research_review_queue` provide the reason and next action. Discovery results
+are candidates, not automatic evidence links or approvals. The separate granular
+editorial artifact is live-hash checked for question/lens prose, readings and
+report points; its completeness status never implies human review.

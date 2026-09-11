@@ -1,6 +1,6 @@
 {
   "name": "diffusion",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Measuring AI's effect on the economy — investment cycles, labour markets, productivity, prices and policy, from sourced data with the limits stated",
   "type": "module",
   "main": "src/server/index.js",
@@ -9,11 +9,12 @@
   },
   "scripts": {
     "start": "node src/server/index.js",
-    "build": "npm run check:tokens && npm run check:contrast && npm run check:routes && vite build && npm run check:vercel",
+    "build": "node scripts/revision-landing-assets.js --write && npm run check:tokens && npm run check:contrast && npm run check:routes && vite build && npm run check:vercel",
     "build:vercel": "npm run build && node scripts/build-static.js",
     "check:tokens": "node scripts/check-tokens.js",
     "check:contrast": "node scripts/check-contrast.js",
     "check:routes": "node scripts/check-routes.js",
+    "check:landing-assets": "node scripts/revision-landing-assets.js",
     "check:vercel": "node scripts/vercel-config.js --check",
     "check:data": "node scripts/check-data.js",
     "check:research": "node scripts/research-ledger.js --check",

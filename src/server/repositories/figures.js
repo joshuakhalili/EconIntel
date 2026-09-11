@@ -44,7 +44,9 @@ async function figuresWhere(column, id) {
                         -- computed from "42.1". The values are printed
                         -- decimals off a page, so a double holds them exactly
                         -- enough for a chart; the stored column stays NUMERIC.
-                        'value',  p.value::float8)
+                        'value',  p.value::float8,
+                        'basis', p.basis,
+                        'value_note', p.value_note)
                       ORDER BY p.sort_order, p.label)
                  FROM report_figure_points p
                 WHERE p.figure_id = f.id),

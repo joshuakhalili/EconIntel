@@ -49,6 +49,7 @@ import {
 import cookieParser from 'cookie-parser';
 import { globe } from './repositories/globe.js';
 import { listCountryCoverage, countryCoverage } from './repositories/countries.js';
+import { researchWorkflowForQuestion } from './repositories/research-workflow.js';
 import * as auth from './lib/auth.js';
 import { reportServerError, describeErrorSink, redact } from './lib/observability.js';
 
@@ -489,7 +490,8 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
            ), measured AS (
              SELECT i.source_id,
                     count(*)::int                                                AS observations,
-                    max(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period
+                    max(o.period_start) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period,
+                    max(o.period_end) FILTER (WHERE o.value IS NOT NULL)::text AS latest_period_end
                FROM observations o
                JOIN indicators i ON i.id = o.indicator_id AND i.is_active
               GROUP BY i.source_id
@@ -505,17 +507,22 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
            SELECT s.id, s.name, s.homepage_url, s.licence, s.attribution_text,
                   s.credibility,
                   success.last_success,
+                  verification.state AS verification_state, verification.checked_at AS verified_at,
+                  verification.scope AS verification_scope,
                   COALESCE(m.observations, 0) AS observations,
                   COALESCE(c.indicators, 0)   AS indicators,
                   m.latest_period,
+                  m.latest_period_end,
                   COALESCE(d.documents, 0)    AS documents
              FROM sources s
              LEFT JOIN catalogued c ON c.source_id = s.id
              LEFT JOIN measured   m ON m.source_id = s.id
              LEFT JOIN reported   d ON d.source_id = s.id
              LEFT JOIN successful success ON success.source_id = s.id
+             LEFT JOIN source_verifications verification ON verification.source_id = s.id
             WHERE COALESCE(m.observations, 0) > 0
                OR COALESCE(d.documents, 0) > 0
+               OR verification.source_id IS NOT NULL
             ORDER BY COALESCE(m.observations, 0) DESC,
                      COALESCE(d.documents, 0) DESC, s.name`),
   ]);
@@ -539,13 +546,14 @@ app.get('/api/status', apiLimiter, route(async (_req, res) => {
          Several rows in `sources` — nasa_gibs, copernicus and a set of gov:
          entries — back no observation and no document at all. Naming an
          institution as a source while holding none of its data is a
-         credibility claim rather than a coverage one, so the query above
-         already excludes them and this counts what survives. */
-      sources_supplying: sources.rows.length,
+         credibility claim rather than a coverage one. Verification-only rows
+         feed the capability register but are excluded from this count and
+         the supplying-source list below. */
+      sources_supplying: sources.rows.filter((source) => source.observations > 0 || source.documents > 0).length,
     },
     recentRuns: runs.rows,
     staleIndicators: stale.rows,
-    sources: sources.rows,
+    sources: sources.rows.filter((source) => source.observations > 0 || source.documents > 0),
     integrations: describeIntegrations(),
     capabilities: sourceCapabilities(describeIntegrations(), sources.rows),
   });
@@ -991,6 +999,12 @@ app.get('/api/simulations/:slug/evidence', route(async (req, res) => {
 
 app.get('/api/questions', route(async (_req, res) => {
   res.json({ questions: await listQuestions() });
+}));
+
+app.get('/api/questions/:slug/research-workflow', route(async (req,res) => {
+  const result=await researchWorkflowForQuestion(req.params.slug);
+  if(!result)return res.status(404).json({error:'Question not found'});
+  res.json(result);
 }));
 
 app.get('/api/questions/:slug', route(async (req, res) => {

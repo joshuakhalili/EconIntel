@@ -161,7 +161,7 @@ words at the end of the bar, and named in a note ABOVE the chart.
 - `src/client/components/charts/chartModel.js:144` — contains `bridgeDates.add(previous.date);`
 - `src/client/components/charts/LineChart.jsx:229` — contains `strokeDasharray="5 4"`
 - `src/client/components/charts/SeriesChart.jsx:71` — contains `const forecasts = mapped`
-- `src/client/components/charts/chartModel.js:555` — contains `export function figureBasisNote(points) {`
+- `src/client/components/charts/chartModel.js:563` — contains `export function figureBasisNote(points) {`
 - `src/client/components/charts/FigureChart.jsx:128` — contains `const basisNote = figureBasisNote(points);`
 
 Coverage: `unit (partial)`
@@ -230,7 +230,7 @@ load-bearing — see behaviour 10 and the note in `rankEntities`.
 
 - `src/client/components/charts/chartModel.js:367` — contains `export function describeSeriesChart(series, {`
 - `src/client/components/charts/chartModel.js:469` — contains `export function seriesTableModel(series, {`
-- `src/client/components/charts/ChartDataTable.jsx:38` — contains `<table className="sr-only">`
+- `src/client/components/charts/ChartDataTable.jsx:38` — contains `<div className="sr-only">`
 - `src/client/components/charts/LineChart.jsx:142` — contains `aria-label={describeSeriesChart(series, { cadence, unit, indexed })}`
 - `src/client/components/charts/FigureChart.jsx:178` — contains `aria-label={describeFigureChart(points, {`
 - `src/client/components/charts/RankedBarChart.jsx:233` — contains `aria-label={describeRankedChart(ranked, { unit, cadence, decimals })}`

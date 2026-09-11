@@ -409,6 +409,20 @@ Access and version are inherited from the actual consulted-source records in see
 
 ## Remaining publication gates
 
+### 11 September addendum: three new country-context placements
+
+These are three additional placements beyond the original 300, not replacements for their dispositions. Both plain and expert captions in seed057 were checked against the World Bank primary glossary on 11 September 2026 (WDI release page names 13 July 2026). They make no numerical growth, ranking or causal-AI assertion.
+
+| Placement | Classification and disposition | Exact primary definition checked |
+|---|---|---|
+| productivity — wb.SL.GDP.PCAP.EM.KD | Measurement context; qualified. GDP/total employment in constant 2021 PPP dollars is not output/hour. Modelled employment and imputation constrain country rankings. | [WDI glossary](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/SL.GDP.PCAP.EM.KD), Long definition; Statistical concept and methodology; Limitations. |
+| jobs — wb.SL.EMP.TOTL.SP.ZS | Measurement context; qualified. Persons employed / population aged 15+, not unemployment or the share of workers retained. ILO modelling, demographics and population definitions matter. | [WDI glossary](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/SL.EMP.TOTL.SP.ZS), Unit; formula; methodology; comparability limitations. |
+| money — wb.NE.GDI.FTOT.ZS | Measurement context; qualified. Whole-economy acquisitions less disposals of fixed assets / GDP, not real investment growth or AI-specific expenditure. | [WDI glossary](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/NE.GDI.FTOT.ZS), Long definition; SNA methodology. |
+
+The country workstream reproduced 26 annual non-null observations, 2000–2025, for the first two concepts in all nine priority economies. GFCF ends in 2024 for China, Japan and the US and 2025 for the other six. Those are coverage endpoints, not matched-country estimates of AI effects. Seed063 changes only provider-level country attribution; the explicit US question placements remain unchanged.
+
+The following earlier gates describe limits to empirical inference. Current rendering, provider checks and observation-status verification are documented in the release handoff and other completion artifacts; they are not certified by this caption-only audit.
+
 - Independently reconcile upstream releases, revisions and current numerical assertions; staged reproduction is not upstream authentication.
 - Resolve AMECO observation/forecast status from release-specific metadata; do not infer it from the current year.
 - Verify OECD capital-contribution codebooks and national labour-survey breaks before quantitative synthesis.

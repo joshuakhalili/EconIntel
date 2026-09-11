@@ -11,7 +11,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 15,
-      "includeFiles": "public/index.html"
+      "includeFiles": "{public/index.html,docs/research/editorial-review-ledger.json}"
     }
   },
   "redirects": [

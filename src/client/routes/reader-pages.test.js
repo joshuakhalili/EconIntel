@@ -409,7 +409,7 @@ describe('/lens/:slug offers the scenario a reader could not otherwise reach', (
 
   test('source-check: both eyebrow-only sections have real headings', () => {
     const src = source(LENS);
-    assert.match(src, /prices are tracked under this lens/);
+    assert.match(src, /measures are tracked under this lens/);
     assert.match(src, /<h2 className="mt-3 text-title-1-medium text-text-primary">What is being reported<\/h2>/);
   });
 });

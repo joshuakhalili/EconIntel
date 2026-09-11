@@ -1,4 +1,7 @@
 /**
+ * V2: stores deterministic fact-ID summaries; no language-model call or API key.
+ * Historical model-prose notes below describe the retired V1 workflow only.
+ *
  * Write the scenario narrations, offline.
  *
  * The reasoning in `generate-narrations.js` applies unchanged — a reader must

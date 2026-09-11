@@ -23,6 +23,10 @@ export function validateClaim(claim) {
     if (!['supports','challenges','context','mixed'].includes(e.relationship)) errors.push(`evidence ${e.id}: relationship invalid`);
     if (!['published','working_paper','report','official_data'].includes(e.publication_stage)) errors.push(`evidence ${e.id}: publication_stage invalid`);
     if (e.claim_id && e.claim_id !== claim.id) errors.push(`evidence ${e.id}: wrong claim`);
+    if(e.estimate!=null && (!Number.isFinite(Number(e.estimate)) || !e.estimate_unit?.trim())) errors.push(`evidence ${e.id}: numeric estimate requires an explicit unit`);
+    if(e.geography_studied!=null && (!Array.isArray(e.geography_studied)||e.geography_studied.some(g=>typeof g!=='string'||!g.trim()))) errors.push(`evidence ${e.id}: study geography must be explicitly assessed text values`);
+    if(e.uncertainty!=null && (typeof e.uncertainty!=='object'||Array.isArray(e.uncertainty))) errors.push(`evidence ${e.id}: uncertainty must be structured`);
+    if(e.uncertainty?.lower!=null && e.uncertainty?.upper!=null && Number(e.uncertainty.lower)>Number(e.uncertainty.upper)) errors.push(`evidence ${e.id}: reversed uncertainty interval`);
   }
   if (claim.verdict === 'supported' && !evidence.some(e => e.relationship === 'supports' && e.access_basis !== 'metadata')) {
     errors.push('supported verdict needs substantive supporting evidence');

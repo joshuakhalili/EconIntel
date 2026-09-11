@@ -12,6 +12,8 @@ try {
   const out = path.resolve(process.argv[2]);
   const rows = (await countryEvidenceMatrix()).map((row) => ({ ...row, evidence_role: evidenceRole(row) }));
   const depth = priorityDepth(rows);
+  const definitions = [...new Map(rows.map((row) => [row.indicator_id, row])).values()];
+  const definitionCounts = definitions.reduce((counts, row) => ({ ...counts, [row.definition_status]: (counts[row.definition_status] ?? 0) + 1 }), {});
   const generated = new Date().toISOString();
   await mkdir(out, { recursive: true });
   await writeFile(path.join(out, 'country-question-indicator-matrix.json'), JSON.stringify({ generated, rows }, null, 2));
@@ -22,6 +24,9 @@ try {
     '|---|---|---:|---:|---|---|---|',
     ...depth.map((row) => `| ${row.iso3} | ${row.domain} | ${row.indicator_count} | ${row.direct_ai_measures} | ${row.direct_ai_latest ?? 'none'} | ${row.latest_period ?? 'none'} | ${row.gap} |`), '',
     'The accompanying JSON includes every country × active question placement, including missing observations, source URL/licence, instrument panel, reference range and provider flags. Zero means absent from this catalogue, not zero economic activity or proof that no source exists.', '',
+    '## Measurement-definition audit', '',
+    ...Object.entries(definitionCounts).map(([status, count]) => `- ${status}: ${count} distinct indicators`), '',
+    'Population and estimand fields retain provider definitions, decoded mirror scope, original FRED notes or the inspected app recipe. These are distinct evidence levels. Null population is an explicit unstructured/missing field with a source-specific attempted-check disposition, not a guessed sampling frame. Direct AI adoption measures remain separate from economic context; none of these fields identifies a causal AI effect.', '',
   ].join('\n');
   await writeFile(path.join(out, 'priority-country-gaps.md'), report);
   console.log(JSON.stringify({ rows: rows.length, priority_domain_cells: depth.length, output: out }));

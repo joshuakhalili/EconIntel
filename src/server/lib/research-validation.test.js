@@ -33,3 +33,11 @@ test('legacy and agent reviews never imply a human check', () => {
   assert.match(reviewLabel('reviewed','human'),/Checked by a person/);
   assert.match(reviewLabel('extracted','human'),/verification pending/);
 });
+test('structured estimates require units and explicit uncertainty/geography shapes',()=>{
+  const errors=evidence=>validateClaim({...claim,evidence:[{...source,...evidence}]});
+  assert.ok(errors({estimate:15}).some(e=>e.includes('explicit unit')));
+  assert.ok(errors({estimate:'not numeric',estimate_unit:'percent'}).some(e=>e.includes('explicit unit')));
+  assert.ok(errors({uncertainty:{lower:5,upper:2}}).some(e=>e.includes('reversed')));
+  assert.ok(errors({geography_studied:'US'}).some(e=>e.includes('geography')));
+  assert.deepEqual(errors({estimate:19,estimate_unit:'percent longer completion time',uncertainty:{kind:'not_reported'},geography_studied:null}),[]);
+});

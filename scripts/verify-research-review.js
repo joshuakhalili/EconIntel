@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { pool } from '../src/server/db/pool.js';
 import { researchForQuestion } from '../src/server/repositories/research.js';
+import { upsertStudyVersion } from '../src/server/repositories/research-workflow.js';
 
 if (process.env.DIFFUSION_STAGING_TEST !== '1') {
   throw new Error('Set DIFFUSION_STAGING_TEST=1 only for an isolated staging database');
@@ -9,6 +10,12 @@ if (process.env.DIFFUSION_STAGING_TEST !== '1') {
 const client = await pool.connect();
 try {
   await client.query('BEGIN');
+  const version={id:'integration-study-version',family_id:'integration-study-family',provider_work_id:'https://openalex.org/W123',title:'Test study',doi:null,
+    source_url:'https://www.nber.org/fixture',version_label:'submittedVersion',publication_date:'2024-01-01',affiliation_countries:['US'],metadata:{geography_studied:null}};
+  await upsertStudyVersion(client,version);
+  await upsertStudyVersion(client,{...version,publication_date:'2024-02-01'});
+  const {rows:[correctedVersion]}=await client.query("SELECT publication_date::text FROM research_study_versions WHERE id='integration-study-version'");
+  assert.equal(correctedVersion.publication_date,'2024-02-01','provider publication-date corrections persist');
   const { rows: [question] } = await client.query('SELECT id, lens_id FROM questions ORDER BY id LIMIT 1');
   assert.ok(question, 'fixture requires one question');
   await client.query(`INSERT INTO research_claims VALUES
@@ -29,6 +36,33 @@ try {
     VALUES ($1, $2, $3, 'agent', 'integration fixture', 'Test only') RETURNING id`,
     [claim.id, claim.fingerprint, JSON.stringify(claim)]);
   assert.equal((await current()).review_status, 'agent_checked');
+  await client.query('SAVEPOINT source_refresh_check');
+  await client.query('SAVEPOINT missing_hash_check');
+  await assert.rejects(client.query("INSERT INTO research_source_refresh_events(evidence_id,source_url,status,detail) VALUES('integration-evidence-fixture','https://example.org/fixture','unchanged','Rollback missing-hash fixture')"),/research_refresh_success_hash_required/);
+  await client.query('ROLLBACK TO SAVEPOINT missing_hash_check');
+  const initialHash='a'.repeat(64),changedHash='b'.repeat(64);
+  await client.query(`INSERT INTO research_source_refresh_events(evidence_id,source_url,status,observed_hash,baseline_hash,detail)
+    VALUES('integration-evidence-fixture','https://example.org/fixture','baseline',$1,$1,'Test baseline')`,[initialHash]);
+  const sourceBaseline=await current();
+  await client.query(`INSERT INTO research_review_events(claim_id,fingerprint,snapshot,actor_type,reviewer,notes)
+    VALUES($1,$2,$3,'agent','integration fixture','Source identity baseline')`,[sourceBaseline.id,sourceBaseline.fingerprint,JSON.stringify(sourceBaseline)]);
+  assert.equal((await current()).review_status,'agent_checked');
+  await client.query(`INSERT INTO research_source_refresh_events(evidence_id,source_url,status,observed_hash,baseline_hash,detail)
+    VALUES('integration-evidence-fixture','https://example.org/fixture','unchanged',$1,$1,'Same bytes on later fetch')`,[initialHash]);
+  assert.equal((await current()).review_status,'agent_checked','unchanged source fetch must retain review');
+  await client.query(`INSERT INTO research_source_refresh_events(evidence_id,source_url,status,observed_hash,baseline_hash,detail)
+    VALUES('integration-evidence-fixture','https://example.org/fixture','changed',$1,$2,'Changed source bytes')`,[changedHash,initialHash]);
+  assert.equal((await current()).review_status,'stale','changed bytes invalidate');
+  const {rows:queued}=await client.query("SELECT reason,next_action FROM research_review_queue WHERE claim_id='integration-review-fixture'");
+  assert.equal(queued[0].reason,'stale');assert.ok(queued[0].next_action);
+  await client.query('SAVEPOINT refresh_immutable_check');
+  await assert.rejects(client.query("UPDATE research_source_refresh_events SET detail='changed' WHERE evidence_id='integration-evidence-fixture'"),/append-only/);
+  await client.query('ROLLBACK TO SAVEPOINT refresh_immutable_check');
+  await client.query(`INSERT INTO research_source_refresh_events(evidence_id,source_url,status,detail)
+    VALUES('integration-evidence-fixture','https://example.org/fixture','inaccessible','Original unavailable')`);
+  assert.equal((await current()).review_status,'stale','inaccessible source is not assumed unchanged');
+  await client.query('ROLLBACK TO SAVEPOINT source_refresh_check');
+  assert.equal((await current()).review_status,'agent_checked');
   await client.query('SAVEPOINT observation_check');
   const { rows: [fact] } = await client.query(`SELECT o.id FROM observations o
     JOIN indicators i ON i.id=o.indicator_id

@@ -144,7 +144,7 @@ export function buildConfig() {
            deploy — a question activated by a seed run, which happens without a
            rebuild. Nothing imports this file, so nothing traces it into the
            bundle, so it has to be named. */
-        includeFiles: 'public/index.html',
+        includeFiles: '{public/index.html,docs/research/editorial-review-ledger.json}',
       },
     },
     redirects: [

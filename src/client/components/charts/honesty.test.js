@@ -792,7 +792,7 @@ describe('behaviour 13 — the chart said out loud', () => {
 
   test('the table markup is hidden visually and NOT from assistive technology', () => {
     const SRC = readFileSync(join(ROOT, 'src/client/components/charts/ChartDataTable.jsx'), 'utf8');
-    assert.match(SRC, /<table className="sr-only">/);
+    assert.match(SRC, /<div className="sr-only">\s*<table>/);
     // `display: none` and the `hidden` attribute remove an element from the
     // accessibility tree as well as from the page, which is the same mistake
     // in a different spelling. Checked on the markup, not on the prose above it.
