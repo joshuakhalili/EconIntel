@@ -4,8 +4,8 @@
 
 ### Economic evidence and research
 
-- Revise all40question packages and300inherited chart placements with measurement-specific explanations, inference limits and separate survey panels; retain17inactive questions with explicit evidence gaps.
-- Add exact-content editorial dispositions for498question spans,47lens spans,422report points,17lens readings and25ticker explanations. Preserve agent/human review distinctions and invalidate changed content rather than presenting stale reviews as current.
+- Revise all 40 question packages and 300 inherited chart placements with measurement-specific explanations, inference limits and separate survey panels; retain 17 inactive questions with explicit evidence gaps.
+- Add exact-content editorial dispositions for 498 question spans, 47 lens spans, 422 report points, 17 lens readings and 25 ticker explanations. Preserve agent/human review distinctions and invalidate changed content rather than presenting stale reviews as current.
 - Correct report dates, qualitative outcomes previously encoded as zero, misleading scenario precision and heterogeneous study comparisons. Retain three unreconciled report percentages as explicitly unresolved.
 - Add bounded question-specific, institutional and citation discovery; versioned study families, structured study evidence, a frozen essential-study benchmark, provider request/cost accounting and source-refresh review queues.
 - Replace generated numerical prose with deterministic source-bound fact templates; reject country/unit/date/value/source/status swaps and stale caches. Keep scenario outcomes distinct from observations.
