@@ -144,7 +144,10 @@ export function buildConfig() {
            deploy — a question activated by a seed run, which happens without a
            rebuild. Nothing imports this file, so nothing traces it into the
            bundle, so it has to be named. */
-        includeFiles: '{public/index.html,docs/research/editorial-review-ledger.json}',
+        /* Explicit runtime JSON dependencies too: deployment tracing omitted
+           the attributed ESM country-disposition import and crashed at boot.
+           runtime-artifacts.test.js checks imports and lazy file-URL reads. */
+        includeFiles: '{public/index.html,docs/research/editorial-review-ledger.json,docs/research/country-measurement-dispositions.json}',
       },
     },
     redirects: [
