@@ -43,6 +43,7 @@
 import { createHash } from 'node:crypto';
 import { APP_ROUTES } from './vercel-config.js';
 import { smokeResponseBody } from './smoke-response.js';
+import { smokeRoute } from './smoke-route.js';
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -393,11 +394,8 @@ check(
 const APP_MOUNT = /<div[^>]+id=["']root["']/i;
 const FRAMER_MARKUP = /data-framer-/i;
 for (const route of APP_ROUTES) {
-  // `:slug` is a pattern; substitute something real so the CDN matches it.
-  const path = route
-    .replace(':slug', route.startsWith('/lens') ? 'investment' : 'adoption')
-    .replace(':id', 'fred.GDPC1')
-    .replace(':iso3', 'GBR');
+  // Slugs belong to distinct tables: a real question is not a real scenario.
+  const path = smokeRoute(route);
   const page = await get(path);
   const t = title(page.body);
   const servedFramer = FRAMER_MARKUP.test(page.body);
