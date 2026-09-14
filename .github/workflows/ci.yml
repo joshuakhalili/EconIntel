@@ -56,13 +56,13 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # From `.nvmrc`, not a literal. A version pinned in two places drifts,
       # and the version CI runs on has to be the version the code is written
       # for — `package.json` declares `engines.node: 24.x` and `.nvmrc` says
       # 24, so `.nvmrc` is the single source both this and `ingest.yml` read.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
           cache: npm
